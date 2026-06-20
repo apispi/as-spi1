@@ -15,11 +15,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Create the default admin user
+        User::updateOrCreate(
+            ['email' => 'admin@apispi.com'],
+            [
+                'name' => 'Admin',
+                'email' => 'admin@apispi.com',
+                'password' => \Illuminate\Support\Facades\Hash::make('password'),
+                'is_admin' => true,
+            ]
+        );
     }
 }

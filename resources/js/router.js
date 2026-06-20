@@ -4,6 +4,7 @@ import { useAuthStore } from './store/auth';
 import Dashboard from './views/Dashboard.vue';
 import Login from './views/Login.vue';
 import Register from './views/Register.vue';
+import Admin from './views/Admin.vue';
 
 const routes = [
     {
@@ -23,6 +24,12 @@ const routes = [
         name: 'register',
         component: Register,
         meta: { guestOnly: true }
+    },
+    {
+        path: '/admin',
+        name: 'admin',
+        component: Admin,
+        meta: { requiresAuth: true, requiresAdmin: true }
     }
 ];
 
@@ -44,6 +51,8 @@ router.beforeEach(async (to, from, next) => {
     if (to.meta.requiresAuth && !isAuthenticated) {
         next('/login');
     } else if (to.meta.guestOnly && isAuthenticated) {
+        next('/');
+    } else if (to.meta.requiresAdmin && (!authStore.user || !authStore.user.is_admin)) {
         next('/');
     } else {
         next();

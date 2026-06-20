@@ -21,12 +21,10 @@ export const useAuthStore = defineStore('auth', {
             }
         },
         async login(credentials) {
-            await axios.get('/sanctum/csrf-cookie');
             await axios.post('/api/login', credentials);
             await this.fetchUser();
         },
         async register(details) {
-            await axios.get('/sanctum/csrf-cookie');
             await axios.post('/api/register', details);
             await this.fetchUser();
         },

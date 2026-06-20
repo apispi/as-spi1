@@ -6,6 +6,7 @@
         <h1>ApiSpi Tester</h1>
       </div>
       <div class="auth-menu" v-if="authStore.isAuthenticated">
+        <router-link v-if="authStore.user.is_admin" to="/admin" class="admin-link">Admin</router-link>
         <span class="user-name">{{ authStore.user.name }}</span>
         <button @click="handleLogout" class="btn btn-logout">Logout</button>
       </div>
@@ -87,5 +88,21 @@ const handleLogout = async () => {
   background-color: rgba(248, 81, 73, 0.1);
   color: #ff7b72;
   border-color: #ff7b72;
+}
+
+.admin-link {
+  color: #d29922;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(210, 153, 34, 0.3);
+  background: rgba(210, 153, 34, 0.1);
+  transition: all 0.2s;
+}
+.admin-link:hover {
+  background: rgba(210, 153, 34, 0.2);
+  border-color: #d29922;
 }
 </style>
