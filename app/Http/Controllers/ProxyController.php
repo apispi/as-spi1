@@ -49,6 +49,8 @@ class ProxyController extends Controller
                 'headers' => $response->headers(),
                 'body' => $response->body(),
                 'time_ms' => $timeTakenMs,
+                'request_payload' => $body,
+                'request_headers' => $headers,
             ]);
 
         } catch (Exception $e) {

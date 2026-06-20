@@ -34,11 +34,19 @@
           <button 
             :class="['tab', activeTab === 'body' ? 'active' : '']" 
             @click="activeTab = 'body'"
-          >Body</button>
+          >Response Body</button>
           <button 
             :class="['tab', activeTab === 'headers' ? 'active' : '']" 
             @click="activeTab = 'headers'"
-          >Headers <span class="count">{{ headerCount }}</span></button>
+          >Response Headers <span class="count">{{ headerCount }}</span></button>
+          <button 
+            :class="['tab', activeTab === 'reqBody' ? 'active' : '']" 
+            @click="activeTab = 'reqBody'"
+          >Request Body</button>
+          <button 
+            :class="['tab', activeTab === 'reqHeaders' ? 'active' : '']" 
+            @click="activeTab = 'reqHeaders'"
+          >Request Headers</button>
         </div>
 
         <div class="tab-content mt-4" v-show="activeTab === 'body'">
@@ -52,6 +60,21 @@
               <div class="header-value">{{ Array.isArray(val) ? val.join(', ') : val }}</div>
             </template>
           </div>
+        </div>
+
+        <div class="tab-content mt-4" v-show="activeTab === 'reqBody'">
+          <pre v-if="response.request_payload" class="code-block" v-html="formattedReqBody"></pre>
+          <p v-else class="text-secondary">No request body sent.</p>
+        </div>
+
+        <div class="tab-content mt-4" v-show="activeTab === 'reqHeaders'">
+          <div class="headers-grid" v-if="response.request_headers && Object.keys(response.request_headers).length > 0">
+            <template v-for="(val, key) in response.request_headers" :key="key">
+              <div class="header-name">{{ key }}</div>
+              <div class="header-value">{{ Array.isArray(val) ? val.join(', ') : val }}</div>
+            </template>
+          </div>
+          <p v-else class="text-secondary">No custom request headers sent.</p>
         </div>
       </div>
     </div>
@@ -117,6 +140,37 @@ const formattedBody = computed(() => {
   }
   
   // Simple syntax highlighting
+  bodyStr = bodyStr.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return bodyStr.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+    let cls = 'number';
+    if (/^"/.test(match)) {
+        if (/:$/.test(match)) {
+            cls = 'key';
+        } else {
+            cls = 'string';
+        }
+    } else if (/true|false/.test(match)) {
+        cls = 'boolean';
+    } else if (/null/.test(match)) {
+        cls = 'null';
+    }
+    return '<span class="' + cls + '">' + match + '</span>';
+  });
+});
+
+const formattedReqBody = computed(() => {
+  if (!props.response || !props.response.request_payload) return '';
+  let bodyStr = props.response.request_payload;
+  if (typeof bodyStr === 'object') {
+    bodyStr = JSON.stringify(bodyStr, null, 2);
+  } else {
+    try {
+      bodyStr = JSON.stringify(JSON.parse(bodyStr), null, 2);
+    } catch(e) {
+      // not JSON
+    }
+  }
+  
   bodyStr = bodyStr.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   return bodyStr.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
     let cls = 'number';

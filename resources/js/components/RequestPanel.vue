@@ -21,7 +21,7 @@
         <input 
           type="text" 
           class="input-field w-full" 
-          placeholder="https://api.example.com/v1/users" 
+          placeholder="https://apispi.com/api/gateway/tools"
           v-model="url"
           @keyup.enter="send"
         />
@@ -72,7 +72,7 @@ const props = defineProps({
 const emit = defineEmits(['send-request']);
 
 const method = ref('GET');
-const url = ref('https://jsonplaceholder.typicode.com/todos/1');
+const url = ref('https://apispi.com/api/gateway/tools');
 const activeTab = ref('headers');
 
 const headers = ref([
