@@ -1,7 +1,10 @@
 <template>
   <div class="panel">
     <div class="panel-header flex items-center justify-between">
-      <h2>Request</h2>
+      <div class="flex items-center gap-4">
+        <h2>Request</h2>
+        <button class="secondary text-sm" @click="save" :disabled="isLoading || !url">Save Request</button>
+      </div>
       <button class="primary flex items-center gap-2" @click="send" :disabled="isLoading">
         <svg v-if="!isLoading" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="icon"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         <span v-else class="loader"></span>
@@ -63,13 +66,14 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
 const props = defineProps({
-  isLoading: Boolean
+  isLoading: Boolean,
+  loadedRequest: Object
 });
 
-const emit = defineEmits(['send-request']);
+const emit = defineEmits(['send-request', 'save-request']);
 
 const method = ref('GET');
 const url = ref('https://apispi.com/api/gateway/tools');
@@ -80,6 +84,24 @@ const headers = ref([
 ]);
 
 const body = ref('');
+
+watch(() => props.loadedRequest, (newReq) => {
+  if (newReq) {
+    url.value = newReq.url;
+    method.value = newReq.method;
+    body.value = newReq.body || '';
+    
+    headers.value = [];
+    if (newReq.headers) {
+      Object.entries(newReq.headers).forEach(([key, value]) => {
+        headers.value.push({ key, value: Array.isArray(value) ? value.join(', ') : value });
+      });
+    }
+    if (headers.value.length === 0) {
+      headers.value.push({ key: '', value: '' });
+    }
+  }
+});
 
 const addHeader = () => {
   headers.value.push({ key: '', value: '' });
@@ -111,6 +133,27 @@ const send = () => {
   }
 
   emit('send-request', {
+    method: method.value,
+    url: url.value,
+    headers: headerObj,
+    body: ['GET', 'HEAD'].includes(method.value) ? null : body.value
+  });
+};
+
+const save = () => {
+  if (!url.value) return;
+  const name = prompt("Enter a name for this saved request:");
+  if (!name) return;
+
+  const headerObj = {};
+  headers.value.forEach(h => {
+    if (h.key && h.key.trim()) {
+      headerObj[h.key.trim()] = h.value;
+    }
+  });
+
+  emit('save-request', {
+    name,
     method: method.value,
     url: url.value,
     headers: headerObj,

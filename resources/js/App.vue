@@ -5,60 +5,25 @@
         <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="icon"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
         <h1>ApiSpi Tester</h1>
       </div>
+      <div class="auth-menu" v-if="authStore.isAuthenticated">
+        <span class="user-name">{{ authStore.user.name }}</span>
+        <button @click="handleLogout" class="btn btn-logout">Logout</button>
+      </div>
     </header>
-    <main class="app-main">
-      <div class="panel-container">
-        <RequestPanel 
-          @send-request="handleRequest" 
-          :isLoading="isLoading"
-        />
-      </div>
-      <div class="panel-container">
-        <ResponsePanel 
-          :response="responseData" 
-          :isLoading="isLoading" 
-        />
-      </div>
-    </main>
+    <router-view></router-view>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import axios from 'axios';
-import RequestPanel from './components/RequestPanel.vue';
-import ResponsePanel from './components/ResponsePanel.vue';
+import { useAuthStore } from './store/auth';
+import { useRouter } from 'vue-router';
 
-const isLoading = ref(false);
-const responseData = ref(null);
+const authStore = useAuthStore();
+const router = useRouter();
 
-const handleRequest = async (requestConfig) => {
-  isLoading.value = true;
-  responseData.value = null;
-
-  try {
-    const res = await axios.post('/api/proxy', {
-      url: requestConfig.url,
-      method: requestConfig.method,
-      headers: requestConfig.headers,
-      body: requestConfig.body
-    });
-    
-    responseData.value = res.data;
-  } catch (error) {
-    if (error.response && error.response.data) {
-      responseData.value = error.response.data;
-    } else {
-      responseData.value = {
-        status: 0,
-        headers: {},
-        body: 'Network error or proxy unreachable',
-        time_ms: 0
-      };
-    }
-  } finally {
-    isLoading.value = false;
-  }
+const handleLogout = async () => {
+  await authStore.logout();
+  router.push('/login');
 };
 </script>
 
@@ -68,6 +33,7 @@ const handleRequest = async (requestConfig) => {
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+  background-color: var(--bg-color);
 }
 
 .app-header {
@@ -76,6 +42,7 @@ const handleRequest = async (requestConfig) => {
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 24px;
 }
 
@@ -94,31 +61,31 @@ const handleRequest = async (requestConfig) => {
   letter-spacing: -0.5px;
 }
 
-.app-main {
+.auth-menu {
   display: flex;
-  flex: 1;
-  overflow: hidden;
+  align-items: center;
+  gap: 16px;
 }
 
-.panel-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--border-color);
-  min-width: 0; /* Prevent flex overflow */
+.user-name {
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
 }
 
-.panel-container:last-child {
-  border-right: none;
+.btn-logout {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-
-@media (max-width: 768px) {
-  .app-main {
-    flex-direction: column;
-  }
-  .panel-container {
-    border-right: none;
-    border-bottom: 1px solid var(--border-color);
-  }
+.btn-logout:hover {
+  background-color: rgba(248, 81, 73, 0.1);
+  color: #ff7b72;
+  border-color: #ff7b72;
 }
 </style>
