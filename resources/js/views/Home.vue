@@ -5,16 +5,12 @@
       <div class="hero-content">
         <h1>Test APIs Without the Hassle</h1>
         <p class="hero-subtitle">The simplest way to test, debug, and document your APIs. No setup required.</p>
-        <a href="#tester" class="hero-cta">Start Testing →</a>
       </div>
     </section>
 
     <!-- API Tester Demo -->
     <section class="demo" id="tester">
       <div class="demo-container">
-        <h2>Try It Now</h2>
-        <p class="demo-subtitle">Test any API endpoint instantly from your browser.</p>
-        
         <div class="tester-container">
           <div class="tester-row">
             <select v-model="testMethod" class="method-select">
