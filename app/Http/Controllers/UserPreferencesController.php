@@ -28,4 +28,17 @@ class UserPreferencesController extends Controller
             'has_key' => !empty($user->scx_api_key),
         ]);
     }
+
+    public function updateScxModel(Request $request)
+    {
+        $validated = $request->validate([
+            'scx_model' => 'required|string|max:100',
+        ]);
+
+        $user = Auth::user();
+        $user->scx_model = $validated['scx_model'];
+        $user->save();
+
+        return response()->json(['message' => 'SCX model saved successfully']);
+    }
 }

@@ -53,7 +53,7 @@ class ScxChatController extends Controller
                 'Authorization' => 'Bearer ' . $user->scx_api_key,
                 'Content-Type' => 'application/json',
             ])->timeout(60)->post('https://api.scx.ai/v1/chat/completions', [
-                'model' => 'scx-ai',
+                'model' => $user->scx_model ?? 'scx-ai',
                 'messages' => $messages,
                 'max_tokens' => 2000,
                 'temperature' => 0.7,
