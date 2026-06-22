@@ -360,6 +360,7 @@ onMounted(() => {
   
   form.name = authStore.user?.name || '';
   loadApiKey();
+    loadScxKeyStatus();
   loadStats();
   loadRecentActivity();
 });
@@ -411,6 +412,15 @@ const hasScxKey = ref(false);
 const showDeleteConfirm = ref(false);
 const deleteConfirmText = ref('');
 const deleting = ref(false);
+
+const loadScxKeyStatus = async () => {
+  try {
+    const res = await axios.get('/api/user/scx-api-key');
+    hasScxKey.value = res.data.has_key;
+  } catch (error) {
+    hasScxKey.value = false;
+  }
+};
 
 const loadApiKey = async () => {
   try {
