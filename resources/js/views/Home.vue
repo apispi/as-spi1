@@ -335,7 +335,7 @@ const formatJson = (str) => {
 
 /* Hero Section */
 .hero {
-  padding: 60px 24px 40px;
+  padding: 24px 24px 16px;
   text-align: center;
   background: linear-gradient(180deg, var(--panel-bg) 0%, var(--bg-color) 100%);
 }
@@ -346,9 +346,9 @@ const formatJson = (str) => {
 }
 
 .hero h1 {
-  font-size: 56px;
+  font-size: 36px;
   font-weight: 700;
-  margin: 0 0 20px 0;
+  margin: 0 0 12px 0;
   letter-spacing: -1px;
   background: linear-gradient(135deg, var(--accent-color), #58a6ff);
   -webkit-background-clip: text;
@@ -388,7 +388,7 @@ const formatJson = (str) => {
 
 /* Demo Section */
 .demo {
-  padding: 80px 24px;
+  padding: 16px 24px 40px;
   background: var(--bg-color);
 }
 
