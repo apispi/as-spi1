@@ -640,8 +640,8 @@ const deleteAccount = async () => {
   cursor: pointer;
 }
 .up-user-row:hover { background: rgba(59,130,246,0.06); }
-.up-user-row-active { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); }
-.up-user-row-active:hover { background: rgba(59,130,246,0.15); }
+.up-user-row-active { background: rgba(59,130,246,0.06); }
+.up-user-row-active:hover { background: rgba(59,130,246,0.1); }
 .up-avatar {
   width: 32px; height: 32px; border-radius: 50%;
   background: linear-gradient(135deg, #3B82F6, #60A5FA);
