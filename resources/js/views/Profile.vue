@@ -27,7 +27,10 @@
         <a href="/" class="up-nav-link">
           <span class="up-nav-icon">⬡</span> Home
         </a>
-        <a href="/profile" class="up-nav-link">
+        <a href="/chat" class="up-nav-link">
+          <span class="up-nav-icon">◈</span> Chat
+        </a>
+        <a href="/profile" class="up-nav-link active">
           <span class="up-nav-icon">◈</span> Profile
         </a>
       </nav>
