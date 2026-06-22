@@ -10,8 +10,8 @@
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 27" class="up-logo-icon">
             <defs>
               <linearGradient id="uplg" x1=".5" y1="0" x2=".5" y2="1">
-                <stop offset="0%" stop-color="#FCD34D"/>
-                <stop offset="100%" stop-color="#D97706"/>
+                <stop offset="0%" stop-color="#60A5FA"/>
+                <stop offset="100%" stop-color="#3B82F6"/>
               </linearGradient>
             </defs>
             <path d="M12,0.5 L13.4,3.3 L16,4.5 L13.4,5.7 L12,8.5 L10.6,5.7 L8,4.5 L10.6,3.3 Z" fill="url(#uplg)"/>
@@ -55,8 +55,8 @@
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 27" class="up-logo-icon">
               <defs>
                 <linearGradient id="uplg2" x1=".5" y1="0" x2=".5" y2="1">
-                  <stop offset="0%" stop-color="#FCD34D"/>
-                  <stop offset="100%" stop-color="#D97706"/>
+                  <stop offset="0%" stop-color="#60A5FA"/>
+                  <stop offset="100%" stop-color="#3B82F6"/>
                 </linearGradient>
               </defs>
               <path d="M12,0.5 L13.4,3.3 L16,4.5 L13.4,5.7 L12,8.5 L10.6,5.7 L8,4.5 L10.6,3.3 Z" fill="url(#uplg2)"/>
@@ -588,7 +588,7 @@ const deleteAccount = async () => {
 .up-sidebar {
   width: 240px; flex-shrink: 0;
   background: rgba(14,8,4,0.95);
-  border-right: 1px solid rgba(217,119,6,0.1);
+  border-right: 1px solid rgba(59,130,246,0.1);
   display: flex; flex-direction: column;
   position: fixed; top: 0; left: 0; height: 100vh; z-index: 40;
   transition: transform 0.25s ease;
@@ -599,11 +599,11 @@ const deleteAccount = async () => {
 
 .up-sidebar-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 1.25rem 1rem 1rem; border-bottom: 1px solid rgba(217,119,6,0.08);
+  padding: 1.25rem 1rem 1rem; border-bottom: 1px solid rgba(59,130,246,0.08);
 }
 .up-logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; }
 .up-logo-icon { width: 22px; height: 25px; }
-.up-logo span { font-size: 1.1rem; font-weight: 700; color: #FCD34D; letter-spacing: -0.01em; }
+.up-logo span { font-size: 1.1rem; font-weight: 700; color: #60A5FA; letter-spacing: -0.01em; }
 .up-sidebar-close {
   display: none; background: none; border: none; color: #6b7280;
   font-size: 1rem; cursor: pointer; padding: 0.25rem;
@@ -624,12 +624,12 @@ const deleteAccount = async () => {
   color: #9ca3af; font-size: 0.875rem; font-weight: 500; text-decoration: none;
   transition: all 0.15s;
 }
-.up-nav-link:hover { background: rgba(217,119,6,0.06); color: #FCD34D; }
-.up-nav-link.active { background: rgba(217,119,6,0.1); color: #FCD34D; }
+.up-nav-link:hover { background: rgba(59,130,246,0.06); color: #60A5FA; }
+.up-nav-link.active { background: rgba(59,130,246,0.1); color: #60A5FA; }
 .up-nav-icon { font-size: 0.9rem; width: 18px; text-align: center; flex-shrink: 0; }
 
 .up-sidebar-footer {
-  padding: 0.875rem; border-top: 1px solid rgba(217,119,6,0.08);
+  padding: 0.875rem; border-top: 1px solid rgba(59,130,246,0.08);
   display: flex; flex-direction: column; gap: 0.5rem;
 }
 .up-user-row {
@@ -639,12 +639,12 @@ const deleteAccount = async () => {
   transition: background 0.15s;
   cursor: pointer;
 }
-.up-user-row:hover { background: rgba(217,119,6,0.06); }
-.up-user-row-active { background: rgba(217,119,6,0.1); border: 1px solid rgba(217,119,6,0.2); }
-.up-user-row-active:hover { background: rgba(217,119,6,0.15); }
+.up-user-row:hover { background: rgba(59,130,246,0.06); }
+.up-user-row-active { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); }
+.up-user-row-active:hover { background: rgba(59,130,246,0.15); }
 .up-avatar {
   width: 32px; height: 32px; border-radius: 50%;
-  background: linear-gradient(135deg, #D97706, #FCD34D);
+  background: linear-gradient(135deg, #3B82F6, #60A5FA);
   display: flex; align-items: center; justify-content: center;
   font-size: 0.8rem; font-weight: 700; color: #0a0805; flex-shrink: 0;
 }
@@ -655,18 +655,18 @@ const deleteAccount = async () => {
 .up-user-email { font-size: 0.7rem; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .up-signout {
   width: 100%; padding: 0.5rem; border-radius: 0.4rem;
-  background: none; border: 1px solid rgba(217,119,6,0.12);
+  background: none; border: 1px solid rgba(59,130,246,0.12);
   color: #6b7280; font-size: 0.78rem; cursor: pointer; font-family: inherit;
   transition: all 0.15s; text-align: center; min-height: 36px;
 }
-.up-signout:hover { border-color: rgba(217,119,6,0.3); color: #9ca3af; }
+.up-signout:hover { border-color: rgba(59,130,246,0.3); color: #9ca3af; }
 
 /* Main */
 .up-main { flex: 1; margin-left: 240px; display: flex; flex-direction: column; min-height: 100vh; }
 
 .up-topbar {
   display: none; align-items: center; justify-content: space-between;
-  padding: 0.75rem 1rem; border-bottom: 1px solid rgba(217,119,6,0.08);
+  padding: 0.75rem 1rem; border-bottom: 1px solid rgba(59,130,246,0.08);
   background: rgba(14,8,4,0.9); position: sticky; top: 0; z-index: 30;
 }
 .up-menu-btn {
@@ -676,7 +676,7 @@ const deleteAccount = async () => {
 .up-menu-btn span { display: block; width: 20px; height: 2px; background: #9ca3af; border-radius: 1px; }
 .up-topbar-left { display: flex; align-items: center; gap: 1rem; }
 .up-topbar-logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; }
-.up-topbar-logo span { font-size: 1rem; font-weight: 700; color: #FCD34D; }
+.up-topbar-logo span { font-size: 1rem; font-weight: 700; color: #60A5FA; }
 .up-topbar-right { display: flex; align-items: center; gap: 0.75rem; }
 
 /* Mobile layout */
@@ -692,15 +692,15 @@ const deleteAccount = async () => {
 /* Hero */
 .up-hero {
   display: flex; align-items: center; gap: 1.25rem;
-  background: rgba(28,18,8,0.8); border: 1px solid rgba(217,119,6,0.2);
+  background: rgba(8,14,28,0.8); border: 1px solid rgba(59,130,246,0.2);
   border-radius: 1.25rem; padding: 1.5rem 1.75rem; margin-bottom: 2rem;
 }
 .up-hero-avatar {
   width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
-  background: linear-gradient(135deg, #D97706, #FCD34D);
+  background: linear-gradient(135deg, #3B82F6, #60A5FA);
   display: flex; align-items: center; justify-content: center;
   font-size: 1.6rem; font-weight: 800; color: #0a0805;
-  border: 2px solid rgba(217,119,6,0.4);
+  border: 2px solid rgba(59,130,246,0.4);
   overflow: hidden;
 }
 .up-hero-photo {
@@ -718,17 +718,17 @@ const deleteAccount = async () => {
 }
 .up-tab {
   padding: 0.55rem 1.1rem; border-radius: 0.5rem;
-  border: 1px solid rgba(217,119,6,0.18);
-  background: rgba(217,119,6,0.04); cursor: pointer;
+  border: 1px solid rgba(59,130,246,0.18);
+  background: rgba(59,130,246,0.04); cursor: pointer;
   font-family: inherit; font-size: 0.82rem; font-weight: 600;
   color: #6b7280; transition: all 0.15s;
   display: flex; align-items: center; gap: 0.4rem;
   white-space: nowrap; flex-shrink: 0;
 }
-.up-tab:hover { color: #d1d5db; background: rgba(217,119,6,0.1); border-color: rgba(217,119,6,0.35); }
+.up-tab:hover { color: #d1d5db; background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.35); }
 .up-tab.active {
-  background: rgba(28,24,16,0.7); color: #FCD34D;
-  border-color: rgba(217,119,6,0.45);
+  background: rgba(16,24,40,0.7); color: #60A5FA;
+  border-color: rgba(59,130,246,0.45);
 }
 
 /* Flash */
@@ -741,30 +741,30 @@ const deleteAccount = async () => {
 
 /* Cards */
 .up-card {
-  background: rgba(20,12,6,0.8); border: 1px solid rgba(217,119,6,0.15);
+  background: rgba(8,14,28,0.8); border: 1px solid rgba(59,130,246,0.15);
   border-radius: 1.25rem; padding: 1.75rem; margin-bottom: 1.5rem;
 }
-.up-card-header { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(217,119,6,0.1); }
+.up-card-header { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(59,130,246,0.1); }
 .up-card-title { font-size: 1.05rem; font-weight: 700; color: #f1f5f9; margin-bottom: 0.25rem; }
 .up-card-sub   { font-size: 0.82rem; color: #6b7280; }
 
 /* Form */
 .up-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .up-form-group { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.25rem; }
-.up-form-footer { padding-top: 0.5rem; border-top: 1px solid rgba(217,119,6,0.08); margin-top: 0.25rem; }
+.up-form-footer { padding-top: 0.5rem; border-top: 1px solid rgba(59,130,246,0.08); margin-top: 0.25rem; }
 
 .up-label { font-size: 0.8rem; font-weight: 700; color: #d1d5db; letter-spacing: 0.02em; text-transform: uppercase; }
 
 .up-input {
   padding: 0.75rem 1rem;
-  background: rgba(10,8,5,0.9); border: 1px solid rgba(217,119,6,0.25);
+  background: rgba(10,8,5,0.9); border: 1px solid rgba(59,130,246,0.25);
   border-radius: 0.625rem; color: #f1f5f9; font-size: 0.95rem; font-family: inherit;
   transition: border-color 0.18s, box-shadow 0.18s; width: 100%;
 }
-.up-input:hover { border-color: #FCD34D; }
+.up-input:hover { border-color: #60A5FA; }
 .up-input:focus {
   outline: none;
-  border-color: #FCD34D;
+  border-color: #60A5FA;
   box-shadow: 0 0 0 4px rgba(252,211,77,0.45);
 }
 .up-input::placeholder { color: #4b5563; }
@@ -772,7 +772,7 @@ const deleteAccount = async () => {
 .up-input-static {
   display: flex; align-items: center; justify-content: space-between;
   padding: 0.75rem 1rem;
-  background: rgba(10,8,5,0.5); border: 1px solid rgba(217,119,6,0.1);
+  background: rgba(10,8,5,0.5); border: 1px solid rgba(59,130,246,0.1);
   border-radius: 0.625rem;
 }
 .up-input-static-val { font-size: 0.95rem; color: #9ca3af; }
@@ -782,24 +782,24 @@ const deleteAccount = async () => {
 
 .up-btn-save {
   padding: 0.7rem 1.75rem; border-radius: 0.625rem;
-  background: rgba(217,119,6,0.2); border: 1px solid rgba(217,119,6,0.45);
-  color: #FCD34D; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+  background: rgba(59,130,246,0.2); border: 1px solid rgba(59,130,246,0.45);
+  color: #60A5FA; font-size: 0.9rem; font-weight: 700; cursor: pointer;
   font-family: inherit; transition: all 0.18s; min-height: 44px;
   margin-top: 1rem;
 }
-.up-btn-save:hover { background: rgba(217,119,6,0.32); border-color: rgba(217,119,6,0.65); }
+.up-btn-save:hover { background: rgba(59,130,246,0.32); border-color: rgba(59,130,246,0.65); }
 .up-btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* API Key */
 .up-api-key-row { margin-bottom: 1rem; }
 .up-api-key-display {
   display: flex; align-items: center; gap: 8px;
-  background: rgba(10,8,5,0.9); border: 1px solid rgba(217,119,6,0.25);
+  background: rgba(10,8,5,0.9); border: 1px solid rgba(59,130,246,0.25);
   border-radius: 0.625rem; padding: 0.75rem 1rem;
 }
 .up-api-key-display code {
   flex: 1; font-family: 'Courier New', monospace;
-  font-size: 0.85rem; color: #FCD34D; word-break: break-all;
+  font-size: 0.85rem; color: #60A5FA; word-break: break-all;
 }
 .up-api-key-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .up-api-key-actions .up-hint { margin: 0; }
@@ -810,11 +810,11 @@ const deleteAccount = async () => {
   margin-bottom: 0;
 }
 .up-stat-card {
-  background: rgba(20,12,6,0.8); border: 1px solid rgba(217,119,6,0.15);
+  background: rgba(8,14,28,0.8); border: 1px solid rgba(59,130,246,0.15);
   border-radius: 1rem; padding: 1.25rem 1.5rem;
 }
 .up-stat-value {
-  font-size: 2rem; font-weight: 800; color: #FCD34D; line-height: 1;
+  font-size: 2rem; font-weight: 800; color: #60A5FA; line-height: 1;
   margin-bottom: 0.3rem; font-variant-numeric: tabular-nums;
 }
 .up-stat-label { font-size: 0.875rem; font-weight: 600; color: #e5e7eb; margin-bottom: 0.2rem; }
@@ -825,7 +825,7 @@ const deleteAccount = async () => {
 .up-activity-list { display: flex; flex-direction: column; }
 .up-activity-row {
   display: flex; align-items: flex-start; gap: 0.875rem;
-  padding: 0.75rem 0; border-bottom: 1px solid rgba(217,119,6,0.06);
+  padding: 0.75rem 0; border-bottom: 1px solid rgba(59,130,246,0.06);
 }
 .up-activity-row:last-child { border-bottom: none; }
 .up-activity-dot {
@@ -833,7 +833,7 @@ const deleteAccount = async () => {
   margin-top: 0.35rem;
 }
 .up-activity-dot.green { background: #00d97e; }
-.up-activity-dot.amber { background: #D97706; }
+.up-activity-dot.amber { background: #3B82F6; }
 .up-activity-dot.blue  { background: #60a5fa; }
 .up-activity-dot.red   { background: #ef4444; }
 .up-activity-dot.grey  { background: #4b5563; }
@@ -850,7 +850,7 @@ const deleteAccount = async () => {
 /* Toggles */
 .up-toggle-row {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-  padding: 1rem 0; border-bottom: 1px solid rgba(217,119,6,0.08);
+  padding: 1rem 0; border-bottom: 1px solid rgba(59,130,246,0.08);
 }
 .up-toggle-info { flex: 1; }
 .up-toggle-label { font-size: 0.875rem; font-weight: 600; color: #e5e7eb; margin-bottom: 0.25rem; }
@@ -869,16 +869,16 @@ const deleteAccount = async () => {
   content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px;
   background: #9ca3af; border-radius: 50%; transition: transform 0.2s, background 0.2s;
 }
-.up-toggle input:checked + .up-toggle-track { background: rgba(217,119,6,0.3); }
+.up-toggle input:checked + .up-toggle-track { background: rgba(59,130,246,0.3); }
 .up-toggle input:checked + .up-toggle-track::before {
-  transform: translateX(20px); background: #FCD34D;
+  transform: translateX(20px); background: #60A5FA;
 }
 
 /* API Keys tab */
-.up-key-banner { margin-bottom: 1.5rem; background: rgba(217,119,6,0.08); border: 1px solid rgba(217,119,6,0.3); border-radius: 1rem; padding: 1.25rem 1.5rem; }
-.up-key-banner-header { font-size: 0.9rem; color: #FCD34D; margin-bottom: 0.75rem; }
+.up-key-banner { margin-bottom: 1.5rem; background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.3); border-radius: 1rem; padding: 1.25rem 1.5rem; }
+.up-key-banner-header { font-size: 0.9rem; color: #60A5FA; margin-bottom: 0.75rem; }
 .up-key-banner-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-.up-key-code { font-family: monospace; font-size: 0.85rem; color: #e5e7eb; background: rgba(0,0,0,0.35); border: 1px solid rgba(217,119,6,0.2); border-radius: 0.5rem; padding: 0.55rem 0.85rem; word-break: break-all; flex: 1; }
+.up-key-code { font-family: monospace; font-size: 0.85rem; color: #e5e7eb; background: rgba(0,0,0,0.35); border: 1px solid rgba(59,130,246,0.2); border-radius: 0.5rem; padding: 0.55rem 0.85rem; word-break: break-all; flex: 1; }
 
 /* Danger Zone */
 .up-card-danger { border-color: rgba(239,68,68,0.2); }
@@ -915,7 +915,7 @@ const deleteAccount = async () => {
   background: none; border: none; padding: 4px; cursor: pointer;
   color: #9ca3af; transition: color 0.2s; flex-shrink: 0;
 }
-.btn-icon:hover { color: #FCD34D; }
+.btn-icon:hover { color: #60A5FA; }
 
 /* Responsive */
 @media (max-width: 900px) {
