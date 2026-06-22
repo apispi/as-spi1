@@ -412,8 +412,8 @@ const formatJson = (str) => {
 }
 
 .tester-container {
-  background: var(--panel-bg);
-  border: 1px solid var(--border-color);
+  background: rgba(88, 166, 255, 0.08);
+  border: 1px solid rgba(88, 166, 255, 0.3);
   border-radius: 12px;
   padding: 24px;
 }
