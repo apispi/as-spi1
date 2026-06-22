@@ -1,154 +1,409 @@
+<!-- Copyright © 2026 ApiSpi -->
 <template>
-  <div class="profile-page">
-    <div class="profile-container">
-      <div class="profile-header">
-        <div class="avatar-large">
-          {{ userInitials }}
-        </div>
-        <div class="profile-info">
-          <h1>{{ authStore.user?.name || 'User' }}</h1>
-          <p class="email">{{ authStore.user?.email }}</p>
-          <span class="member-since">Member since {{ formatDate(authStore.user?.created_at) }}</span>
-        </div>
+  <div class="up-shell" :class="{ 'sidebar-open': sidebarOpen, 'is-mobile': isMobile }">
+
+    <div class="up-overlay" @click="sidebarOpen = false"></div>
+
+    <aside class="up-sidebar">
+      <div class="up-sidebar-header">
+        <a href="/" class="up-logo">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 27" class="up-logo-icon">
+            <defs>
+              <linearGradient id="uplg" x1=".5" y1="0" x2=".5" y2="1">
+                <stop offset="0%" stop-color="#FCD34D"/>
+                <stop offset="100%" stop-color="#D97706"/>
+              </linearGradient>
+            </defs>
+            <path d="M12,0.5 L13.4,3.3 L16,4.5 L13.4,5.7 L12,8.5 L10.6,5.7 L8,4.5 L10.6,3.3 Z" fill="url(#uplg)"/>
+            <path d="M12,8.5 L24,26 L20,26 L15.5,18 L8.5,18 L4,26 L0,26 Z" fill="url(#uplg)"/>
+          </svg>
+          <span>ApiSpi</span>
+        </a>
+        <button class="up-sidebar-close" @click="sidebarOpen = false" aria-label="Close menu">✕</button>
       </div>
 
-      <div class="profile-sections">
-        <!-- Account Settings -->
-        <div class="profile-section">
-          <h2>Account Settings</h2>
-          <div class="settings-card">
-            <div class="setting-row">
-              <div class="setting-info">
-                <label>Full Name</label>
-                <input v-model="form.name" type="text" class="setting-input" />
-              </div>
-              <button @click="updateProfile" class="btn btn-primary btn-sm" :disabled="saving">
-                {{ saving ? 'Saving...' : 'Update' }}
-              </button>
-            </div>
-            <div class="setting-row">
-              <div class="setting-info">
-                <label>Email Address</label>
-                <input v-model="form.email" type="email" class="setting-input" disabled />
-                <span class="setting-hint">Email cannot be changed</span>
-              </div>
-            </div>
+      <nav class="up-nav">
+        <span class="up-nav-label">Navigation</span>
+        <a href="/" class="up-nav-link">
+          <span class="up-nav-icon">⬡</span> Home
+        </a>
+        <a href="/profile" class="up-nav-link">
+          <span class="up-nav-icon">◈</span> Profile
+        </a>
+      </nav>
+
+      <div class="up-sidebar-footer">
+        <div class="up-user-row up-user-row-active">
+          <div v-if="authStore.user?.avatar" class="up-avatar">
+            <img :src="authStore.user.avatar" :alt="authStore.user.name" class="up-avatar-photo" referrerpolicy="no-referrer">
+          </div>
+          <div v-else class="up-avatar">{{ userInitial }}</div>
+          <div class="up-user-text">
+            <div class="up-user-name">{{ authStore.user?.name || 'User' }}</div>
+            <div class="up-user-email">{{ authStore.user?.email }}</div>
+          </div>
+        </div>
+        <button @click="handleLogout" class="up-signout">⏻ Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="up-main">
+      <header class="up-topbar">
+        <div class="up-topbar-left">
+          <a href="/" class="up-topbar-logo">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 27" class="up-logo-icon">
+              <defs>
+                <linearGradient id="uplg2" x1=".5" y1="0" x2=".5" y2="1">
+                  <stop offset="0%" stop-color="#FCD34D"/>
+                  <stop offset="100%" stop-color="#D97706"/>
+                </linearGradient>
+              </defs>
+              <path d="M12,0.5 L13.4,3.3 L16,4.5 L13.4,5.7 L12,8.5 L10.6,5.7 L8,4.5 L10.6,3.3 Z" fill="url(#uplg2)"/>
+              <path d="M12,8.5 L24,26 L20,26 L15.5,18 L8.5,18 L4,26 L0,26 Z" fill="url(#uplg2)"/>
+            </svg>
+            <span>ApiSpi</span>
+          </a>
+          <button class="up-menu-btn" @click="sidebarOpen = true" aria-label="Open menu">
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+        <div class="up-topbar-right">
+          <div v-if="authStore.user?.avatar" class="up-avatar up-avatar-sm">
+            <img :src="authStore.user.avatar" :alt="authStore.user.name" class="up-avatar-photo" referrerpolicy="no-referrer">
+          </div>
+          <div v-else class="up-avatar up-avatar-sm">{{ userInitial }}</div>
+        </div>
+      </header>
+
+      <main class="up-content">
+
+        <!-- Flash messages -->
+        <div v-if="flashSuccess" class="up-flash success">✓ {{ flashSuccess }}</div>
+        <div v-if="flashError" class="up-flash error">{{ flashError }}</div>
+
+        <!-- Profile hero -->
+        <div class="up-hero">
+          <div v-if="authStore.user?.avatar" class="up-hero-avatar">
+            <img :src="authStore.user.avatar" :alt="authStore.user.name" class="up-hero-photo" referrerpolicy="no-referrer">
+          </div>
+          <div v-else class="up-hero-avatar">{{ userInitial }}</div>
+          <div class="up-hero-info">
+            <div class="up-hero-name">{{ authStore.user?.name || 'User' }}</div>
+            <div class="up-hero-email">{{ authStore.user?.email }}</div>
+            <div class="up-hero-date">Member since {{ formatMemberSince(authStore.user?.created_at) }}</div>
           </div>
         </div>
 
-        <!-- API Keys -->
-        <div class="profile-section">
-          <h2>API Keys</h2>
-          <div class="settings-card">
-            <div class="api-key-row">
-              <div class="api-key-info">
-                <label>Your API Key</label>
-                <div class="api-key-display">
-                  <code>{{ apiKey || 'Generating...' }}</code>
-                  <button @click="copyApiKey" class="btn btn-icon" :title="copied ? 'Copied!' : 'Copy'">
-                    <svg v-if="!copied" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    </svg>
-                    <svg v-else viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
-                  </button>
+        <!-- Tabs -->
+        <div class="up-tabs">
+          <button :class="['up-tab', { active: activeTab === 'account' }]" @click="activeTab = 'account'">Account</button>
+          <button :class="['up-tab', { active: activeTab === 'api-keys' }]" @click="activeTab = 'api-keys'">API Keys</button>
+          <button :class="['up-tab', { active: activeTab === 'usage' }]" @click="activeTab = 'usage'">Usage</button>
+          <button :class="['up-tab', { active: activeTab === 'settings' }]" @click="activeTab = 'settings'">Settings</button>
+          <button :class="['up-tab', { active: activeTab === 'danger' }]" @click="activeTab = 'danger'">Danger Zone</button>
+        </div>
+
+        <!-- ── Account tab ── -->
+        <template v-if="activeTab === 'account'">
+          <div class="up-card">
+            <div class="up-card-header">
+              <h2 class="up-card-title">Account Details</h2>
+              <p class="up-card-sub">Update your display name</p>
+            </div>
+            <form @submit.prevent="updateProfile">
+              <div class="up-form-group">
+                <label class="up-label" for="profile-name">Full Name</label>
+                <input id="profile-name" type="text" v-model="form.name" required
+                       class="up-input" placeholder="Your full name">
+              </div>
+              <div class="up-form-group">
+                <label class="up-label">Email Address</label>
+                <div class="up-input-static">
+                  <span class="up-input-static-val">{{ authStore.user?.email }}</span>
+                  <span class="up-input-lock">🔒 Read only</span>
+                </div>
+                <p class="up-hint">Email cannot be changed. Contact support if needed.</p>
+              </div>
+              <div class="up-form-footer">
+                <button type="submit" class="up-btn-save" :disabled="saving">
+                  {{ saving ? 'Saving...' : 'Save Changes' }}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="up-card">
+            <div class="up-card-header">
+              <h2 class="up-card-title">Change Password</h2>
+              <p class="up-card-sub">Choose a strong password of at least 8 characters</p>
+            </div>
+            <form @submit.prevent="updatePassword">
+              <div class="up-form-group">
+                <label class="up-label" for="current-password">Current Password</label>
+                <input id="current-password" type="password" v-model="passwordForm.current_password" required
+                       class="up-input" placeholder="Enter your current password">
+              </div>
+              <div class="up-form-row">
+                <div class="up-form-group">
+                  <label class="up-label" for="new-password">New Password</label>
+                  <input id="new-password" type="password" v-model="passwordForm.password" required minlength="8"
+                         class="up-input" placeholder="Min. 8 characters">
+                </div>
+                <div class="up-form-group">
+                  <label class="up-label" for="confirm-password">Confirm New Password</label>
+                  <input id="confirm-password" type="password" v-model="passwordForm.password_confirmation" required
+                         class="up-input" placeholder="Repeat new password">
+                </div>
+              </div>
+              <div class="up-form-footer">
+                <button type="submit" class="up-btn-save" :disabled="changingPassword">
+                  {{ changingPassword ? 'Updating...' : 'Update Password' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </template>
+
+        <!-- ── API Keys tab ── -->
+        <template v-else-if="activeTab === 'api-keys'">
+          <div v-if="newKey && showKeyBanner" class="up-key-banner">
+            <div class="up-key-banner-header">
+              <strong>{{ newKeyName }}</strong> — copy this key now. It won't be shown again.
+            </div>
+            <div class="up-key-banner-row">
+              <code class="up-key-code">{{ newKey }}</code>
+              <button type="button" class="up-btn-save" @click="copyNewKey">{{ copiedKey ? 'Copied!' : 'Copy' }}</button>
+            </div>
+          </div>
+
+          <div class="up-card">
+            <div class="up-card-header">
+              <h2 class="up-card-title">Your API Key</h2>
+              <p class="up-card-sub">Use this key to authenticate your API requests</p>
+            </div>
+            <div class="up-api-key-row">
+              <div class="up-api-key-display">
+                <code>{{ apiKey || 'Generating...' }}</code>
+                <button @click="copyApiKey" class="btn btn-icon" :title="copied ? 'Copied!' : 'Copy'">
+                  <svg v-if="!copied" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <svg v-else viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="up-api-key-actions">
+              <button @click="regenerateApiKey" class="up-btn-save" :disabled="regenerating">
+                {{ regenerating ? 'Regenerating...' : 'Regenerate Key' }}
+              </button>
+              <p class="up-hint">Regenerating will invalidate your old key</p>
+            </div>
+          </div>
+        </template>
+
+        <!-- ── Usage tab ── -->
+        <template v-else-if="activeTab === 'usage'">
+          <div class="up-stats-grid">
+            <div class="up-stat-card">
+              <div class="up-stat-value">{{ stats.requests || 0 }}</div>
+              <div class="up-stat-label">API Requests</div>
+              <div class="up-stat-sub">All time</div>
+            </div>
+            <div class="up-stat-card">
+              <div class="up-stat-value">{{ stats.saved || 0 }}</div>
+              <div class="up-stat-label">Saved Requests</div>
+              <div class="up-stat-sub">Your saved work</div>
+            </div>
+            <div class="up-stat-card">
+              <div class="up-stat-value">{{ formatBytes(stats.bandwidth || 0) }}</div>
+              <div class="up-stat-label">Data Transferred</div>
+              <div class="up-stat-sub">Total bandwidth</div>
+            </div>
+            <div class="up-stat-card">
+              <div class="up-stat-value">{{ stats.active_days || 0 }}</div>
+              <div class="up-stat-label">Active Days</div>
+              <div class="up-stat-sub">This month</div>
+            </div>
+          </div>
+
+          <div class="up-card" style="margin-top: 1.5rem">
+            <div class="up-card-header">
+              <h2 class="up-card-title">Recent Activity</h2>
+              <p class="up-card-sub">Your last 10 actions</p>
+            </div>
+            <div v-if="!recentActivity.length" class="up-empty">No activity recorded yet.</div>
+            <div v-else class="up-activity-list">
+              <div v-for="(item, i) in recentActivity" :key="i" class="up-activity-row">
+                <div class="up-activity-dot" :class="activityColor(item.action)"></div>
+                <div class="up-activity-body">
+                  <div class="up-activity-desc">{{ item.description }}</div>
+                  <div class="up-activity-meta">
+                    <span class="up-activity-action">{{ item.action }}</span>
+                    <span class="up-activity-time">{{ formatActivityDate(item.created_at) }}</span>
+                  </div>
                 </div>
               </div>
             </div>
-            <div class="setting-row">
-              <button @click="regenerateApiKey" class="btn btn-secondary btn-sm">
-                Regenerate Key
-              </button>
-              <span class="setting-hint">Regenerating will invalidate your old key</span>
-            </div>
           </div>
-        </div>
+        </template>
 
-        <!-- Stats -->
-        <div class="profile-section">
-          <h2>Usage Statistics</h2>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-value">{{ stats.requests || 0 }}</div>
-              <div class="stat-label">API Requests</div>
+        <!-- ── Settings tab ── -->
+        <template v-else-if="activeTab === 'settings'">
+          <div class="up-card">
+            <div class="up-card-header">
+              <h2 class="up-card-title">Notification Settings</h2>
+              <p class="up-card-sub">Choose which emails you receive from ApiSpi</p>
             </div>
-            <div class="stat-card">
-              <div class="stat-value">{{ stats.saved || 0 }}</div>
-              <div class="stat-label">Saved Requests</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value">{{ formatBytes(stats.bandwidth || 0) }}</div>
-              <div class="stat-label">Data Transferred</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Danger Zone -->
-        <div class="profile-section danger-zone">
-          <h2>Danger Zone</h2>
-          <div class="settings-card">
-            <div class="setting-row">
-              <div class="setting-info">
-                <label>Delete Account</label>
-                <span class="setting-hint">Permanently delete your account and all data</span>
+            <form @submit.prevent="updateNotifications">
+              <div class="up-toggle-row">
+                <div class="up-toggle-info">
+                  <div class="up-toggle-label">Subscription updates</div>
+                  <div class="up-toggle-desc">Agent status changes, renewals, and expiry notices</div>
+                </div>
+                <label class="up-toggle">
+                  <input type="checkbox" v-model="notificationsForm.subscription_updates">
+                  <span class="up-toggle-track"><span class="up-toggle-thumb"></span></span>
+                </label>
               </div>
-              <button @click="confirmDelete" class="btn btn-danger btn-sm">
+
+              <div class="up-toggle-row">
+                <div class="up-toggle-info">
+                  <div class="up-toggle-label">New features & announcements</div>
+                  <div class="up-toggle-desc">Product updates, new agents, and platform news</div>
+                </div>
+                <label class="up-toggle">
+                  <input type="checkbox" v-model="notificationsForm.new_features">
+                  <span class="up-toggle-track"><span class="up-toggle-thumb"></span></span>
+                </label>
+              </div>
+
+              <div class="up-toggle-row" style="border-bottom: none">
+                <div class="up-toggle-info">
+                  <div class="up-toggle-label">Tips & best practices</div>
+                  <div class="up-toggle-desc">Occasional guides on getting more from your agents</div>
+                </div>
+                <label class="up-toggle">
+                  <input type="checkbox" v-model="notificationsForm.tips">
+                  <span class="up-toggle-track"><span class="up-toggle-thumb"></span></span>
+                </label>
+              </div>
+
+              <div class="up-form-footer">
+                <button type="submit" class="up-btn-save" :disabled="savingNotifications">
+                  {{ savingNotifications ? 'Saving...' : 'Save Settings' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </template>
+
+        <!-- ── Danger Zone tab ── -->
+        <template v-else-if="activeTab === 'danger'">
+          <div class="up-card up-card-danger">
+            <div class="up-card-header">
+              <h2 class="up-card-title up-danger-title">Danger Zone</h2>
+              <p class="up-card-sub">Irreversible actions — proceed with caution</p>
+            </div>
+            <div class="up-danger-row">
+              <div class="up-danger-info">
+                <div class="up-danger-label">Delete account</div>
+                <div class="up-danger-desc">Permanently remove your account and all associated data. This cannot be undone.</div>
+              </div>
+              <button type="button" class="up-btn-danger" @click="showDeleteConfirm = !showDeleteConfirm">
                 Delete Account
               </button>
             </div>
+            <div v-if="showDeleteConfirm" class="up-delete-confirm">
+              <p class="up-delete-warning">Type <strong>DELETE</strong> below to confirm account deletion.</p>
+              <div class="up-delete-row">
+                <input type="text" v-model="deleteConfirmText"
+                       class="up-input" placeholder="Type DELETE to confirm" autocomplete="off">
+                <button type="button" class="up-btn-danger-confirm"
+                        :disabled="deleteConfirmText !== 'DELETE'" @click="deleteAccount">
+                  Confirm Delete
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </template>
+
+      </main>
     </div>
 
-    <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
-      <div class="modal-content">
-        <h3>Delete Account</h3>
-        <p>Are you sure you want to delete your account? This action cannot be undone.</p>
-        <div class="modal-actions">
-          <button @click="showDeleteModal = false" class="btn btn-secondary">Cancel</button>
-          <button @click="deleteAccount" class="btn btn-danger" :disabled="deleting">
-            {{ deleting ? 'Deleting...' : 'Delete Forever' }}
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '../store/auth';
 import axios from 'axios';
 
 const authStore = useAuthStore();
 
-const form = ref({
-  name: '',
-  email: ''
+const sidebarOpen = ref(false);
+const isMobile = ref(false);
+let mobileMql = null;
+
+function handleMobileChange(e) { isMobile.value = e.matches; }
+
+onMounted(() => {
+  mobileMql = window.matchMedia('(max-width: 768px)');
+  isMobile.value = mobileMql.matches;
+  mobileMql.addEventListener('change', handleMobileChange);
+  
+  form.name = authStore.user?.name || '';
+  loadApiKey();
+  loadStats();
+  loadRecentActivity();
 });
 
-const saving = ref(false);
-const apiKey = ref('');
-const copied = ref(false);
-const stats = ref({});
-const showDeleteModal = ref(false);
-const deleting = ref(false);
+onUnmounted(() => mobileMql?.removeEventListener('change', handleMobileChange));
 
-const userInitials = computed(() => {
+const userInitial = computed(() => {
   const name = authStore.user?.name || 'U';
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 });
 
-onMounted(() => {
-  form.value.name = authStore.user?.name || '';
-  form.value.email = authStore.user?.email || '';
-  loadApiKey();
-  loadStats();
+const VALID_TABS = ['account', 'api-keys', 'usage', 'settings', 'danger'];
+
+const activeTab = ref('account');
+const flashSuccess = ref('');
+const flashError = ref('');
+
+const form = reactive({ name: '' });
+const passwordForm = reactive({
+  current_password: '',
+  password: '',
+  password_confirmation: ''
 });
+const saving = ref(false);
+const changingPassword = ref(false);
+
+const apiKey = ref('');
+const copied = ref(false);
+const regenerating = ref(false);
+const newKey = ref('');
+const newKeyName = ref('');
+const showKeyBanner = ref(false);
+const copiedKey = ref(false);
+
+const stats = ref({});
+const recentActivity = ref([]);
+
+const notificationsForm = reactive({
+  subscription_updates: true,
+  new_features: true,
+  tips: false
+});
+const savingNotifications = ref(false);
+
+const showDeleteConfirm = ref(false);
+const deleteConfirmText = ref('');
+const deleting = ref(false);
 
 const loadApiKey = async () => {
   try {
@@ -164,21 +419,52 @@ const loadStats = async () => {
     const res = await axios.get('/api/user/stats');
     stats.value = res.data;
   } catch (error) {
-    stats.value = { requests: 0, saved: 0, bandwidth: 0 };
+    stats.value = { requests: 0, saved: 0, bandwidth: 0, active_days: 0 };
+  }
+};
+
+const loadRecentActivity = async () => {
+  try {
+    const res = await axios.get('/api/user/activity');
+    recentActivity.value = res.data || [];
+  } catch (error) {
+    recentActivity.value = [];
   }
 };
 
 const updateProfile = async () => {
   saving.value = true;
+  flashSuccess.value = '';
+  flashError.value = '';
   try {
-    const res = await axios.put('/api/user/profile', {
-      name: form.value.name
-    });
+    const res = await axios.put('/api/user/profile', { name: form.name });
     authStore.user.name = res.data.name;
+    flashSuccess.value = 'Profile updated successfully';
   } catch (error) {
-    console.error('Failed to update profile');
+    flashError.value = 'Failed to update profile. Please try again.';
   } finally {
     saving.value = false;
+  }
+};
+
+const updatePassword = async () => {
+  if (passwordForm.password !== passwordForm.password_confirmation) {
+    flashError.value = 'Passwords do not match';
+    return;
+  }
+  changingPassword.value = true;
+  flashSuccess.value = '';
+  flashError.value = '';
+  try {
+    await axios.put('/api/user/password', passwordForm);
+    passwordForm.current_password = '';
+    passwordForm.password = '';
+    passwordForm.password_confirmation = '';
+    flashSuccess.value = 'Password updated successfully';
+  } catch (error) {
+    flashError.value = error.response?.data?.message || 'Failed to update password';
+  } finally {
+    changingPassword.value = false;
   }
 };
 
@@ -192,22 +478,48 @@ const copyApiKey = async () => {
   }
 };
 
-const regenerateApiKey = async () => {
-  if (!confirm('Are you sure? Your old API key will stop working.')) return;
+const copyNewKey = async () => {
   try {
-    const res = await axios.post('/api/user/api-key/regenerate');
-    apiKey.value = res.data.api_key;
+    await navigator.clipboard.writeText(newKey.value);
+    copiedKey.value = true;
+    setTimeout(() => { copiedKey.value = false; }, 1500);
   } catch (error) {
-    console.error('Failed to regenerate key');
+    console.error('Failed to copy');
   }
 };
 
-const formatDate = (date) => {
-  if (!date) return 'Unknown';
-  return new Date(date).toLocaleDateString('en-US', { 
-    month: 'long', 
-    year: 'numeric' 
-  });
+const regenerateApiKey = async () => {
+  if (!confirm('Are you sure? Your old API key will stop working.')) return;
+  regenerating.value = true;
+  try {
+    const res = await axios.post('/api/user/api-key/regenerate');
+    apiKey.value = res.data.api_key;
+    newKey.value = res.data.api_key;
+    newKeyName.value = 'API Key';
+    showKeyBanner.value = true;
+  } catch (error) {
+    flashError.value = 'Failed to regenerate key';
+  } finally {
+    regenerating.value = false;
+  }
+};
+
+const updateNotifications = async () => {
+  savingNotifications.value = true;
+  flashSuccess.value = '';
+  flashError.value = '';
+  try {
+    await axios.put('/api/user/notifications', {
+      subscription_updates: notificationsForm.subscription_updates,
+      new_features: notificationsForm.new_features,
+      tips: notificationsForm.tips
+    });
+    flashSuccess.value = 'Notification settings saved';
+  } catch (error) {
+    flashError.value = 'Failed to save settings';
+  } finally {
+    savingNotifications.value = false;
+  }
 };
 
 const formatBytes = (bytes) => {
@@ -218,403 +530,407 @@ const formatBytes = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
 
-const confirmDelete = () => {
-  showDeleteModal.value = true;
+const formatMemberSince = (d) => {
+  if (!d) return 'Unknown';
+  return new Date(d).toLocaleDateString('en-AU', { month: 'short', year: 'numeric' });
+};
+
+const formatActivityDate = (d) => {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+
+const activityColorMap = {
+  login: 'green',
+  logout: 'grey',
+  register: 'amber',
+  'password.change': 'amber',
+  'profile.update': 'amber',
+};
+
+function activityColor(action) {
+  return activityColorMap[action] ?? 'grey';
+}
+
+const handleLogout = async () => {
+  try {
+    await axios.post('/logout');
+    await authStore.logout();
+    window.location.href = '/';
+  } catch (error) {
+    window.location.href = '/';
+  }
 };
 
 const deleteAccount = async () => {
+  if (deleteConfirmText.value !== 'DELETE') return;
   deleting.value = true;
   try {
     await axios.delete('/api/user/account');
     await authStore.logout();
     window.location.href = '/';
   } catch (error) {
-    console.error('Failed to delete account');
+    flashError.value = 'Failed to delete account';
     deleting.value = false;
   }
 };
 </script>
 
 <style scoped>
-.profile-page {
-  padding: 24px;
-  min-height: calc(100vh - 60px);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+.up-shell {
+  display: flex; min-height: 100vh; background: #0a0805;
+  font-family: 'Instrument Sans', system-ui, sans-serif;
 }
 
-.profile-container {
-  background: var(--panel-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  overflow: hidden;
-  width: 100%;
-  max-width: 800px;
+/* Sidebar */
+.up-sidebar {
+  width: 240px; flex-shrink: 0;
+  background: rgba(14,8,4,0.95);
+  border-right: 1px solid rgba(217,119,6,0.1);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; height: 100vh; z-index: 40;
+  transition: transform 0.25s ease;
+}
+.up-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 39;
 }
 
-.profile-header {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 24px;
-  background: linear-gradient(180deg, rgba(88, 166, 255, 0.08) 0%, var(--panel-bg) 100%);
-  border-bottom: 1px solid var(--border-color);
+.up-sidebar-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.25rem 1rem 1rem; border-bottom: 1px solid rgba(217,119,6,0.08);
+}
+.up-logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; }
+.up-logo-icon { width: 22px; height: 25px; }
+.up-logo span { font-size: 1.1rem; font-weight: 700; color: #FCD34D; letter-spacing: -0.01em; }
+.up-sidebar-close {
+  display: none; background: none; border: none; color: #6b7280;
+  font-size: 1rem; cursor: pointer; padding: 0.25rem;
 }
 
-.avatar-large {
-  width: 72px;
-  height: 72px;
-  background: var(--accent-color);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 24px;
-  font-weight: 600;
-  flex-shrink: 0;
+.up-nav {
+  flex: 1; padding: 1rem 0.625rem; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 0.125rem;
 }
-
-.profile-info h1 {
-  font-size: 22px;
-  font-weight: 600;
-  margin: 0 0 4px 0;
+.up-nav-label {
+  font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.1em; color: #4b5563;
+  padding: 0.75rem 0.5rem 0.25rem; display: block;
 }
-
-.email {
-  color: var(--text-secondary);
-  margin: 0 0 6px 0;
-  font-size: 14px;
+.up-nav-link {
+  display: flex; align-items: center; gap: 0.625rem;
+  padding: 0.5rem 0.75rem; border-radius: 0.5rem;
+  color: #9ca3af; font-size: 0.875rem; font-weight: 500; text-decoration: none;
+  transition: all 0.15s;
 }
+.up-nav-link:hover { background: rgba(217,119,6,0.06); color: #FCD34D; }
+.up-nav-link.active { background: rgba(217,119,6,0.1); color: #FCD34D; }
+.up-nav-icon { font-size: 0.9rem; width: 18px; text-align: center; flex-shrink: 0; }
 
-.member-since {
-  font-size: 12px;
-  color: var(--text-secondary);
+.up-sidebar-footer {
+  padding: 0.875rem; border-top: 1px solid rgba(217,119,6,0.08);
+  display: flex; flex-direction: column; gap: 0.5rem;
 }
-
-.profile-sections {
-  padding: 20px 24px 24px;
-}
-
-.profile-section {
-  margin-bottom: 24px;
-}
-
-.profile-section:last-child {
-  margin-bottom: 0;
-}
-
-.profile-section h2 {
-  font-size: 14px;
-  font-weight: 600;
-  margin: 0 0 12px 0;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.settings-card {
-  background: var(--bg-color);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 16px;
-}
-
-.setting-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 0;
-}
-
-.setting-row:first-child {
-  padding-top: 0;
-}
-
-.setting-row:not(:last-child) {
-  border-bottom: 1px solid var(--border-color);
-}
-
-.setting-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.setting-info label {
-  display: block;
-  font-size: 14px;
-  font-weight: 500;
-  margin-bottom: 6px;
-}
-
-.setting-input {
-  width: 100%;
-  padding: 10px 12px;
-  background: var(--panel-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 14px;
-  color: var(--text-primary);
-  transition: all 0.2s;
-  box-sizing: border-box;
-}
-
-.setting-input:focus {
-  outline: none;
-  border-color: var(--accent-color);
-  border-width: 2px;
-}
-
-.setting-input:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.setting-hint {
-  display: block;
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-top: 4px;
-}
-
-.api-key-row {
-  padding-bottom: 12px;
-  margin-bottom: 8px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.api-key-display {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--panel-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-
-.api-key-display code {
-  flex: 1;
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-  color: var(--accent-color);
-  word-break: break-all;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.btn-icon {
-  background: none;
-  border: none;
-  padding: 4px;
+.up-user-row {
+  display: flex; align-items: center; gap: 0.625rem;
+  padding: 0.5rem 0.625rem; border-radius: 0.5rem;
+  text-decoration: none; color: inherit;
+  transition: background 0.15s;
   cursor: pointer;
-  color: var(--text-secondary);
-  transition: color 0.2s;
-  flex-shrink: 0;
+}
+.up-user-row:hover { background: rgba(217,119,6,0.06); }
+.up-user-row-active { background: rgba(217,119,6,0.1); border: 1px solid rgba(217,119,6,0.2); }
+.up-user-row-active:hover { background: rgba(217,119,6,0.15); }
+.up-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, #D97706, #FCD34D);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; font-weight: 700; color: #0a0805; flex-shrink: 0;
+}
+.up-avatar-sm { width: 28px; height: 28px; font-size: 0.72rem; }
+.up-avatar-photo { object-fit: cover; background: none; width: 100%; height: 100%; border-radius: 50%; }
+.up-user-text { overflow: hidden; }
+.up-user-name { font-size: 0.8rem; font-weight: 600; color: #e5e7eb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.up-user-email { font-size: 0.7rem; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.up-signout {
+  width: 100%; padding: 0.5rem; border-radius: 0.4rem;
+  background: none; border: 1px solid rgba(217,119,6,0.12);
+  color: #6b7280; font-size: 0.78rem; cursor: pointer; font-family: inherit;
+  transition: all 0.15s; text-align: center; min-height: 36px;
+}
+.up-signout:hover { border-color: rgba(217,119,6,0.3); color: #9ca3af; }
+
+/* Main */
+.up-main { flex: 1; margin-left: 240px; display: flex; flex-direction: column; min-height: 100vh; }
+
+.up-topbar {
+  display: none; align-items: center; justify-content: space-between;
+  padding: 0.75rem 1rem; border-bottom: 1px solid rgba(217,119,6,0.08);
+  background: rgba(14,8,4,0.9); position: sticky; top: 0; z-index: 30;
+}
+.up-menu-btn {
+  display: flex; flex-direction: column; gap: 4px;
+  background: none; border: none; cursor: pointer; padding: 4px;
+}
+.up-menu-btn span { display: block; width: 20px; height: 2px; background: #9ca3af; border-radius: 1px; }
+.up-topbar-left { display: flex; align-items: center; gap: 1rem; }
+.up-topbar-logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; }
+.up-topbar-logo span { font-size: 1rem; font-weight: 700; color: #FCD34D; }
+.up-topbar-right { display: flex; align-items: center; gap: 0.75rem; }
+
+/* Mobile layout */
+.is-mobile .up-sidebar { transform: translateX(-100%); }
+.is-mobile.sidebar-open .up-sidebar { transform: translateX(0); }
+.is-mobile.sidebar-open .up-overlay { display: block; }
+.is-mobile .up-sidebar-close { display: block; }
+.is-mobile .up-main { margin-left: 0; }
+.is-mobile .up-topbar { display: flex; }
+
+.up-content { padding: 2rem 2.5rem; max-width: none; }
+
+/* Hero */
+.up-hero {
+  display: flex; align-items: center; gap: 1.25rem;
+  background: rgba(28,18,8,0.8); border: 1px solid rgba(217,119,6,0.2);
+  border-radius: 1.25rem; padding: 1.5rem 1.75rem; margin-bottom: 2rem;
+}
+.up-hero-avatar {
+  width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, #D97706, #FCD34D);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem; font-weight: 800; color: #0a0805;
+  border: 2px solid rgba(217,119,6,0.4);
+  overflow: hidden;
+}
+.up-hero-photo {
+  width: 100%; height: 100%; object-fit: cover;
+}
+.up-hero-info { min-width: 0; }
+.up-hero-name  { font-size: 1.25rem; font-weight: 700; color: #f1f5f9; margin-bottom: 0.25rem; }
+.up-hero-email { font-size: 0.875rem; color: #9ca3af; }
+.up-hero-date { font-size: 0.8rem; color: #6b7280; margin-top: 0.25rem; }
+
+/* Tabs */
+.up-tabs {
+  display: flex; gap: 0.35rem; row-gap: 0.5rem; margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+.up-tab {
+  padding: 0.55rem 1.1rem; border-radius: 0.5rem;
+  border: 1px solid rgba(217,119,6,0.18);
+  background: rgba(217,119,6,0.04); cursor: pointer;
+  font-family: inherit; font-size: 0.82rem; font-weight: 600;
+  color: #6b7280; transition: all 0.15s;
+  display: flex; align-items: center; gap: 0.4rem;
+  white-space: nowrap; flex-shrink: 0;
+}
+.up-tab:hover { color: #d1d5db; background: rgba(217,119,6,0.1); border-color: rgba(217,119,6,0.35); }
+.up-tab.active {
+  background: rgba(28,24,16,0.7); color: #FCD34D;
+  border-color: rgba(217,119,6,0.45);
 }
 
-.btn-icon:hover {
-  color: var(--accent-color);
+/* Flash */
+.up-flash {
+  padding: 0.75rem 1rem; border-radius: 0.625rem;
+  font-size: 0.875rem; margin-bottom: 1.5rem; font-weight: 500;
 }
+.up-flash.success { background: rgba(0,217,126,0.08); border: 1px solid rgba(0,217,126,0.3); color: #00d97e; }
+.up-flash.error   { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; }
+
+/* Cards */
+.up-card {
+  background: rgba(20,12,6,0.8); border: 1px solid rgba(217,119,6,0.15);
+  border-radius: 1.25rem; padding: 1.75rem; margin-bottom: 1.5rem;
+}
+.up-card-header { margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(217,119,6,0.1); }
+.up-card-title { font-size: 1.05rem; font-weight: 700; color: #f1f5f9; margin-bottom: 0.25rem; }
+.up-card-sub   { font-size: 0.82rem; color: #6b7280; }
+
+/* Form */
+.up-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.up-form-group { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.25rem; }
+.up-form-footer { padding-top: 0.5rem; border-top: 1px solid rgba(217,119,6,0.08); margin-top: 0.25rem; }
+
+.up-label { font-size: 0.8rem; font-weight: 700; color: #d1d5db; letter-spacing: 0.02em; text-transform: uppercase; }
+
+.up-input {
+  padding: 0.75rem 1rem;
+  background: rgba(10,8,5,0.9); border: 1px solid rgba(217,119,6,0.25);
+  border-radius: 0.625rem; color: #f1f5f9; font-size: 0.95rem; font-family: inherit;
+  transition: border-color 0.18s, box-shadow 0.18s; width: 100%;
+}
+.up-input:hover { border-color: #FCD34D; }
+.up-input:focus {
+  outline: none;
+  border-color: #FCD34D;
+  box-shadow: 0 0 0 4px rgba(252,211,77,0.45);
+}
+.up-input::placeholder { color: #4b5563; }
+
+.up-input-static {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: rgba(10,8,5,0.5); border: 1px solid rgba(217,119,6,0.1);
+  border-radius: 0.625rem;
+}
+.up-input-static-val { font-size: 0.95rem; color: #9ca3af; }
+.up-input-lock { font-size: 0.72rem; color: #4b5563; flex-shrink: 0; }
+
+.up-hint { font-size: 0.76rem; color: #4b5563; }
+
+.up-btn-save {
+  padding: 0.7rem 1.75rem; border-radius: 0.625rem;
+  background: rgba(217,119,6,0.2); border: 1px solid rgba(217,119,6,0.45);
+  color: #FCD34D; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: all 0.18s; min-height: 44px;
+  margin-top: 1rem;
+}
+.up-btn-save:hover { background: rgba(217,119,6,0.32); border-color: rgba(217,119,6,0.65); }
+.up-btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* API Key */
+.up-api-key-row { margin-bottom: 1rem; }
+.up-api-key-display {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(10,8,5,0.9); border: 1px solid rgba(217,119,6,0.25);
+  border-radius: 0.625rem; padding: 0.75rem 1rem;
+}
+.up-api-key-display code {
+  flex: 1; font-family: 'Courier New', monospace;
+  font-size: 0.85rem; color: #FCD34D; word-break: break-all;
+}
+.up-api-key-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.up-api-key-actions .up-hint { margin: 0; }
 
 /* Stats Grid */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+.up-stats-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+  margin-bottom: 0;
+}
+.up-stat-card {
+  background: rgba(20,12,6,0.8); border: 1px solid rgba(217,119,6,0.15);
+  border-radius: 1rem; padding: 1.25rem 1.5rem;
+}
+.up-stat-value {
+  font-size: 2rem; font-weight: 800; color: #FCD34D; line-height: 1;
+  margin-bottom: 0.3rem; font-variant-numeric: tabular-nums;
+}
+.up-stat-label { font-size: 0.875rem; font-weight: 600; color: #e5e7eb; margin-bottom: 0.2rem; }
+.up-stat-sub   { font-size: 0.75rem; color: #4b5563; }
+
+/* Activity feed */
+.up-empty { padding: 2rem 0; text-align: center; font-size: 0.875rem; color: #4b5563; }
+.up-activity-list { display: flex; flex-direction: column; }
+.up-activity-row {
+  display: flex; align-items: flex-start; gap: 0.875rem;
+  padding: 0.75rem 0; border-bottom: 1px solid rgba(217,119,6,0.06);
+}
+.up-activity-row:last-child { border-bottom: none; }
+.up-activity-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  margin-top: 0.35rem;
+}
+.up-activity-dot.green { background: #00d97e; }
+.up-activity-dot.amber { background: #D97706; }
+.up-activity-dot.blue  { background: #60a5fa; }
+.up-activity-dot.red   { background: #ef4444; }
+.up-activity-dot.grey  { background: #4b5563; }
+.up-activity-body { flex: 1; min-width: 0; }
+.up-activity-desc { font-size: 0.875rem; color: #e5e7eb; margin-bottom: 0.2rem; }
+.up-activity-meta { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.up-activity-action {
+  font-size: 0.7rem; font-weight: 600; font-family: monospace;
+  color: #6b7280; background: rgba(255,255,255,0.04);
+  padding: 0.1rem 0.4rem; border-radius: 0.25rem;
+}
+.up-activity-time { font-size: 0.72rem; color: #4b5563; }
+
+/* Toggles */
+.up-toggle-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 1rem 0; border-bottom: 1px solid rgba(217,119,6,0.08);
+}
+.up-toggle-info { flex: 1; }
+.up-toggle-label { font-size: 0.875rem; font-weight: 600; color: #e5e7eb; margin-bottom: 0.25rem; }
+.up-toggle-desc { font-size: 0.78rem; color: #6b7280; }
+
+.up-toggle {
+  position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0;
+}
+.up-toggle input { opacity: 0; width: 0; height: 0; }
+.up-toggle-track {
+  position: absolute; cursor: pointer; inset: 0;
+  background: rgba(255,255,255,0.1); border-radius: 12px;
+  transition: background 0.2s;
+}
+.up-toggle-track::before {
+  content: ''; position: absolute; height: 18px; width: 18px; left: 3px; bottom: 3px;
+  background: #9ca3af; border-radius: 50%; transition: transform 0.2s, background 0.2s;
+}
+.up-toggle input:checked + .up-toggle-track { background: rgba(217,119,6,0.3); }
+.up-toggle input:checked + .up-toggle-track::before {
+  transform: translateX(20px); background: #FCD34D;
 }
 
-.stat-card {
-  background: var(--bg-color);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 16px;
-  text-align: center;
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--accent-color);
-  margin-bottom: 4px;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
+/* API Keys tab */
+.up-key-banner { margin-bottom: 1.5rem; background: rgba(217,119,6,0.08); border: 1px solid rgba(217,119,6,0.3); border-radius: 1rem; padding: 1.25rem 1.5rem; }
+.up-key-banner-header { font-size: 0.9rem; color: #FCD34D; margin-bottom: 0.75rem; }
+.up-key-banner-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.up-key-code { font-family: monospace; font-size: 0.85rem; color: #e5e7eb; background: rgba(0,0,0,0.35); border: 1px solid rgba(217,119,6,0.2); border-radius: 0.5rem; padding: 0.55rem 0.85rem; word-break: break-all; flex: 1; }
 
 /* Danger Zone */
-.danger-zone h2 {
-  color: #f85149;
+.up-card-danger { border-color: rgba(239,68,68,0.2); }
+.up-danger-title { color: #ef4444; }
+.up-danger-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  flex-wrap: wrap;
+}
+.up-danger-info { flex: 1; min-width: 200px; }
+.up-danger-label { font-size: 0.95rem; font-weight: 600; color: #e5e7eb; margin-bottom: 0.25rem; }
+.up-danger-desc { font-size: 0.8rem; color: #6b7280; }
+.up-btn-danger {
+  padding: 0.6rem 1.25rem; border-radius: 0.5rem;
+  background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4);
+  color: #ef4444; font-size: 0.82rem; font-weight: 600;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.up-btn-danger:hover { background: rgba(239,68,68,0.25); border-color: rgba(239,68,68,0.6); }
+.up-delete-confirm { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid rgba(239,68,68,0.2); }
+.up-delete-warning { font-size: 0.85rem; color: #ef4444; margin-bottom: 1rem; }
+.up-delete-row { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.up-delete-row .up-input { max-width: 280px; }
+.up-btn-danger-confirm {
+  padding: 0.6rem 1.25rem; border-radius: 0.5rem;
+  background: #ef4444; border: 1px solid #ef4444;
+  color: #fff; font-size: 0.82rem; font-weight: 600;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.up-btn-danger-confirm:hover:not(:disabled) { background: #dc2626; }
+.up-btn-danger-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Icon buttons */
+.btn-icon {
+  background: none; border: none; padding: 4px; cursor: pointer;
+  color: #9ca3af; transition: color 0.2s; flex-shrink: 0;
+}
+.btn-icon:hover { color: #FCD34D; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .up-stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
-.danger-zone .settings-card {
-  border-color: rgba(248, 81, 73, 0.3);
-}
-
-/* Buttons */
-.btn {
-  display: inline-block;
-  padding: 10px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-  white-space: nowrap;
-}
-
-.btn-sm {
-  padding: 8px 12px;
-  font-size: 13px;
-}
-
-.btn-primary {
-  background: var(--accent-color);
-  color: #fff;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #4a9eff;
-}
-
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: var(--panel-bg);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-}
-
-.btn-secondary:hover {
-  background: var(--border-color);
-}
-
-.btn-danger {
-  background: #f85149;
-  color: #fff;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: #da3633;
-}
-
-.btn-danger:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Modal */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 16px;
-}
-
-.modal-content {
-  background: var(--panel-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  padding: 24px;
-  max-width: 400px;
-  width: 100%;
-}
-
-.modal-content h3 {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 12px 0;
-}
-
-.modal-content p {
-  color: var(--text-secondary);
-  margin: 0 0 24px 0;
-  line-height: 1.5;
-}
-
-.modal-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-}
-
-/* Mobile Responsive */
 @media (max-width: 640px) {
-  .profile-page {
-    padding: 16px;
-  }
-  
-  .profile-header {
-    flex-direction: column;
-    text-align: center;
-    padding: 20px 16px;
-  }
-  
-  .avatar-large {
-    width: 64px;
-    height: 64px;
-    font-size: 20px;
-  }
-  
-  .profile-info h1 {
-    font-size: 20px;
-  }
-  
-  .profile-sections {
-    padding: 16px;
-  }
-  
-  .setting-row {
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .setting-row > button {
-    width: 100%;
-  }
-  
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .stat-card {
-    padding: 14px;
-  }
-  
-  .stat-value {
-    font-size: 22px;
-  }
-  
-  .settings-card {
-    padding: 14px;
-  }
-  
-  .modal-content {
-    padding: 20px;
-  }
-  
-  .modal-actions {
-    flex-direction: column;
-  }
-  
-  .modal-actions .btn {
-    width: 100%;
-    text-align: center;
-  }
+  .up-content { padding: 1rem; }
+  .up-hero { flex-direction: column; text-align: center; padding: 1.25rem; }
+  .up-stats-grid { grid-template-columns: 1fr; }
+  .up-form-row { grid-template-columns: 1fr; }
+  .up-danger-row { flex-direction: column; align-items: stretch; }
+  .up-danger-row .up-btn-danger { width: 100%; }
+  .up-delete-row { flex-direction: column; }
+  .up-delete-row .up-input { max-width: none; }
+  .up-delete-row .up-btn-danger-confirm { width: 100%; }
 }
 </style>
