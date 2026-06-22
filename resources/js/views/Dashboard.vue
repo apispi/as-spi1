@@ -45,15 +45,19 @@ import axios from 'axios';
 import RequestPanel from '../components/RequestPanel.vue';
 import ResponsePanel from '../components/ResponsePanel.vue';
 import { useRequestsStore } from '../store/requests';
+import { useAuthStore } from '../store/auth';
 
 const requestsStore = useRequestsStore();
+const authStore = useAuthStore();
 
 const isLoading = ref(false);
 const responseData = ref(null);
 const currentLoadedRequest = ref(null);
 
-onMounted(() => {
-  requestsStore.fetchSavedRequests();
+onMounted(async () => {
+  if (authStore.isAuthenticated) {
+    await requestsStore.fetchSavedRequests();
+  }
 });
 
 const loadRequest = (req) => {
