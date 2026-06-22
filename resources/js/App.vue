@@ -10,6 +10,10 @@
         <span class="user-name">{{ authStore.user.name }}</span>
         <button @click="handleLogout" class="btn btn-logout">Logout</button>
       </div>
+      <div class="auth-menu" v-else>
+        <router-link to="/login" class="btn btn-login">Sign In</router-link>
+        <router-link to="/register" class="btn btn-register">Get Started</router-link>
+      </div>
     </header>
     <router-view></router-view>
   </div>
@@ -104,5 +108,35 @@ const handleLogout = async () => {
 .admin-link:hover {
   background: rgba(210, 153, 34, 0.2);
   border-color: #d29922;
+}
+
+.btn-login {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.btn-login:hover {
+  background: var(--border-color);
+}
+
+.btn-register {
+  background: var(--accent-color);
+  border: 1px solid var(--accent-color);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.btn-register:hover {
+  background: #4a9eff;
+  border-color: #4a9eff;
 }
 </style>

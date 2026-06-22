@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from './store/auth';
 
+import Home from './views/Home.vue';
 import Dashboard from './views/Dashboard.vue';
 import Login from './views/Login.vue';
 import Register from './views/Register.vue';
@@ -9,8 +10,15 @@ import Admin from './views/Admin.vue';
 const routes = [
     {
         path: '/',
+        name: 'home',
+        component: Home,
+        meta: { guestOnly: true }
+    },
+    {
+        path: '/dashboard',
         name: 'dashboard',
-        component: Dashboard
+        component: Dashboard,
+        meta: { requiresAuth: true }
     },
     {
         path: '/login',
@@ -50,9 +58,9 @@ router.beforeEach(async (to, from, next) => {
     if (to.meta.requiresAuth && !isAuthenticated) {
         next('/login');
     } else if (to.meta.guestOnly && isAuthenticated) {
-        next('/');
+        next('/dashboard');
     } else if (to.meta.requiresAdmin && (!authStore.user || !authStore.user.is_admin)) {
-        next('/');
+        next('/dashboard');
     } else {
         next();
     }
