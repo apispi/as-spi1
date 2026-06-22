@@ -4,17 +4,13 @@
     <section class="hero">
       <div class="hero-content">
         <h1>Test APIs Without the Hassle</h1>
-        <p class="hero-subtitle">The simplest way to test, debug, and document your APIs. No setup required. Try it now.</p>
-        <div class="hero-actions">
-          <router-link to="/register" class="btn btn-primary btn-large">Get Started Free</router-link>
-          <router-link to="/login" class="btn btn-secondary btn-large">Sign In</router-link>
-        </div>
-        <p class="hero-note">No credit card required • Free forever plan available</p>
+        <p class="hero-subtitle">The simplest way to test, debug, and document your APIs. No setup required.</p>
+        <a href="#tester" class="hero-cta">Start Testing →</a>
       </div>
     </section>
 
     <!-- API Tester Demo -->
-    <section class="demo">
+    <section class="demo" id="tester">
       <div class="demo-container">
         <h2>Try It Now</h2>
         <p class="demo-subtitle">Test any API endpoint instantly from your browser.</p>
@@ -383,6 +379,23 @@ const formatJson = (str) => {
   font-size: 14px;
   color: var(--text-secondary);
   margin: 16px 0 0 0;
+}
+
+.hero-cta {
+  display: inline-block;
+  padding: 16px 32px;
+  background: var(--accent-color);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.hero-cta:hover {
+  background: #4a9eff;
+  transform: translateY(-2px);
 }
 
 /* Demo Section */

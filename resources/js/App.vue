@@ -10,10 +10,6 @@
         <span class="user-name">{{ authStore.user.name }}</span>
         <button @click="handleLogout" class="btn btn-logout">Logout</button>
       </div>
-      <div class="auth-menu" v-else>
-        <router-link to="/login" class="btn btn-login">Sign In</router-link>
-        <router-link to="/register" class="btn btn-register">Get Started</router-link>
-      </div>
     </header>
     <router-view class="router-content"></router-view>
   </div>
