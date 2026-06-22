@@ -434,6 +434,14 @@ const formatJson = (str) => {
   color: var(--accent-color);
   cursor: pointer;
   min-width: 100px;
+  transition: all 0.2s;
+}
+
+.method-select:hover,
+.method-select:focus {
+  border-color: var(--accent-color);
+  outline: none;
+  border-width: 2px;
 }
 
 .url-input {
@@ -448,6 +456,11 @@ const formatJson = (str) => {
 
 .url-input:focus {
   outline: none;
+  border-color: var(--accent-color);
+  border-width: 2px;
+}
+
+.url-input:hover {
   border-color: var(--accent-color);
 }
 
@@ -490,10 +503,16 @@ const formatJson = (str) => {
   resize: vertical;
 }
 
+.headers-input:hover,
+.body-input:hover {
+  border-color: var(--accent-color);
+}
+
 .headers-input:focus,
 .body-input:focus {
   outline: none;
   border-color: var(--accent-color);
+  border-width: 2px;
 }
 
 .response-container {
