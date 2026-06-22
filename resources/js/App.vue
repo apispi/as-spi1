@@ -3,7 +3,7 @@
     <header class="app-header">
       <div class="logo">
         <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="icon"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-        <h1>ApiSpi Tester</h1>
+        <h1>Spi</h1>
       </div>
       <div class="auth-menu" v-if="authStore.isAuthenticated">
         <router-link v-if="authStore.user.is_admin" to="/admin" class="admin-link">Admin</router-link>
