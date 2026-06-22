@@ -281,7 +281,7 @@
                 </label>
               </div>
 
-              <div class="up-toggle-row" style="border-bottom: none">
+              <div class="up-card" style="margin-top: 1.5rem"><div class="up-card-header"><h2 class="up-card-title">SCX AI Integration</h2><p class="up-card-sub">Connect your SCX AI account using an API key</p></div><form @submit.prevent="updateScxApiKey"><div class="up-form-group"><label class="up-label" for="scx-api-key">SCX API Key</label><input id="scx-api-key" type="password" v-model="scxApiKeyForm" class="up-input" placeholder="Enter your SCX API key"></div><div class="up-form-footer"><button type="submit" class="up-btn-save" :disabled="savingScx">Save SCX API Key</button></div></form></div><div class="up-toggle-row" style="border-bottom: none">
                 <div class="up-toggle-info">
                   <div class="up-toggle-label">Tips & best practices</div>
                   <div class="up-toggle-desc">Occasional guides on getting more from your agents</div>
@@ -401,6 +401,9 @@ const notificationsForm = reactive({
 });
 const savingNotifications = ref(false);
 
+const scxApiKeyForm = ref('');
+const savingScx = ref(false);
+
 const showDeleteConfirm = ref(false);
 const deleteConfirmText = ref('');
 const deleting = ref(false);
@@ -519,6 +522,22 @@ const updateNotifications = async () => {
     flashError.value = 'Failed to save settings';
   } finally {
     savingNotifications.value = false;
+  }
+};
+
+const updateScxApiKey = async () => {
+  savingScx.value = true;
+  flashSuccess.value = '';
+  flashError.value = '';
+  try {
+    await axios.put('/api/user/scx-api-key', {
+      scx_api_key: scxApiKeyForm.value
+    });
+    flashSuccess.value = 'SCX API key saved';
+  } catch (error) {
+    flashError.value = 'Failed to save SCX API key';
+  } finally {
+    savingScx.value = false;
   }
 };
 
