@@ -7,6 +7,7 @@ import Login from './views/Login.vue';
 import Register from './views/Register.vue';
 import Admin from './views/Admin.vue';
 import Profile from './views/Profile.vue';
+import Chat from './views/Chat.vue';
 
 const routes = [
     {
@@ -25,6 +26,12 @@ const routes = [
         path: '/profile',
         name: 'profile',
         component: Profile,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/chat',
+        name: 'chat',
+        component: Chat,
         meta: { requiresAuth: true }
     },
     {

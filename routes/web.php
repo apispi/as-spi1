@@ -6,6 +6,7 @@ use App\Http\Controllers\SavedRequestController;
 use App\Http\Controllers\ProxyController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\UserPreferencesController;
+use App\Http\Controllers\ScxChatController;
 
 Route::get('/{any}', function () {
     return view('welcome');
@@ -24,6 +25,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/api/saved-requests/{id}', [SavedRequestController::class, 'destroy']);
     Route::put('/api/user/scx-api-key', [UserPreferencesController::class, 'updateScxApiKey']);
     Route::get('/api/user/scx-api-key', [UserPreferencesController::class, 'getScxApiKey']);
+    Route::post('/api/scx/chat', [ScxChatController::class, 'chat']);
 });
 
 Route::middleware(['auth', 'admin'])->group(function () {
