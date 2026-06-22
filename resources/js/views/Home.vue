@@ -11,27 +11,54 @@
     <section class="demo" id="tester">
       <div class="demo-container">
         <div class="tester-container">
-          <div class="tester-row">
-            <select v-model="testMethod" class="method-select">
+          <!-- Protocol Selector -->
+          <div class="protocol-row">
+            <select v-model="selectedProtocol" class="protocol-select">
+              <option value="rest">REST</option>
+              <option value="graphql">GraphQL</option>
+              <option value="websocket">WebSocket</option>
+              <option value="grpc">gRPC</option>
+              <option value="mqtt">MQTT</option>
+              <option value="amqp">AMQP</option>
+              <option value="soap">SOAP</option>
+              <option value="webhook">Webhook</option>
+              <option value="mcp">MCP</option>
+              <option value="a2a">A2A</option>
+            </select>
+            <select v-if="selectedProtocol === 'rest'" v-model="testMethod" class="method-select">
               <option value="GET">GET</option>
               <option value="POST">POST</option>
               <option value="PUT">PUT</option>
               <option value="PATCH">PATCH</option>
               <option value="DELETE">DELETE</option>
+              <option value="HEAD">HEAD</option>
+              <option value="OPTIONS">OPTIONS</option>
+            </select>
+            <select v-else-if="selectedProtocol === 'graphql'" v-model="graphqlOperation" class="method-select">
+              <option value="query">Query</option>
+              <option value="mutation">Mutation</option>
+              <option value="subscription">Subscription</option>
+            </select>
+            <select v-else-if="selectedProtocol === 'grpc'" v-model="grpcCallType" class="method-select">
+              <option value="unary">Unary</option>
+              <option value="server-streaming">Server Streaming</option>
+              <option value="client-streaming">Client Streaming</option>
+              <option value="bidi-streaming">Bidi Streaming</option>
             </select>
             <input 
               v-model="testUrl" 
               type="text" 
               class="url-input" 
-              placeholder="https://api.example.com/endpoint"
+              :placeholder="getUrlPlaceholder()"
               @keyup.enter="sendTestRequest"
             />
             <button @click="sendTestRequest" class="btn btn-primary send-btn" :disabled="isTesting">
-              {{ isTesting ? 'Sending...' : 'Send' }}
+              {{ isTesting ? 'Connecting...' : 'Send' }}
             </button>
           </div>
-          
-          <div class="headers-row">
+
+          <!-- REST/GraphQL Headers -->
+          <div v-if="['rest', 'graphql', 'soap', 'webhook', 'mcp', 'a2a'].includes(selectedProtocol)" class="headers-row">
             <label class="headers-label">Headers (JSON)</label>
             <textarea 
               v-model="testHeaders" 
@@ -40,8 +67,9 @@
               rows="2"
             ></textarea>
           </div>
-          
-          <div class="body-row">
+
+          <!-- REST Body -->
+          <div v-if="selectedProtocol === 'rest' && ['POST', 'PUT', 'PATCH'].includes(testMethod)" class="body-row">
             <label class="body-label">Body (JSON)</label>
             <textarea 
               v-model="testBody" 
@@ -50,7 +78,211 @@
               rows="4"
             ></textarea>
           </div>
-          
+
+          <!-- GraphQL Body -->
+          <div v-if="selectedProtocol === 'graphql'" class="body-row">
+            <label class="body-label">{{ graphqlOperation === 'subscription' ? 'Subscription Query' : (graphqlOperation === 'mutation' ? 'Mutation' : 'Query') }}</label>
+            <textarea 
+              v-model="graphqlQuery" 
+              class="body-input" 
+              placeholder='query { users { id name email } }'
+              rows="4"
+            ></textarea>
+          </div>
+
+          <!-- GraphQL Variables -->
+          <div v-if="selectedProtocol === 'graphql'" class="body-row">
+            <label class="body-label">Variables (JSON, optional)</label>
+            <textarea 
+              v-model="graphqlVariables" 
+              class="body-input" 
+              placeholder='{"id": 1}'
+              rows="2"
+            ></textarea>
+          </div>
+
+          <!-- WebSocket Config -->
+          <div v-if="selectedProtocol === 'websocket'" class="protocol-section">
+            <div class="protocol-info">
+              <span class="protocol-badge ws">WebSocket</span>
+              <span class="protocol-hint">Messages are sent and received in real-time</span>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Message to Send</label>
+              <textarea 
+                v-model="wsMessage" 
+                class="body-input" 
+                placeholder='{"event": "ping"}'
+                rows="3"
+              ></textarea>
+            </div>
+            <div class="ws-messages" v-if="wsMessages.length > 0">
+              <label class="headers-label">Messages</label>
+              <div class="ws-message-list">
+                <div v-for="(msg, idx) in wsMessages" :key="idx" class="ws-message" :class="msg.type">
+                  <span class="msg-type">{{ msg.type === 'sent' ? '→' : '←' }}</span>
+                  <pre>{{ msg.data }}</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- gRPC Config -->
+          <div v-if="selectedProtocol === 'grpc'" class="protocol-section">
+            <div class="protocol-info">
+              <span class="protocol-badge grpc">gRPC</span>
+              <span class="protocol-hint">Google's high-performance RPC framework</span>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Proto Definition (optional)</label>
+              <textarea 
+                v-model="grpcProto" 
+                class="body-input" 
+                placeholder='syntax = "proto3"; service MyService { rpc MyMethod(Request) returns (Response); }'
+                rows="4"
+              ></textarea>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Request Message (JSON)</label>
+              <textarea 
+                v-model="grpcRequest" 
+                class="body-input" 
+                placeholder='{"name": "test"}'
+                rows="3"
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- MQTT Config -->
+          <div v-if="selectedProtocol === 'mqtt'" class="protocol-section">
+            <div class="protocol-info">
+              <span class="protocol-badge mqtt">MQTT</span>
+              <span class="protocol-hint">Lightweight IoT messaging protocol</span>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Topic</label>
+              <input v-model="mqttTopic" type="text" class="url-input" placeholder="sensors/temperature" />
+            </div>
+            <div class="body-row">
+              <label class="body-label">QoS Level</label>
+              <select v-model="mqttQos" class="method-select">
+                <option value="0">0 - At most once</option>
+                <option value="1">1 - At least once</option>
+                <option value="2">2 - Exactly once</option>
+              </select>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Message Payload (JSON)</label>
+              <textarea v-model="mqttMessage" class="body-input" placeholder='{"temp": 25.5}' rows="2"></textarea>
+            </div>
+          </div>
+
+          <!-- AMQP Config -->
+          <div v-if="selectedProtocol === 'amqp'" class="protocol-section">
+            <div class="protocol-info">
+              <span class="protocol-badge amqp">AMQP</span>
+              <span class="protocol-hint">Advanced Message Queuing Protocol</span>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Exchange</label>
+              <input v-model="amqpExchange" type="text" class="url-input" placeholder="my-exchange" />
+            </div>
+            <div class="body-row">
+              <label class="body-label">Routing Key</label>
+              <input v-model="amqpRoutingKey" type="text" class="url-input" placeholder="my.routing.key" />
+            </div>
+            <div class="body-row">
+              <label class="body-label">Message Body (JSON)</label>
+              <textarea v-model="amqpMessage" class="body-input" placeholder='{"data": "value"}' rows="2"></textarea>
+            </div>
+          </div>
+
+          <!-- SOAP Config -->
+          <div v-if="selectedProtocol === 'soap'" class="protocol-section">
+            <div class="protocol-info">
+              <span class="protocol-badge soap">SOAP</span>
+              <span class="protocol-hint">Simple Object Access Protocol</span>
+            </div>
+            <div class="body-row">
+              <label class="body-label">SOAP Action</label>
+              <input v-model="soapAction" type="text" class="url-input" placeholder="urn:my-action" />
+            </div>
+            <div class="body-row">
+              <label class="body-label">SOAP Envelope (XML)</label>
+              <textarea 
+                v-model="soapEnvelope" 
+                class="body-input" 
+                placeholder='<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope"><soap:Body></soap:Body></soap:Envelope>'
+                rows="5"
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Webhook Config -->
+          <div v-if="selectedProtocol === 'webhook'" class="protocol-section">
+            <div class="protocol-info">
+              <span class="protocol-badge webhook">Webhook</span>
+              <span class="protocol-hint">HTTP callback with signature verification</span>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Secret (for signature)</label>
+              <input v-model="webhookSecret" type="text" class="url-input" placeholder="your-webhook-secret" />
+            </div>
+            <div class="body-row">
+              <label class="body-label">Payload (JSON)</label>
+              <textarea v-model="webhookPayload" class="body-input" placeholder='{"event": "user.created", "data": {}}' rows="3"></textarea>
+            </div>
+          </div>
+
+          <!-- MCP Config -->
+          <div v-if="selectedProtocol === 'mcp'" class="protocol-section">
+            <div class="protocol-info">
+              <span class="protocol-badge mcp">MCP</span>
+              <span class="protocol-hint">Model Context Protocol</span>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Method</label>
+              <select v-model="mcpMethod" class="method-select">
+                <option value="initialize">initialize</option>
+                <option value="tools/list">tools/list</option>
+                <option value="tools/call">tools/call</option>
+                <option value="resources/list">resources/list</option>
+                <option value="resources/read">resources/read</option>
+                <option value="prompts/list">prompts/list</option>
+              </select>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Params (JSON)</label>
+              <textarea v-model="mcpParams" class="body-input" placeholder='{"name": "my-tool"}' rows="3"></textarea>
+            </div>
+          </div>
+
+          <!-- A2A Config -->
+          <div v-if="selectedProtocol === 'a2a'" class="protocol-section">
+            <div class="protocol-info">
+              <span class="protocol-badge a2a">A2A</span>
+              <span class="protocol-hint">Agent-to-Agent Protocol</span>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Agent ID</label>
+              <input v-model="a2aAgentId" type="text" class="url-input" placeholder="agent-123" />
+            </div>
+            <div class="body-row">
+              <label class="body-label">Action</label>
+              <select v-model="a2aAction" class="method-select">
+                <option value="send_task">send_task</option>
+                <option value="get_task">get_task</option>
+                <option value="cancel_task">cancel_task</option>
+                <option value="send_message">send_message</option>
+              </select>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Payload (JSON)</label>
+              <textarea v-model="a2aPayload" class="body-input" placeholder='{"task": "do something"}' rows="3"></textarea>
+            </div>
+          </div>
+
+          <!-- Response Container -->
           <div v-if="testResponse" class="response-container">
             <div class="response-header">
               <span class="response-status" :class="getStatusClass(testResponse.status)">
@@ -127,10 +359,10 @@
           <h3>Free</h3>
           <div class="price">$0<span>/month</span></div>
           <ul class="pricing-features">
-            <li>✓ Unlimited API requests</li>
+            <li>✓ REST & GraphQL</li>
+            <li>✓ WebSocket testing</li>
             <li>✓ Save up to 10 requests</li>
             <li>✓ Basic headers & body support</li>
-            <li>✓ Response timing</li>
           </ul>
           <router-link to="/register" class="btn btn-secondary btn-block">Get Started</router-link>
         </div>
@@ -139,11 +371,10 @@
           <h3>Pro</h3>
           <div class="price">$12<span>/month</span></div>
           <ul class="pricing-features">
-            <li>✓ Everything in Free</li>
+            <li>✓ All protocols</li>
             <li>✓ Unlimited saved requests</li>
             <li>✓ Team sharing</li>
             <li>✓ Priority support</li>
-            <li>✓ Advanced auth headers</li>
           </ul>
           <router-link to="/register" class="btn btn-primary btn-block">Start Free Trial</router-link>
         </div>
@@ -154,7 +385,6 @@
             <li>✓ Everything in Pro</li>
             <li>✓ Custom integrations</li>
             <li>✓ Dedicated support</li>
-            <li>✓ SSO & SAML</li>
             <li>✓ SLA guarantee</li>
           </ul>
           <router-link to="/register" class="btn btn-secondary btn-block">Contact Sales</router-link>
@@ -240,6 +470,7 @@
 import { ref } from 'vue';
 import axios from 'axios';
 
+const selectedProtocol = ref('rest');
 const testMethod = ref('GET');
 const testUrl = ref('');
 const testHeaders = ref('');
@@ -247,6 +478,64 @@ const testBody = ref('');
 const testResponse = ref(null);
 const testError = ref('');
 const isTesting = ref(false);
+
+// GraphQL
+const graphqlOperation = ref('query');
+const graphqlQuery = ref('');
+const graphqlVariables = ref('');
+
+// WebSocket
+const wsMessage = ref('');
+const wsMessages = ref([]);
+let ws = null;
+
+// gRPC
+const grpcCallType = ref('unary');
+const grpcProto = ref('');
+const grpcRequest = ref('');
+
+// MQTT
+const mqttTopic = ref('');
+const mqttQos = ref('0');
+const mqttMessage = ref('');
+
+// AMQP
+const amqpExchange = ref('');
+const amqpRoutingKey = ref('');
+const amqpMessage = ref('');
+
+// SOAP
+const soapAction = ref('');
+const soapEnvelope = ref('');
+
+// Webhook
+const webhookSecret = ref('');
+const webhookPayload = ref('');
+
+// MCP
+const mcpMethod = ref('initialize');
+const mcpParams = ref('');
+
+// A2A
+const a2aAgentId = ref('');
+const a2aAction = ref('send_task');
+const a2aPayload = ref('');
+
+const getUrlPlaceholder = () => {
+  const placeholders = {
+    rest: 'https://api.example.com/endpoint',
+    graphql: 'https://api.example.com/graphql',
+    websocket: 'wss://api.example.com/ws',
+    grpc: 'grpc://api.example.com:50051',
+    mqtt: 'mqtt://broker.example.com:1883',
+    amqp: 'amqp://broker.example.com:5672',
+    soap: 'https://api.example.com/soap',
+    webhook: 'https://your-server.com/webhook',
+    mcp: 'https://api.example.com/mcp',
+    a2a: 'https://agents.example.com/a2a'
+  };
+  return placeholders[selectedProtocol.value] || 'https://api.example.com';
+};
 
 const sendTestRequest = async () => {
   if (!testUrl.value) {
@@ -258,45 +547,204 @@ const sendTestRequest = async () => {
   testResponse.value = null;
   testError.value = '';
 
+  const startTime = Date.now();
+
+  try {
+    if (selectedProtocol.value === 'websocket') {
+      await testWebSocket(startTime);
+    } else if (selectedProtocol.value === 'grpc') {
+      await testGrpc(startTime);
+    } else if (selectedProtocol.value === 'mqtt') {
+      await testMqtt(startTime);
+    } else if (selectedProtocol.value === 'amqp') {
+      await testAmqp(startTime);
+    } else {
+      await testHttpProtocol(startTime);
+    }
+  } catch (error) {
+    testError.value = error.message || 'Request failed';
+  } finally {
+    isTesting.value = false;
+  }
+};
+
+const testHttpProtocol = async (startTime) => {
   let headers = {};
   if (testHeaders.value.trim()) {
     try {
       headers = JSON.parse(testHeaders.value);
     } catch {
       testError.value = 'Invalid JSON in headers';
-      isTesting.value = false;
       return;
     }
   }
 
   let body = undefined;
-  if (['POST', 'PUT', 'PATCH'].includes(testMethod.value) && testBody.value.trim()) {
+  let method = testMethod.value;
+
+  if (selectedProtocol.value === 'graphql') {
+    method = 'POST';
+    headers['Content-Type'] = 'application/json';
+    body = {
+      query: graphqlQuery.value,
+      variables: graphqlVariables.value ? JSON.parse(graphqlVariables.value) : {}
+    };
+  } else if (selectedProtocol.value === 'soap') {
+    method = 'POST';
+    headers['Content-Type'] = 'text/xml';
+    if (soapAction.value) {
+      headers['SOAPAction'] = soapAction.value;
+    }
+    body = soapEnvelope.value;
+  } else if (selectedProtocol.value === 'webhook') {
+    method = 'POST';
+    const payload = webhookPayload.value ? JSON.parse(webhookPayload.value) : {};
+    if (webhookSecret.value) {
+      const signature = btoa(webhookSecret.value + JSON.stringify(payload));
+      headers['X-Webhook-Signature'] = signature;
+    }
+    body = payload;
+  } else if (selectedProtocol.value === 'mcp') {
+    method = 'POST';
+    headers['Content-Type'] = 'application/json';
+    body = {
+      jsonrpc: '2.0',
+      method: mcpMethod.value,
+      params: mcpParams.value ? JSON.parse(mcpParams.value) : {},
+      id: Date.now()
+    };
+  } else if (selectedProtocol.value === 'a2a') {
+    method = 'POST';
+    headers['Content-Type'] = 'application/json';
+    body = {
+      agent_id: a2aAgentId.value,
+      action: a2aAction.value,
+      payload: a2aPayload.value ? JSON.parse(a2aPayload.value) : {}
+    };
+  } else if (['POST', 'PUT', 'PATCH'].includes(testMethod.value)) {
     try {
-      body = JSON.parse(testBody.value);
+      body = testBody.value ? JSON.parse(testBody.value) : {};
     } catch {
       testError.value = 'Invalid JSON in body';
-      isTesting.value = false;
       return;
     }
   }
 
-  try {
-    const res = await axios.post('/api/proxy', {
-      url: testUrl.value,
-      method: testMethod.value,
-      headers,
-      body
-    });
-    testResponse.value = res.data;
-  } catch (error) {
-    if (error.response && error.response.data) {
-      testResponse.value = error.response.data;
-    } else {
-      testError.value = 'Network error or proxy unreachable';
+  const res = await axios.post('/api/proxy', {
+    url: testUrl.value,
+    method,
+    headers,
+    body
+  });
+  
+  testResponse.value = {
+    status: res.data.status || 200,
+    body: res.data.body,
+    time_ms: Date.now() - startTime
+  };
+};
+
+const testWebSocket = async (startTime) => {
+  return new Promise((resolve, reject) => {
+    try {
+      ws = new WebSocket(testUrl.value);
+      
+      ws.onopen = () => {
+        if (wsMessage.value) {
+          ws.send(wsMessage.value);
+          wsMessages.value.push({ type: 'sent', data: wsMessage.value });
+        }
+      };
+      
+      ws.onmessage = (event) => {
+        wsMessages.value.push({ type: 'received', data: event.data });
+      };
+      
+      ws.onerror = (error) => {
+        testError.value = 'WebSocket connection failed';
+        reject(error);
+      };
+      
+      ws.onclose = () => {
+        testResponse.value = {
+          status: 101,
+          body: { messages: wsMessages.value, count: wsMessages.value.length },
+          time_ms: Date.now() - startTime
+        };
+        resolve();
+      };
+      
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        if (ws) {
+          ws.close();
+        }
+      }, 10000);
+    } catch (error) {
+      reject(error);
     }
-  } finally {
-    isTesting.value = false;
-  }
+  });
+};
+
+const testGrpc = async (startTime) => {
+  // gRPC would require a backend proxy - sending config for now
+  const res = await axios.post('/api/proxy', {
+    url: testUrl.value,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/grpc' },
+    body: {
+      protocol: 'grpc',
+      callType: grpcCallType.value,
+      proto: grpcProto.value,
+      request: grpcRequest.value ? JSON.parse(grpcRequest.value) : {}
+    }
+  });
+  
+  testResponse.value = {
+    status: res.data.status || 200,
+    body: res.data.body || { message: 'gRPC request configured', config: { callType: grpcCallType.value } },
+    time_ms: Date.now() - startTime
+  };
+};
+
+const testMqtt = async (startTime) => {
+  const res = await axios.post('/api/proxy', {
+    url: testUrl.value,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: {
+      protocol: 'mqtt',
+      topic: mqttTopic.value,
+      qos: parseInt(mqttQos.value),
+      message: mqttMessage.value ? JSON.parse(mqttMessage.value) : {}
+    }
+  });
+  
+  testResponse.value = {
+    status: res.data.status || 200,
+    body: res.data.body || { message: 'MQTT message configured', topic: mqttTopic.value, qos: mqttQos.value },
+    time_ms: Date.now() - startTime
+  };
+};
+
+const testAmqp = async (startTime) => {
+  const res = await axios.post('/api/proxy', {
+    url: testUrl.value,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: {
+      protocol: 'amqp',
+      exchange: amqpExchange.value,
+      routingKey: amqpRoutingKey.value,
+      message: amqpMessage.value ? JSON.parse(amqpMessage.value) : {}
+    }
+  });
+  
+  testResponse.value = {
+    status: res.data.status || 200,
+    body: res.data.body || { message: 'AMQP message configured', exchange: amqpExchange.value },
+    time_ms: Date.now() - startTime
+  };
 };
 
 const getStatusClass = (status) => {
@@ -308,6 +756,7 @@ const getStatusClass = (status) => {
 
 const getStatusText = (status) => {
   const texts = {
+    101: 'Switching Protocols',
     200: 'OK', 201: 'Created', 204: 'No Content',
     400: 'Bad Request', 401: 'Unauthorized', 403: 'Forbidden', 404: 'Not Found',
     500: 'Internal Server Error', 502: 'Bad Gateway', 503: 'Service Unavailable'
@@ -356,36 +805,6 @@ const formatJson = (str) => {
   background-clip: text;
 }
 
-.hero-actions {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.hero-note {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin: 16px 0 0 0;
-}
-
-.hero-cta {
-  display: inline-block;
-  padding: 16px 32px;
-  background: var(--accent-color);
-  color: #fff;
-  font-size: 16px;
-  font-weight: 600;
-  text-decoration: none;
-  border-radius: 8px;
-  transition: all 0.2s;
-}
-
-.hero-cta:hover {
-  background: #4a9eff;
-  transform: translateY(-2px);
-}
-
 /* Demo Section */
 .demo {
   padding: 16px 24px 40px;
@@ -397,20 +816,6 @@ const formatJson = (str) => {
   margin: 0 auto;
 }
 
-.demo h2 {
-  font-size: 32px;
-  font-weight: 600;
-  text-align: center;
-  margin: 0 0 12px 0;
-}
-
-.demo-subtitle {
-  font-size: 16px;
-  color: var(--text-secondary);
-  text-align: center;
-  margin: 0 0 32px 0;
-}
-
 .tester-container {
   background: rgba(88, 166, 255, 0.08);
   border: 1px solid rgba(88, 166, 255, 0.3);
@@ -418,10 +823,22 @@ const formatJson = (str) => {
   padding: 24px;
 }
 
-.tester-row {
+.protocol-row {
   display: flex;
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.protocol-select {
+  background: rgba(88, 166, 255, 0.1);
+  border: 1px solid rgba(88, 166, 255, 0.4);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-color);
+  cursor: pointer;
+  min-width: 120px;
 }
 
 .method-select {
@@ -515,11 +932,94 @@ const formatJson = (str) => {
   border-width: 2px;
 }
 
+/* Protocol Section */
+.protocol-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(88, 166, 255, 0.2);
+}
+
+.protocol-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.protocol-badge {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.protocol-badge.rest { background: rgba(88, 166, 255, 0.2); color: #58a6ff; }
+.protocol-badge.graphql { background: rgba(233, 84, 178, 0.2); color: #e954b2; }
+.protocol-badge.websocket { background: rgba(63, 185, 80, 0.2); color: #3fb950; }
+.protocol-badge.grpc { background: rgba(88, 166, 255, 0.2); color: #58a6ff; }
+.protocol-badge.mqtt { background: rgba(210, 153, 34, 0.2); color: #d29922; }
+.protocol-badge.amqp { background: rgba(139, 148, 158, 0.2); color: #8b949e; }
+.protocol-badge.soap { background: rgba(210, 153, 34, 0.2); color: #d29922; }
+.protocol-badge.webhook { background: rgba(63, 185, 80, 0.2); color: #3fb950; }
+.protocol-badge.mcp { background: rgba(163, 113, 247, 0.2); color: #a371f7; }
+.protocol-badge.a2a { background: rgba(248, 81, 73, 0.2); color: #f85149; }
+
+.protocol-hint {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.ws-messages {
+  margin-top: 16px;
+}
+
+.ws-message-list {
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.ws-message {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.ws-message:last-child {
+  border-bottom: none;
+}
+
+.ws-message.sent {
+  background: rgba(88, 166, 255, 0.05);
+}
+
+.ws-message.received {
+  background: rgba(63, 185, 80, 0.05);
+}
+
+.msg-type {
+  font-weight: 600;
+  color: var(--accent-color);
+}
+
+.ws-message pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .response-container {
   background: var(--bg-color);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   overflow: hidden;
+  margin-top: 16px;
 }
 
 .response-header {
@@ -568,6 +1068,7 @@ const formatJson = (str) => {
   border: 1px solid rgba(248, 81, 73, 0.3);
   border-radius: 8px;
   padding: 16px;
+  margin-top: 16px;
 }
 
 .error-container p {
@@ -939,30 +1440,21 @@ const formatJson = (str) => {
     font-size: 36px;
   }
   
-  .hero-subtitle {
-    font-size: 16px;
+  .protocol-row {
+    flex-direction: column;
   }
   
-  .hero-actions {
-    flex-direction: column;
-    align-items: center;
+  .protocol-select,
+  .method-select,
+  .send-btn {
+    width: 100%;
   }
   
   .features h2,
   .pricing h2,
   .testimonials h2,
-  .cta h2,
-  .demo h2 {
+  .cta h2 {
     font-size: 28px;
-  }
-  
-  .tester-row {
-    flex-direction: column;
-  }
-  
-  .method-select,
-  .send-btn {
-    width: 100%;
   }
   
   .footer-content {
