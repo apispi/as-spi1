@@ -7,7 +7,7 @@
       </div>
       <div class="auth-menu" v-if="authStore.isAuthenticated">
         <router-link v-if="authStore.user.is_admin" to="/admin" class="admin-link">Admin</router-link>
-        <span class="user-name">{{ authStore.user.name }}</span>
+        <router-link to="/profile" class="user-profile-link">{{ authStore.user.name }}</router-link>
         <button @click="handleLogout" class="btn btn-logout">Logout</button>
       </div>
       <div class="auth-menu" v-else>
