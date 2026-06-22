@@ -11,6 +11,17 @@
     <section class="demo" id="tester">
       <div class="demo-container">
         <div class="tester-container">
+          <!-- Sample Tests Row -->
+          <div class="sample-tests-row">
+            <span class="sample-label">Try samples:</span>
+            <button @click="loadSample('rest')" class="sample-btn rest">REST</button>
+            <button @click="loadSample('graphql')" class="sample-btn graphql">GraphQL</button>
+            <button @click="loadSample('websocket')" class="sample-btn websocket">WebSocket</button>
+            <button @click="loadSample('grpc')" class="sample-btn grpc">gRPC</button>
+            <button @click="loadSample('mqtt')" class="sample-btn mqtt">MQTT</button>
+            <button @click="loadSample('soap')" class="sample-btn soap">SOAP</button>
+          </div>
+
           <!-- Protocol Selector -->
           <div class="protocol-row">
             <select v-model="selectedProtocol" class="protocol-select">
@@ -772,6 +783,68 @@ const formatJson = (str) => {
     return str;
   }
 };
+
+const loadSample = (protocol) => {
+  selectedProtocol.value = protocol;
+  testResponse.value = null;
+  testError.value = '';
+  wsMessages.value = [];
+  
+  const samples = {
+    rest: () => {
+      testMethod.value = 'GET';
+      testUrl.value = 'https://jsonplaceholder.typicode.com/posts/1';
+      testHeaders.value = '';
+      testBody.value = '';
+    },
+    graphql: () => {
+      testUrl.value = 'https://countries.trevorblades.com/graphql';
+      testHeaders.value = '';
+      graphqlOperation.value = 'query';
+      graphqlQuery.value = `query {
+  country(code: "US") {
+    name
+    capital
+    currency
+    languages { name }
+  }
+}`;
+      graphqlVariables.value = '';
+    },
+    websocket: () => {
+      testUrl.value = 'wss://echo.websocket.org';
+      wsMessage.value = 'Hello Spi!';
+    },
+    grpc: () => {
+      testUrl.value = 'http://grpcbin.test.k6.io:9000';
+      grpcCallType.value = 'unary';
+      grpcProto.value = '';
+      grpcRequest.value = '{"name": "World"}';
+    },
+    mqtt: () => {
+      testUrl.value = 'mqtt://test.mosquitto.org:1883';
+      mqttTopic.value = 'spi/test';
+      mqttQos.value = '0';
+      mqttMessage.value = '{"message": "Hello from Spi!"}';
+    },
+    soap: () => {
+      testUrl.value = 'https://www.crcind.com/csp/samples/SOAP.CLS';
+      soapAction.value = 'http://tempuri.org/celsiusToFahrenheit';
+      testHeaders.value = '';
+      soapEnvelope.value = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
+  <soap:Body>
+    <celsiusToFahrenheit xmlns="http://tempuri.org">
+      <celsius>100</celsius>
+    </celsiusToFahrenheit>
+  </soap:Body>
+</soap:Envelope>`;
+    }
+  };
+  
+  if (samples[protocol]) {
+    samples[protocol]();
+  }
+};
 </script>
 
 <style scoped>
@@ -821,6 +894,80 @@ const formatJson = (str) => {
   border: 1px solid rgba(88, 166, 255, 0.3);
   border-radius: 12px;
   padding: 24px;
+}
+
+/* Sample Tests Row */
+.sample-tests-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.sample-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.sample-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid;
+  transition: all 0.2s;
+  background: transparent;
+}
+
+.sample-btn.rest {
+  color: #58a6ff;
+  border-color: rgba(88, 166, 255, 0.4);
+}
+.sample-btn.rest:hover {
+  background: rgba(88, 166, 255, 0.15);
+}
+
+.sample-btn.graphql {
+  color: #e954b2;
+  border-color: rgba(233, 84, 178, 0.4);
+}
+.sample-btn.graphql:hover {
+  background: rgba(233, 84, 178, 0.15);
+}
+
+.sample-btn.websocket {
+  color: #3fb950;
+  border-color: rgba(63, 185, 80, 0.4);
+}
+.sample-btn.websocket:hover {
+  background: rgba(63, 185, 80, 0.15);
+}
+
+.sample-btn.grpc {
+  color: #58a6ff;
+  border-color: rgba(88, 166, 255, 0.4);
+}
+.sample-btn.grpc:hover {
+  background: rgba(88, 166, 255, 0.15);
+}
+
+.sample-btn.mqtt {
+  color: #d29922;
+  border-color: rgba(210, 153, 34, 0.4);
+}
+.sample-btn.mqtt:hover {
+  background: rgba(210, 153, 34, 0.15);
+}
+
+.sample-btn.soap {
+  color: #d29922;
+  border-color: rgba(210, 153, 34, 0.4);
+}
+.sample-btn.soap:hover {
+  background: rgba(210, 153, 34, 0.15);
 }
 
 .protocol-row {
