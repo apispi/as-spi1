@@ -284,7 +284,7 @@
                 </label>
               </div>
 
-              <div class="up-card" style="margin-top: 1.5rem"><div class="up-card-header"><h2 class="up-card-title">SCX AI Integration</h2><p class="up-card-sub">Connect your SCX AI account using an API key</p></div><form @submit.prevent="updateScxApiKey"><div class="up-form-group"><label class="up-label" for="scx-api-key">SCX API Key</label><input id="scx-api-key" type="password" v-model="scxApiKeyForm" class="up-input" placeholder="Enter your SCX API key"></div><p v-if="hasScxKey" class="up-hint">A key is saved. Enter a new value to replace it.</p><div class="up-form-footer"><button type="submit" class="up-btn-save" :disabled="savingScx">Save SCX API Key</button></div></form></div><div class="up-toggle-row" style="border-bottom: none">
+              <div class="up-card" style="margin-top: 1.5rem"><div class="up-card-header"><h2 class="up-card-title">SCX AI Integration</h2><p class="up-card-sub">Connect your SCX AI account using an API key</p></div><form @submit.prevent="updateScxApiKey"><div class="up-form-group"><label class="up-label" for="scx-api-key">SCX API Key</label><span v-if="hasScxKey" class="scx-key-status">••••••••</span><input id="scx-api-key" type="password" v-model="scxApiKeyForm" class="up-input" placeholder="Enter your SCX API key"></div><p v-if="hasScxKey" class="up-hint">A key is saved. Enter a new value to replace it.</p><div class="up-form-footer"><button type="submit" class="up-btn-save" :disabled="savingScx">Save SCX API Key</button></div></form></div><div class="up-toggle-row" style="border-bottom: none">
                 <div class="up-toggle-info">
                   <div class="up-toggle-label">Tips & best practices</div>
                   <div class="up-toggle-desc">Occasional guides on getting more from your agents</div>
@@ -802,6 +802,8 @@ const deleteAccount = async () => {
 .up-input-lock { font-size: 0.72rem; color: #4b5563; flex-shrink: 0; }
 
 .up-hint { font-size: 0.76rem; color: #4b5563; }
+
+.scx-key-status { font-size: 0.85rem; color: #00d97e; margin-left: 0.75rem; font-family: monospace; letter-spacing: 0.1em; }
 
 .up-btn-save {
   padding: 0.7rem 1.75rem; border-radius: 0.625rem;
