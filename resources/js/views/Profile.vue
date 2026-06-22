@@ -548,6 +548,7 @@ const updateScxApiKey = async () => {
       scx_api_key: scxApiKeyForm.value
     });
     flashSuccess.value = 'SCX API key saved';
+    hasScxKey.value = true;
   } catch (error) {
     flashError.value = 'Failed to save SCX API key';
   } finally {
