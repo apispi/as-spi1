@@ -582,6 +582,14 @@ const formatJson = (str) => {
 
 .feature-card {
   padding: 32px;
+  border-radius: 12px;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+}
+
+.feature-card:hover {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
 }
 
 .feature-icon {
@@ -636,6 +644,12 @@ const formatJson = (str) => {
   border-radius: 16px;
   padding: 32px;
   position: relative;
+  transition: all 0.2s;
+}
+
+.pricing-card:hover {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
 }
 
 .pricing-card.featured {
@@ -719,6 +733,12 @@ const formatJson = (str) => {
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 32px;
+  transition: all 0.2s;
+}
+
+.testimonial-card:hover {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
 }
 
 .testimonial-card p {
