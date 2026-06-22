@@ -284,7 +284,7 @@
                 </label>
               </div>
 
-              <div class="up-card" style="margin-top: 1.5rem"><div class="up-card-header"><h2 class="up-card-title">SCX AI Integration</h2><p class="up-card-sub">Connect your SCX AI account using an API key</p></div><form @submit.prevent="updateScxApiKey"><div class="up-form-group"><label class="up-label" for="scx-api-key">SCX API Key</label><span v-if="hasScxKey" class="scx-key-status">••••••••</span><input id="scx-api-key" type="password" v-model="scxApiKeyForm" class="up-input" placeholder="Enter your SCX API key"></div><p v-if="hasScxKey" class="up-hint">A key is saved. Enter a new value to replace it.</p><div class="up-form-footer"><button type="submit" class="up-btn-save" :disabled="savingScx">Save SCX API Key</button></div></form></div><div class="up-toggle-row" style="border-bottom: none">
+              <div class="up-card" style="margin-top: 1.5rem"><div class="up-card-header"><h2 class="up-card-title">SCX AI Integration</h2><p class="up-card-sub">Connect your SCX AI account using an API key</p></div><form @submit.prevent="updateScxApiKey"><div class="up-form-group"><label class="up-label" for="scx-api-key">SCX API Key</label><span v-if="hasScxKey" class="scx-key-status">••••••••</span><input id="scx-api-key" type="password" v-model="scxApiKeyForm" class="up-input" placeholder="Enter your SCX API key"></div><p v-if="hasScxKey" class="up-hint">A key is saved. Enter a new value to replace it.</p><div class="up-form-group"><label class="up-label" for="scx-model">AI Model</label><select id="scx-model" v-model="scxModelForm" class="up-input"><option value="scx-ai">SCX AI (Default)</option><option value="gpt-4o-mini">GPT-4o Mini</option></select></div><div class="up-form-footer"><button type="submit" class="up-btn-save" :disabled="savingScx">Save SCX API Key</button></div></form></div><div class="up-toggle-row" style="border-bottom: none">
                 <div class="up-toggle-info">
                   <div class="up-toggle-label">Tips & best practices</div>
                   <div class="up-toggle-desc">Occasional guides on getting more from your agents</div>
@@ -406,6 +406,7 @@ const notificationsForm = reactive({
 const savingNotifications = ref(false);
 
 const scxApiKeyForm = ref('');
+const scxModelForm = ref('scx-ai');
 const savingScx = ref(false);
 const hasScxKey = ref(false);
 
@@ -541,6 +542,7 @@ const updateNotifications = async () => {
 
 const updateScxApiKey = async () => {
   savingScx.value = true;
+    axios.put('/api/user/scx-model', { scx_model: scxModelForm.value });
   flashSuccess.value = '';
   flashError.value = '';
   try {
