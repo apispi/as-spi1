@@ -336,14 +336,15 @@ const formatJson = (str) => {
 
 <style scoped>
 .home-page {
-  min-height: calc(100vh - 60px);
+  min-height: 100%;
   background-color: var(--bg-color);
   color: var(--text-primary);
+  overflow-y: auto;
 }
 
 /* Hero Section */
 .hero {
-  padding: 100px 24px 80px;
+  padding: 60px 24px 40px;
   text-align: center;
   background: linear-gradient(180deg, var(--panel-bg) 0%, var(--bg-color) 100%);
 }

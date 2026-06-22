@@ -15,7 +15,7 @@
         <router-link to="/register" class="btn btn-register">Get Started</router-link>
       </div>
     </header>
-    <router-view></router-view>
+    <router-view class="router-content"></router-view>
   </div>
 </template>
 
@@ -49,6 +49,12 @@ const handleLogout = async () => {
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
+  flex-shrink: 0;
+}
+
+.router-content {
+  flex: 1;
+  overflow-y: auto;
 }
 
 .logo {
