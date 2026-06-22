@@ -10,7 +10,7 @@ Route::get('/{any}', function () {
     return view('welcome');
 })->where('any', '^(?!api\/).*$');
 
-Route::post('/api/proxy', [ProxyController::class, 'handle'])->middleware('auth');
+Route::post('/api/proxy', [ProxyController::class, 'handle']);
 
 Route::post('/api/register', [AuthController::class, 'register']);
 Route::post('/api/login', [AuthController::class, 'login']);
