@@ -10,7 +10,6 @@
     <!-- API Tester Demo -->
     <section class="demo" id="tester">
       <div class="demo-container">
-        <p class="tester-subtitle">The simplest way to test, debug, and document your APIs. No setup required.</p>
         <div class="tester-container">
           <div class="tester-row">
             <select v-model="testMethod" class="method-select">
@@ -355,14 +354,6 @@ const formatJson = (str) => {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-}
-
-.tester-subtitle {
-  font-size: 18px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 0 0 24px 0;
-  text-align: center;
 }
 
 .hero-actions {
