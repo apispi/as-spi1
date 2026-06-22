@@ -237,9 +237,11 @@ const deleteAccount = async () => {
 
 <style scoped>
 .profile-page {
-  padding: 32px 24px;
-  max-width: 800px;
-  margin: 0 auto;
+  padding: 24px;
+  min-height: calc(100vh - 60px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
 }
 
 .profile-container {
@@ -247,53 +249,56 @@ const deleteAccount = async () => {
   border: 1px solid var(--border-color);
   border-radius: 16px;
   overflow: hidden;
+  width: 100%;
+  max-width: 800px;
 }
 
 .profile-header {
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 32px;
+  gap: 20px;
+  padding: 24px;
   background: linear-gradient(180deg, rgba(88, 166, 255, 0.08) 0%, var(--panel-bg) 100%);
   border-bottom: 1px solid var(--border-color);
 }
 
 .avatar-large {
-  width: 80px;
-  height: 80px;
+  width: 72px;
+  height: 72px;
   background: var(--accent-color);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 600;
   flex-shrink: 0;
 }
 
 .profile-info h1 {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 600;
   margin: 0 0 4px 0;
 }
 
 .email {
   color: var(--text-secondary);
-  margin: 0 0 8px 0;
+  margin: 0 0 6px 0;
+  font-size: 14px;
 }
 
 .member-since {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 
 .profile-sections {
-  padding: 24px 32px;
+  padding: 20px 24px 24px;
 }
 
 .profile-section {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .profile-section:last-child {
@@ -301,9 +306,9 @@ const deleteAccount = async () => {
 }
 
 .profile-section h2 {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  margin: 0 0 16px 0;
+  margin: 0 0 12px 0;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -313,7 +318,7 @@ const deleteAccount = async () => {
   background: var(--bg-color);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  padding: 20px;
+  padding: 16px;
 }
 
 .setting-row {
@@ -334,13 +339,14 @@ const deleteAccount = async () => {
 
 .setting-info {
   flex: 1;
+  min-width: 0;
 }
 
 .setting-info label {
   display: block;
   font-size: 14px;
   font-weight: 500;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .setting-input {
@@ -352,6 +358,7 @@ const deleteAccount = async () => {
   font-size: 14px;
   color: var(--text-primary);
   transition: all 0.2s;
+  box-sizing: border-box;
 }
 
 .setting-input:focus {
@@ -369,11 +376,11 @@ const deleteAccount = async () => {
   display: block;
   font-size: 12px;
   color: var(--text-secondary);
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 .api-key-row {
-  padding-bottom: 16px;
+  padding-bottom: 12px;
   margin-bottom: 8px;
   border-bottom: 1px solid var(--border-color);
 }
@@ -391,9 +398,11 @@ const deleteAccount = async () => {
 .api-key-display code {
   flex: 1;
   font-family: 'Courier New', monospace;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--accent-color);
   word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .btn-icon {
@@ -403,6 +412,7 @@ const deleteAccount = async () => {
   cursor: pointer;
   color: var(--text-secondary);
   transition: color 0.2s;
+  flex-shrink: 0;
 }
 
 .btn-icon:hover {
@@ -413,26 +423,26 @@ const deleteAccount = async () => {
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  gap: 12px;
 }
 
 .stat-card {
   background: var(--bg-color);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  padding: 20px;
+  padding: 16px;
   text-align: center;
 }
 
 .stat-value {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--accent-color);
   margin-bottom: 4px;
 }
 
 .stat-label {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary);
 }
 
@@ -455,6 +465,7 @@ const deleteAccount = async () => {
   cursor: pointer;
   transition: all 0.2s;
   border: none;
+  white-space: nowrap;
 }
 
 .btn-sm {
@@ -512,6 +523,7 @@ const deleteAccount = async () => {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 16px;
 }
 
 .modal-content {
@@ -520,7 +532,7 @@ const deleteAccount = async () => {
   border-radius: 16px;
   padding: 24px;
   max-width: 400px;
-  width: 90%;
+  width: 100%;
 }
 
 .modal-content h3 {
@@ -541,19 +553,68 @@ const deleteAccount = async () => {
   justify-content: flex-end;
 }
 
-/* Responsive */
+/* Mobile Responsive */
 @media (max-width: 640px) {
+  .profile-page {
+    padding: 16px;
+  }
+  
   .profile-header {
     flex-direction: column;
     text-align: center;
+    padding: 20px 16px;
+  }
+  
+  .avatar-large {
+    width: 64px;
+    height: 64px;
+    font-size: 20px;
+  }
+  
+  .profile-info h1 {
+    font-size: 20px;
+  }
+  
+  .profile-sections {
+    padding: 16px;
+  }
+  
+  .setting-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .setting-row > button {
+    width: 100%;
   }
   
   .stats-grid {
     grid-template-columns: 1fr;
   }
   
-  .setting-row {
+  .stat-card {
+    padding: 14px;
+  }
+  
+  .stat-value {
+    font-size: 22px;
+  }
+  
+  .settings-card {
+    padding: 14px;
+  }
+  
+  .modal-content {
+    padding: 20px;
+  }
+  
+  .modal-actions {
     flex-direction: column;
+  }
+  
+  .modal-actions .btn {
+    width: 100%;
+    text-align: center;
   }
 }
 </style>
