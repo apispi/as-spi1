@@ -4,13 +4,13 @@
     <section class="hero">
       <div class="hero-content">
         <h1>Test APIs Without the Hassle</h1>
-        <p class="hero-subtitle">The simplest way to test, debug, and document your APIs. No setup required.</p>
       </div>
     </section>
 
     <!-- API Tester Demo -->
     <section class="demo" id="tester">
       <div class="demo-container">
+        <p class="tester-subtitle">The simplest way to test, debug, and document your APIs. No setup required.</p>
         <div class="tester-container">
           <div class="tester-row">
             <select v-model="testMethod" class="method-select">
@@ -357,11 +357,12 @@ const formatJson = (str) => {
   background-clip: text;
 }
 
-.hero-subtitle {
-  font-size: 20px;
+.tester-subtitle {
+  font-size: 18px;
   color: var(--text-secondary);
   line-height: 1.6;
-  margin: 0 0 32px 0;
+  margin: 0 0 24px 0;
+  text-align: center;
 }
 
 .hero-actions {
