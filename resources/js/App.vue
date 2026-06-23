@@ -5,41 +5,58 @@
     <!-- Overlay (mobile) -->
     <div class="db-overlay" @click="sidebarOpen = false"></div>
 
+    <!-- Floating hamburger (shown when sidebar collapsed) -->
+    <button class="db-open-btn" @click="sidebarOpen = true" aria-label="Open menu">
+      <span></span><span></span><span></span>
+    </button>
+
     <!-- Sidebar -->
     <aside class="db-sidebar">
       <div class="db-sidebar-header">
-        <router-link to="/dashboard" class="db-logo" @click="sidebarOpen = false">
+        <router-link to="/dashboard" class="db-logo" @click="closeOnMobile">
           <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="db-logo-icon"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
           <span>Spi</span>
         </router-link>
-        <button class="db-sidebar-close" @click="sidebarOpen = false" aria-label="Close menu">✕</button>
+        <button class="db-sidebar-close" @click="sidebarOpen = false" aria-label="Collapse menu">✕</button>
       </div>
 
       <nav class="db-nav">
         <span class="db-nav-label">Workspace</span>
-        <router-link to="/dashboard" class="db-nav-link" @click="sidebarOpen = false">
+        <router-link to="/dashboard" class="db-nav-link" @click="closeOnMobile">
           <span class="db-nav-icon">⬡</span> Dashboard
         </router-link>
-        <router-link to="/chat" class="db-nav-link" @click="sidebarOpen = false">
+        <router-link to="/chat" class="db-nav-link" @click="closeOnMobile">
           <span class="db-nav-icon">◇</span> Chat
         </router-link>
-        <router-link to="/profile" class="db-nav-link" @click="sidebarOpen = false">
+        <router-link to="/profile" class="db-nav-link" @click="closeOnMobile">
           <span class="db-nav-icon">◈</span> Profile
-        </router-link>
-        <router-link v-if="authStore.user.is_admin" to="/admin" class="db-nav-link db-nav-admin" @click="sidebarOpen = false">
-          <span class="db-nav-icon">▣</span> Admin
         </router-link>
       </nav>
 
       <div class="db-sidebar-footer">
-        <router-link to="/profile" class="db-user-row" @click="sidebarOpen = false">
-          <div class="db-avatar">{{ initial }}</div>
-          <div class="db-user-text">
-            <div class="db-user-name">{{ authStore.user.name }}</div>
-            <div class="db-user-email">{{ authStore.user.email }}</div>
+        <div ref="acctRoot" class="db-acct">
+          <button type="button" class="db-user-row" :class="{ open: acctOpen }" @click="acctOpen = !acctOpen" aria-haspopup="true" :aria-expanded="acctOpen">
+            <div class="db-avatar">{{ initial }}</div>
+            <div class="db-user-text">
+              <div class="db-user-name">{{ authStore.user.name }}</div>
+              <div class="db-user-email">{{ authStore.user.email }}</div>
+            </div>
+            <span class="db-acct-caret">⌄</span>
+          </button>
+
+          <div v-if="acctOpen" class="db-acct-menu" @click.stop>
+            <div class="db-acct-current">
+              <div class="db-acct-label">Signed in as</div>
+              <div class="db-acct-name">{{ authStore.user.name }}</div>
+              <div class="db-acct-email">{{ authStore.user.email }}</div>
+            </div>
+            <div class="db-acct-divider"></div>
+            <router-link to="/profile" class="db-acct-action" @click="onAcctNav">Manage profile</router-link>
+            <router-link v-if="authStore.user.is_admin" to="/admin" class="db-acct-action db-acct-admin" @click="onAcctNav">Admin Panel</router-link>
+            <div class="db-acct-divider"></div>
+            <button type="button" class="db-acct-action db-acct-signout" @click="handleLogout">Sign out</button>
           </div>
-        </router-link>
-        <button type="button" class="db-signout" @click="handleLogout">⏻ Sign Out</button>
+        </div>
       </div>
     </aside>
 
@@ -85,18 +102,42 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from './store/auth';
 import { useRouter } from 'vue-router';
 
 const authStore = useAuthStore();
 const router = useRouter();
 
-const sidebarOpen = ref(false);
+// Open by default on desktop, collapsed on mobile.
+const sidebarOpen = ref(typeof window !== 'undefined' ? window.innerWidth > 768 : true);
+
+// Auto-collapse the overlay sidebar after navigating on mobile only;
+// on desktop the sidebar stays put until the user toggles it.
+const closeOnMobile = () => {
+  if (typeof window !== 'undefined' && window.innerWidth <= 768) sidebarOpen.value = false;
+};
+
+// Account popup menu (mirrors as-website1-laravel AccountSwitcher).
+const acctRoot = ref(null);
+const acctOpen = ref(false);
+
+const onAcctNav = () => {
+  acctOpen.value = false;
+  closeOnMobile();
+};
+
+const onDocMousedown = (e) => {
+  if (acctRoot.value && !acctRoot.value.contains(e.target)) acctOpen.value = false;
+};
+
+onMounted(() => document.addEventListener('mousedown', onDocMousedown));
+onUnmounted(() => document.removeEventListener('mousedown', onDocMousedown));
 
 const initial = computed(() => ((authStore.user && authStore.user.name) || 'U').charAt(0).toUpperCase());
 
 const handleLogout = async () => {
+  acctOpen.value = false;
   sidebarOpen.value = false;
   await authStore.logout();
   router.push('/login');
@@ -132,8 +173,24 @@ const handleLogout = async () => {
   display: flex; flex-direction: column;
   z-index: 100;
   overflow-y: auto;
+  transform: translateX(0);
   transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
+/* Collapsed: slide the sidebar out of view */
+.db-shell:not(.sidebar-open) .db-sidebar { transform: translateX(-100%); }
+
+/* Floating hamburger to reopen the collapsed sidebar (desktop) */
+.db-open-btn {
+  display: none;
+  position: fixed; top: 14px; left: 14px; z-index: 110;
+  flex-direction: column; justify-content: space-between;
+  width: 42px; height: 36px; padding: 10px;
+  background: var(--panel-bg); border: 1px solid var(--border-color);
+  border-radius: 8px; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.db-shell:not(.sidebar-open) .db-open-btn { display: flex; }
+.db-open-btn span { display: block; width: 100%; height: 2px; background: var(--accent-color); border-radius: 2px; }
 .db-sidebar-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 18px 16px;
@@ -147,10 +204,12 @@ const handleLogout = async () => {
 }
 .db-logo-icon { color: var(--accent-color); }
 .db-sidebar-close {
-  display: none;
+  display: block;
   background: none; border: none; cursor: pointer;
   color: var(--text-secondary); font-size: 18px; padding: 4px;
+  line-height: 1; border-radius: 6px;
 }
+.db-sidebar-close:hover { background: var(--border-color); color: var(--text-primary); }
 
 .db-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 3px; }
 .db-nav-label {
@@ -178,12 +237,15 @@ const handleLogout = async () => {
   border-top: 1px solid var(--border-color);
   flex-shrink: 0;
 }
+.db-acct { position: relative; }
 .db-user-row {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 10px; width: 100%;
   text-decoration: none; color: inherit;
   padding: 6px 8px; border-radius: 8px; transition: background 0.15s;
+  background: none; border: none; cursor: pointer; font-family: inherit; text-align: left;
 }
-.db-user-row:hover { background: var(--border-color); }
+.db-user-row:hover, .db-user-row.open { background: var(--border-color); }
+.db-acct-caret { margin-left: auto; color: var(--text-secondary); font-size: 14px; flex-shrink: 0; }
 .db-avatar {
   width: 36px; height: 36px; border-radius: 50%;
   background: var(--accent-color);
@@ -195,14 +257,32 @@ const handleLogout = async () => {
 .db-user-text { min-width: 0; }
 .db-user-name { font-size: 14px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .db-user-email { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.db-signout {
-  display: flex; align-items: center; gap: 8px;
-  width: 100%; padding: 10px 12px;
-  background: none; border: none; cursor: pointer;
-  color: var(--text-secondary); font-size: 14px; font-weight: 500; border-radius: 8px;
-  transition: all 0.18s; font-family: inherit; text-align: left;
+
+/* Account popup menu (opens above the trigger) */
+.db-acct-menu {
+  position: absolute; bottom: 100%; left: 0; right: 0; margin-bottom: 8px;
+  background: var(--panel-bg); border: 1px solid var(--border-color);
+  border-radius: 10px; padding: 6px; z-index: 200;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  display: flex; flex-direction: column;
 }
-.db-signout:hover { background: rgba(248, 81, 73, 0.1); color: #ff7b72; }
+.db-acct-current { padding: 8px 10px 10px; }
+.db-acct-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); margin-bottom: 3px; }
+.db-acct-name { font-size: 14px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.db-acct-email { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.db-acct-divider { height: 1px; background: var(--border-color); margin: 6px 4px; }
+.db-acct-action {
+  display: block; width: 100%; text-align: left;
+  background: none; border: none; cursor: pointer;
+  padding: 8px 10px; border-radius: 6px; box-sizing: border-box;
+  font-family: inherit; font-size: 14px; font-weight: 500;
+  color: var(--text-primary); text-decoration: none;
+}
+.db-acct-action:hover { background: rgba(88, 166, 255, 0.12); color: var(--accent-color); }
+.db-acct-admin { color: #d29922; }
+.db-acct-admin:hover { background: rgba(210, 153, 34, 0.12); color: #d29922; }
+.db-acct-signout { color: #ff7b72; }
+.db-acct-signout:hover { background: rgba(248, 81, 73, 0.1); color: #ff7b72; }
 
 /* Main */
 .db-main {
@@ -211,7 +291,10 @@ const handleLogout = async () => {
   height: 100vh;
   display: flex; flex-direction: column;
   min-width: 0;
+  transition: margin-left 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
+/* Collapsed: main content reclaims the full width */
+.db-shell:not(.sidebar-open) .db-main { margin-left: 0; }
 .db-content-area { flex: 1; overflow-y: auto; min-height: 0; }
 
 /* Topbar (mobile only) */
@@ -296,10 +379,9 @@ const handleLogout = async () => {
 
 /* ---------- Mobile ---------- */
 @media (max-width: 768px) {
-  .db-sidebar { transform: translateX(-100%); }
-  .sidebar-open .db-sidebar { transform: translateX(0); }
-  .db-sidebar-close { display: block; }
-  .db-main { margin-left: 0; }
+  /* On mobile the topbar hamburger handles opening; sidebar overlays content */
+  .db-main { margin-left: 0 !important; }
   .db-topbar { display: flex; }
+  .db-open-btn { display: none !important; }
 }
 </style>
