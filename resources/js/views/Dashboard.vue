@@ -111,7 +111,7 @@ const handleRequest = async (requestConfig) => {
 <style scoped>
 .dashboard-layout {
   display: flex;
-  height: calc(100vh - 60px);
+  height: 100%;
 }
 
 .sidebar {

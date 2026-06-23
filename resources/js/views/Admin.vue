@@ -155,7 +155,7 @@ onMounted(fetchData);
   padding: 32px;
   max-width: 1200px;
   margin: 0 auto;
-  height: calc(100vh - 60px);
+  height: 100%;
   overflow-y: auto;
 }
 
