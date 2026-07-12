@@ -20,6 +20,8 @@
             <button @click="loadSample('grpc')" class="sample-btn grpc">gRPC</button>
             <button @click="loadSample('mqtt')" class="sample-btn mqtt">MQTT</button>
             <button @click="loadSample('soap')" class="sample-btn soap">SOAP</button>
+            <button @click="loadSample('mcp')" class="sample-btn mcp">MCP</button>
+            <button @click="loadSample('a2a')" class="sample-btn a2a">A2A</button>
           </div>
 
           <!-- Protocol Selector -->
@@ -358,6 +360,13 @@
           </div>
           <h3>Team Collaboration</h3>
           <p>Built for individuals and teams. Share your testing workflow with colleagues.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M10 6.5h4M6.5 10v4M17.5 10v4M10 17.5h4"/></svg>
+          </div>
+          <h3>MCP & A2A Ready</h3>
+          <p>Test Model Context Protocol servers and Agent-to-Agent communication alongside every other protocol you already use.</p>
         </div>
       </div>
     </section>
@@ -838,6 +847,19 @@ const loadSample = (protocol) => {
     </celsiusToFahrenheit>
   </soap:Body>
 </soap:Envelope>`;
+    },
+    mcp: () => {
+      testUrl.value = 'https://api.example.com/mcp';
+      testHeaders.value = '';
+      mcpMethod.value = 'tools/list';
+      mcpParams.value = '';
+    },
+    a2a: () => {
+      testUrl.value = 'https://agents.example.com/a2a';
+      testHeaders.value = '';
+      a2aAgentId.value = 'agent-123';
+      a2aAction.value = 'send_message';
+      a2aPayload.value = '{"message": "What is the status of my order?"}';
     }
   };
   
@@ -968,6 +990,22 @@ const loadSample = (protocol) => {
 }
 .sample-btn.soap:hover {
   background: rgba(210, 153, 34, 0.15);
+}
+
+.sample-btn.mcp {
+  color: #a371f7;
+  border-color: rgba(163, 113, 247, 0.4);
+}
+.sample-btn.mcp:hover {
+  background: rgba(163, 113, 247, 0.15);
+}
+
+.sample-btn.a2a {
+  color: #f85149;
+  border-color: rgba(248, 81, 73, 0.4);
+}
+.sample-btn.a2a:hover {
+  background: rgba(248, 81, 73, 0.15);
 }
 
 .protocol-row {
