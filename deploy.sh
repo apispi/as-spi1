@@ -2,145 +2,75 @@
 #
 # Deploy apispi.com to production on SiteGround.
 #
-# Two modes:
+#   Local machine:  ./deploy.sh "commit message"
+#     Builds Vite assets, commits, pushes, then updates the server over SSH
+#     (which re-runs this script there in server mode).
 #
-#   Local (default) — run from your machine:
-#     ./deploy.sh [user@host] [--seed]
-#     Builds assets, commits them, pushes, then SSHes in and runs this same
-#     script in --server mode on SiteGround.
+#   On the server:  ./deploy.sh
+#     Refreshes to origin/main, composer install --no-dev, migrate --force,
+#     clears caches, verifies the site returns HTTP 200.
 #
-#   Server — runs ON SiteGround (invoked automatically over SSH, or manually):
-#     ./deploy.sh --server [--seed]
-#     Pulls code and runs the release steps: composer (only if the lockfile
-#     changed), migrations, optional seeders, storage link, and cache warming,
-#     all wrapped in maintenance mode with automatic recovery on failure.
-#
-# Flags:
-#   --seed   Also run `php artisan db:seed --force` (seeders are idempotent;
-#            off by default so routine deploys don't re-run them).
-#
-# Configuration (env vars, or pass as $1 in local mode):
-#   SITEGROUND_SSH   SSH target, e.g. "user@123.45.67.89"
-#   REMOTE_PATH      Remote app directory (default: ~/www/apispi.com)
-#   PHP_BIN          PHP binary to use on the server (default: php)
+# Config (env vars):
+#   DEPLOY_SSH_HOST      SSH host/alias        (default: as)
+#   DEPLOY_SERVER_PATH   Remote app directory  (default: ~/www/apispi.com)
+#   DEPLOY_SEED=1        Also run seeders on the server (idempotent; off by default)
 
 set -euo pipefail
 
-cd "$(dirname "${BASH_SOURCE[0]}")"
+cd "$(dirname "$0")"
 
-# Collect flags that apply to either mode.
-RUN_SEED=false
-POSITIONAL=()
-for arg in "$@"; do
-  case "$arg" in
-    --seed) RUN_SEED=true ;;
-    *) POSITIONAL+=("$arg") ;;
-  esac
-done
-set -- "${POSITIONAL[@]+"${POSITIONAL[@]}"}"
+SSH_HOST="${DEPLOY_SSH_HOST:-as}"
+SERVER_PATH="${DEPLOY_SERVER_PATH:-~/www/apispi.com}"
+SITE_URL="${DEPLOY_SITE_URL:-https://apispi.com/}"
 
-# ---------------------------------------------------------------------------
-# Server mode: the release steps that run on SiteGround itself.
-# ---------------------------------------------------------------------------
-if [[ "${1:-}" == "--server" ]]; then
-  PHP="${PHP_BIN:-php}"
+verify() {
+    echo "==> Verifying live site..."
+    CODE=$(curl -sS -o /dev/null -w "%{http_code}" "$SITE_URL")
+    echo "    $SITE_URL -> HTTP $CODE"
+    [ "$CODE" = "200" ] && echo "✓ Deploy complete." || { echo "✗ Site did not return 200."; exit 1; }
+}
 
-  echo "==> [server] Pulling latest code"
-  BEFORE_PULL="$(git rev-parse HEAD)"
-  git pull --ff-only
-  echo "    $(git rev-parse --short "$BEFORE_PULL") -> $(git rev-parse --short HEAD)"
+# ----------------------------------------------------------------- server mode
+# Detected by running from inside the deploy directory on the server.
+if [[ "$(pwd -P)" == */www/apispi.com ]]; then
+    echo "==> Server mode: refreshing to origin/main..."
+    git fetch -q origin
+    git reset -q --hard origin/main
 
-  # Install PHP dependencies before any artisan call, in case new packages
-  # arrived, but only when the lockfile actually changed.
-  if ! git diff --quiet "$BEFORE_PULL" HEAD -- composer.lock 2>/dev/null; then
-    echo "==> [server] composer.lock changed — installing dependencies"
-    composer install --no-dev --optimize-autoloader --no-interaction
-  else
-    echo "==> [server] composer.lock unchanged — skipping composer install"
-  fi
+    echo "==> Installing composer dependencies..."
+    composer install --no-dev --optimize-autoloader --no-interaction --quiet
 
-  # Enter maintenance mode, and guarantee we bring the app back up even if a
-  # later step fails and the script exits early.
-  echo "==> [server] Entering maintenance mode"
-  "$PHP" artisan down --retry=15 || true
-  trap '"$PHP" artisan up || true' EXIT
+    echo "==> Running migrations..."
+    php artisan migrate --force
 
-  echo "==> [server] Running migrations"
-  "$PHP" artisan migrate --force
+    if [[ "${DEPLOY_SEED:-}" == "1" ]]; then
+        echo "==> Running seeders..."
+        php artisan db:seed --force
+    fi
 
-  if [[ "$RUN_SEED" == true ]]; then
-    echo "==> [server] Running seeders"
-    "$PHP" artisan db:seed --force
-  fi
+    echo "==> Clearing caches..."
+    php artisan optimize:clear >/dev/null
 
-  # Ensure the public storage symlink exists (no-op if already linked).
-  "$PHP" artisan storage:link 2>/dev/null || true
-
-  # Warm the caches. Config and views are cached for performance; routes are
-  # only cleared, never cached, because routes/web.php uses a closure route
-  # which cannot be serialized by route:cache.
-  echo "==> [server] Rebuilding caches"
-  "$PHP" artisan config:clear
-  "$PHP" artisan config:cache
-  "$PHP" artisan view:cache
-  "$PHP" artisan route:clear
-
-  echo "==> [server] Leaving maintenance mode"
-  "$PHP" artisan up
-  trap - EXIT
-
-  echo "==> [server] Deploy complete ($(git rev-parse --short HEAD))"
-  exit 0
+    verify
+    exit 0
 fi
 
-# ---------------------------------------------------------------------------
-# Local mode: build, commit assets, push, then trigger server mode over SSH.
-# ---------------------------------------------------------------------------
-SITEGROUND_SSH="${1:-${SITEGROUND_SSH:-}}"
-REMOTE_PATH="${REMOTE_PATH:-~/www/apispi.com}"
+# ------------------------------------------------------------------ local mode
+MSG="${1:-Deploy site updates}"
 
-if [[ -z "$SITEGROUND_SSH" ]]; then
-  echo "Error: SiteGround SSH target not set." >&2
-  echo "Usage: ./deploy.sh user@host [--seed]" >&2
-  echo "   or: SITEGROUND_SSH=user@host ./deploy.sh [--seed]" >&2
-  exit 1
-fi
+echo "==> Building Vite assets..."
+npm run build   # laravel-vite-plugin writes straight to public_html/build
 
-echo "==> Checking for uncommitted source changes"
-UNSTAGED_NON_BUILD="$(git status --porcelain -- . ':!public_html/build' 2>/dev/null || true)"
-if [[ -n "$UNSTAGED_NON_BUILD" ]]; then
-  echo "Warning: you have uncommitted changes outside public_html/build:"
-  echo "$UNSTAGED_NON_BUILD"
-  echo "These will NOT be deployed unless you commit them first."
-  read -r -p "Continue anyway? [y/N] " CONTINUE_ANYWAY
-  if [[ ! "$CONTINUE_ANYWAY" =~ ^[Yy]$ ]]; then
-    echo "Aborted. Commit your changes, then re-run."
-    exit 1
-  fi
-fi
-
-echo "==> Building frontend assets"
-npm run build
-
-echo "==> Staging built assets"
-git add public_html/build/
-
+echo "==> Committing..."
+git add -A
 if git diff --cached --quiet; then
-  echo "==> No asset changes to commit"
+    echo "    No changes to commit."
 else
-  git status --short
-  read -r -p "Commit message for asset rebuild [Rebuild frontend assets]: " COMMIT_MSG
-  COMMIT_MSG="${COMMIT_MSG:-Rebuild frontend assets}"
-  git commit -m "$COMMIT_MSG"
+    git commit -m "$MSG"
 fi
 
-echo "==> Pushing to origin"
-git push
+echo "==> Pushing to GitHub..."
+git push origin "$(git rev-parse --abbrev-ref HEAD)"
 
-REMOTE_FLAGS="--server"
-[[ "$RUN_SEED" == true ]] && REMOTE_FLAGS="$REMOTE_FLAGS --seed"
-
-echo "==> Deploying on SiteGround (${SITEGROUND_SSH})"
-ssh "$SITEGROUND_SSH" "cd ${REMOTE_PATH} && bash deploy.sh ${REMOTE_FLAGS}"
-
-echo "==> Deploy complete"
+echo "==> Updating server ($SSH_HOST)..."
+ssh -o BatchMode=yes "$SSH_HOST" "cd $SERVER_PATH && git fetch -q origin && git reset -q --hard origin/main && ${DEPLOY_SEED:+DEPLOY_SEED=1 }./deploy.sh"
