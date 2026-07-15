@@ -7,6 +7,8 @@ use App\Http\Controllers\ProxyController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\UserPreferencesController;
 use App\Http\Controllers\ScxChatController;
+use App\Http\Controllers\McpTestController;
+use App\Http\Controllers\A2aTestController;
 
 Route::get('/{any}', function () {
     return view('welcome');
@@ -27,6 +29,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/user/scx-api-key', [UserPreferencesController::class, 'getScxApiKey']);
     Route::put('/api/user/scx-model', [UserPreferencesController::class, 'updateScxModel']);
     Route::post('/api/scx/chat', [ScxChatController::class, 'chat']);
+    Route::post('/api/mcp/test', [McpTestController::class, 'test']);
+    Route::post('/api/a2a/test', [A2aTestController::class, 'test']);
 });
 
 Route::middleware(['auth', 'admin'])->group(function () {

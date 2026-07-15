@@ -14,17 +14,37 @@
     
     <div class="panel-content">
       <div class="url-bar flex gap-2">
-        <select class="input-field method-select" v-model="method">
+        <select class="input-field protocol-select" v-model="protocol">
+          <option value="rest">REST</option>
+          <option value="mcp">MCP</option>
+          <option value="a2a">A2A</option>
+        </select>
+        <select v-if="protocol === 'rest'" class="input-field method-select" v-model="method">
           <option>GET</option>
           <option>POST</option>
           <option>PUT</option>
           <option>PATCH</option>
           <option>DELETE</option>
         </select>
-        <input 
-          type="text" 
-          class="input-field w-full" 
-          placeholder="https://apispi.com/api/gateway/tools"
+        <select v-else-if="protocol === 'mcp'" class="input-field method-select" v-model="mcpMethod">
+          <option value="initialize">initialize</option>
+          <option value="tools/list">tools/list</option>
+          <option value="tools/call">tools/call</option>
+          <option value="resources/list">resources/list</option>
+          <option value="resources/read">resources/read</option>
+          <option value="prompts/list">prompts/list</option>
+          <option value="ping">ping</option>
+        </select>
+        <select v-else class="input-field method-select" v-model="a2aMethod">
+          <option value="agent-card">agent-card</option>
+          <option value="message/send">message/send</option>
+          <option value="tasks/get">tasks/get</option>
+          <option value="tasks/cancel">tasks/cancel</option>
+        </select>
+        <input
+          type="text"
+          class="input-field w-full"
+          :placeholder="urlPlaceholder"
           v-model="url"
           @keyup.enter="send"
         />
@@ -32,14 +52,14 @@
 
       <div class="tabs mt-6">
         <div class="tab-list flex gap-4">
-          <button 
-            :class="['tab', activeTab === 'headers' ? 'active' : '']" 
+          <button
+            :class="['tab', activeTab === 'headers' ? 'active' : '']"
             @click="activeTab = 'headers'"
           >Headers</button>
-          <button 
-            :class="['tab', activeTab === 'body' ? 'active' : '']" 
+          <button
+            :class="['tab', activeTab === 'body' ? 'active' : '']"
             @click="activeTab = 'body'"
-          >Body</button>
+          >{{ protocol === 'rest' ? 'Body' : 'Params' }}</button>
         </div>
 
         <div class="tab-content mt-4" v-show="activeTab === 'headers'">
@@ -54,9 +74,9 @@
         </div>
 
         <div class="tab-content mt-4" v-show="activeTab === 'body'">
-          <textarea 
-            class="input-field w-full body-editor" 
-            placeholder="{&#10;  &quot;key&quot;: &quot;value&quot;&#10;}"
+          <textarea
+            class="input-field w-full body-editor"
+            :placeholder="bodyPlaceholder"
             v-model="body"
           ></textarea>
         </div>
@@ -66,7 +86,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 const props = defineProps({
   isLoading: Boolean,
@@ -75,7 +95,10 @@ const props = defineProps({
 
 const emit = defineEmits(['send-request', 'save-request']);
 
+const protocol = ref('rest');
 const method = ref('GET');
+const mcpMethod = ref('initialize');
+const a2aMethod = ref('agent-card');
 const url = ref('https://apispi.com/api/gateway/tools');
 const activeTab = ref('headers');
 
@@ -85,12 +108,27 @@ const headers = ref([
 
 const body = ref('');
 
+const urlPlaceholder = computed(() => {
+  if (protocol.value === 'mcp') return 'https://api.example.com/mcp';
+  if (protocol.value === 'a2a') return 'https://agents.example.com/a2a';
+  return 'https://apispi.com/api/gateway/tools';
+});
+
+const bodyPlaceholder = computed(() => {
+  if (protocol.value === 'mcp') return '{\n  "name": "my-tool",\n  "arguments": {}\n}';
+  if (protocol.value === 'a2a') return '{\n  "message": {"role": "user", "parts": [{"text": "Hello"}]}\n}';
+  return '{\n  "key": "value"\n}';
+});
+
 watch(() => props.loadedRequest, (newReq) => {
   if (newReq) {
+    protocol.value = newReq.protocol || 'rest';
     url.value = newReq.url;
     method.value = newReq.method;
+    mcpMethod.value = newReq.protocolMethod || 'initialize';
+    a2aMethod.value = newReq.protocolMethod || 'agent-card';
     body.value = newReq.body || '';
-    
+
     headers.value = [];
     if (newReq.headers) {
       Object.entries(newReq.headers).forEach(([key, value]) => {
@@ -111,16 +149,41 @@ const removeHeader = (index) => {
   headers.value.splice(index, 1);
 };
 
-const send = () => {
-  if (!url.value) return;
-
-  // Process headers
+const collectHeaders = () => {
   const headerObj = {};
   headers.value.forEach(h => {
     if (h.key && h.key.trim()) {
       headerObj[h.key.trim()] = h.value;
     }
   });
+  return headerObj;
+};
+
+const send = () => {
+  if (!url.value) return;
+
+  if (protocol.value === 'mcp' || protocol.value === 'a2a') {
+    let params = {};
+    if (body.value.trim()) {
+      try {
+        params = JSON.parse(body.value);
+      } catch (e) {
+        alert('Params must be valid JSON');
+        return;
+      }
+    }
+
+    emit('send-request', {
+      protocol: protocol.value,
+      protocolMethod: protocol.value === 'mcp' ? mcpMethod.value : a2aMethod.value,
+      url: url.value,
+      headers: collectHeaders(),
+      params
+    });
+    return;
+  }
+
+  const headerObj = collectHeaders();
 
   // Automatically add Content-Type for JSON body if missing
   if (body.value && !Object.keys(headerObj).some(k => k.toLowerCase() === 'content-type')) {
@@ -133,6 +196,7 @@ const send = () => {
   }
 
   emit('send-request', {
+    protocol: 'rest',
     method: method.value,
     url: url.value,
     headers: headerObj,
@@ -145,18 +209,16 @@ const save = () => {
   const name = prompt("Enter a name for this saved request:");
   if (!name) return;
 
-  const headerObj = {};
-  headers.value.forEach(h => {
-    if (h.key && h.key.trim()) {
-      headerObj[h.key.trim()] = h.value;
-    }
-  });
+  if (protocol.value !== 'rest') {
+    alert('Saving MCP/A2A requests is not supported yet — only REST requests can be saved.');
+    return;
+  }
 
   emit('save-request', {
     name,
     method: method.value,
     url: url.value,
-    headers: headerObj,
+    headers: collectHeaders(),
     body: ['GET', 'HEAD'].includes(method.value) ? null : body.value
   });
 };
@@ -190,6 +252,12 @@ const save = () => {
 
 .method-select {
   width: 110px;
+  font-weight: 600;
+  color: var(--accent-color);
+}
+
+.protocol-select {
+  width: 90px;
   font-weight: 600;
   color: var(--accent-color);
 }

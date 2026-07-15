@@ -83,13 +83,31 @@ const handleRequest = async (requestConfig) => {
   responseData.value = null;
 
   try {
-    const res = await axios.post('/api/proxy', {
-      url: requestConfig.url,
-      method: requestConfig.method,
-      headers: requestConfig.headers,
-      body: requestConfig.body
-    });
-    
+    let res;
+
+    if (requestConfig.protocol === 'mcp') {
+      res = await axios.post('/api/mcp/test', {
+        url: requestConfig.url,
+        method: requestConfig.protocolMethod,
+        params: requestConfig.params,
+        headers: requestConfig.headers
+      });
+    } else if (requestConfig.protocol === 'a2a') {
+      res = await axios.post('/api/a2a/test', {
+        url: requestConfig.url,
+        method: requestConfig.protocolMethod,
+        params: requestConfig.params,
+        headers: requestConfig.headers
+      });
+    } else {
+      res = await axios.post('/api/proxy', {
+        url: requestConfig.url,
+        method: requestConfig.method,
+        headers: requestConfig.headers,
+        body: requestConfig.body
+      });
+    }
+
     responseData.value = res.data;
   } catch (error) {
     if (error.response && error.response.data) {

@@ -24,6 +24,7 @@ class McpClient
     public function __construct(
         protected string $endpoint,
         protected ?string $bearerToken = null,
+        protected array $extraHeaders = [],
     ) {
     }
 
@@ -149,10 +150,10 @@ class McpClient
     protected function client(): PendingRequest
     {
         $client = Http::acceptJson()
-            ->withHeaders([
+            ->withHeaders(array_merge([
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json, text/event-stream',
-            ]);
+            ], $this->extraHeaders));
 
         if ($this->bearerToken) {
             $client = $client->withToken($this->bearerToken);
