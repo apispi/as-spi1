@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
         // Create the default admin user. The password comes from the
         // ADMIN_PASSWORD env var; if unset, a random one is generated and
         // printed once so a known default can never ship to production.
-        $password = env('ADMIN_PASSWORD');
+        $password = config('security.admin_password');
 
         if (! $password) {
             $password = Str::password(20);
