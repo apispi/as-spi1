@@ -7,11 +7,11 @@ use Tests\TestCase;
 
 class PubliclyRoutableUrlTest extends TestCase
 {
-    protected function fails(string $url): bool
+    protected function fails(string $url, ?callable $resolver = null): bool
     {
         $failed = false;
 
-        (new PubliclyRoutableUrl)->validate('url', $url, function () use (&$failed) {
+        (new PubliclyRoutableUrl($resolver))->validate('url', $url, function () use (&$failed) {
             $failed = true;
         });
 
@@ -54,5 +54,34 @@ class PubliclyRoutableUrlTest extends TestCase
     {
         $this->assertTrue($this->fails('ftp://example.com/'));
         $this->assertTrue($this->fails('file:///etc/passwd'));
+    }
+
+    public function test_blocks_hostname_that_resolves_to_a_private_ip(): void
+    {
+        $resolver = fn () => ['10.1.2.3'];
+
+        $this->assertTrue($this->fails('https://sneaky.example.com/', $resolver));
+    }
+
+    public function test_blocks_when_any_resolved_ip_is_private(): void
+    {
+        // Public and private mixed — the private one must trip the block.
+        $resolver = fn () => ['93.184.216.34', '192.168.0.10'];
+
+        $this->assertTrue($this->fails('https://rebind.example.com/', $resolver));
+    }
+
+    public function test_allows_hostname_that_resolves_to_public_ips(): void
+    {
+        $resolver = fn () => ['93.184.216.34', '8.8.8.8'];
+
+        $this->assertFalse($this->fails('https://legit.example.com/', $resolver));
+    }
+
+    public function test_blocks_hostname_that_does_not_resolve(): void
+    {
+        $resolver = fn () => [];
+
+        $this->assertTrue($this->fails('https://nxdomain.example.com/', $resolver));
     }
 }
