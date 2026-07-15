@@ -37,6 +37,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/api/user/profile', [UserController::class, 'updateProfile']);
     Route::get('/api/user/stats', [UserController::class, 'stats']);
     Route::get('/api/user/activity', [UserController::class, 'activity']);
+    Route::get('/api/user/preferences', [UserController::class, 'preferences']);
+    Route::put('/api/user/preferences', [UserController::class, 'updatePreferences']);
     Route::delete('/api/user/account', [UserController::class, 'deleteAccount']);
     Route::post('/api/mcp/test', [McpTestController::class, 'test'])->middleware('throttle:outbound-test');
     Route::post('/api/a2a/test', [A2aTestController::class, 'test'])->middleware('throttle:outbound-test');

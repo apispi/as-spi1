@@ -42,11 +42,12 @@
     </aside>
     <main class="app-main">
       <div class="panel-container">
-        <RequestPanel 
-          @send-request="handleRequest" 
+        <RequestPanel
+          @send-request="handleRequest"
           @save-request="handleSaveRequest"
           :isLoading="isLoading"
           :loadedRequest="currentLoadedRequest"
+          :defaults="preferences"
         />
       </div>
       <div class="panel-container">
@@ -76,10 +77,17 @@ const currentLoadedRequest = ref(null);
 const sidebarTab = ref('saved');
 const history = ref([]);
 const historyLoading = ref(false);
+const preferences = ref(null);
 
 onMounted(async () => {
   if (authStore.isAuthenticated) {
     await requestsStore.fetchSavedRequests();
+    try {
+      const res = await axios.get('/api/user/preferences');
+      preferences.value = res.data;
+    } catch (error) {
+      preferences.value = null;
+    }
   }
 });
 

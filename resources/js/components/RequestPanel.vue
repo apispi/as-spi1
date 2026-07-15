@@ -130,10 +130,13 @@ import axios from 'axios';
 
 const props = defineProps({
   isLoading: Boolean,
-  loadedRequest: Object
+  loadedRequest: Object,
+  defaults: Object
 });
 
 const emit = defineEmits(['send-request', 'save-request']);
+
+let defaultsApplied = false;
 
 const protocol = ref('rest');
 const method = ref('GET');
@@ -154,6 +157,15 @@ const headers = ref([
 ]);
 
 const body = ref('');
+
+// Apply the user's saved defaults once, when they arrive, and only if the
+// user hasn't already loaded a specific request into the panel.
+watch(() => props.defaults, (prefs) => {
+  if (!prefs || defaultsApplied || props.loadedRequest) return;
+  defaultsApplied = true;
+  protocol.value = prefs.default_protocol || 'rest';
+  if (prefs.default_method) method.value = prefs.default_method;
+}, { immediate: true });
 
 const urlPlaceholder = computed(() => {
   if (protocol.value === 'mcp') return 'https://api.example.com/mcp';

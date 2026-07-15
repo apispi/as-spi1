@@ -70,11 +70,62 @@ class UserControllerTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $admin->id]);
     }
 
+    public function test_preferences_return_defaults_when_unset(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->getJson('/api/user/preferences');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('default_protocol', 'rest')
+            ->assertJsonPath('default_method', 'GET')
+            ->assertJsonPath('timezone', 'UTC')
+            ->assertJsonPath('compact_history', false);
+    }
+
+    public function test_preferences_can_be_saved_and_read_back(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->putJson('/api/user/preferences', [
+            'default_protocol' => 'mcp',
+            'default_method' => 'POST',
+            'timezone' => 'Australia/Sydney',
+            'compact_history' => true,
+        ])->assertStatus(200)->assertJsonPath('default_protocol', 'mcp');
+
+        $this->actingAs($user)->getJson('/api/user/preferences')
+            ->assertJsonPath('default_protocol', 'mcp')
+            ->assertJsonPath('timezone', 'Australia/Sydney')
+            ->assertJsonPath('compact_history', true);
+    }
+
+    public function test_preferences_reject_invalid_values(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->putJson('/api/user/preferences', [
+            'default_protocol' => 'carrier-pigeon',
+            'default_method' => 'GET',
+            'timezone' => 'UTC',
+            'compact_history' => false,
+        ])->assertStatus(422)->assertJsonValidationErrors(['default_protocol']);
+
+        $this->actingAs($user)->putJson('/api/user/preferences', [
+            'default_protocol' => 'rest',
+            'default_method' => 'GET',
+            'timezone' => 'Not/AZone',
+            'compact_history' => false,
+        ])->assertStatus(422)->assertJsonValidationErrors(['timezone']);
+    }
+
     public function test_user_endpoints_require_auth(): void
     {
         $this->putJson('/api/user/profile', ['name' => 'x'])->assertStatus(401);
         $this->getJson('/api/user/stats')->assertStatus(401);
         $this->getJson('/api/user/activity')->assertStatus(401);
+        $this->getJson('/api/user/preferences')->assertStatus(401);
+        $this->putJson('/api/user/preferences', [])->assertStatus(401);
         $this->deleteJson('/api/user/account')->assertStatus(401);
     }
 }

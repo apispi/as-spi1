@@ -22,6 +22,7 @@
         <!-- Tabs -->
         <div class="up-tabs">
           <button :class="['up-tab', { active: activeTab === 'account' }]" @click="activeTab = 'account'">Account</button>
+          <button :class="['up-tab', { active: activeTab === 'personalisation' }]" @click="activeTab = 'personalisation'">Personalisation</button>
           <button :class="['up-tab', { active: activeTab === 'api-keys' }]" @click="activeTab = 'api-keys'">API Keys</button>
           <button :class="['up-tab', { active: activeTab === 'usage' }]" @click="activeTab = 'usage'">Usage</button>
           <button :class="['up-tab', { active: activeTab === 'settings' }]" @click="activeTab = 'settings'">Settings</button>
@@ -83,6 +84,60 @@
               <div class="up-form-footer">
                 <button type="submit" class="up-btn-save" :disabled="changingPassword">
                   {{ changingPassword ? 'Updating...' : 'Update Password' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </template>
+
+        <!-- ── Personalisation tab ── -->
+        <template v-else-if="activeTab === 'personalisation'">
+          <div class="up-card">
+            <div class="up-card-header">
+              <h2 class="up-card-title">Personalisation</h2>
+              <p class="up-card-sub">Set the defaults used when you open the request tester</p>
+            </div>
+            <form @submit.prevent="updatePreferences">
+              <div class="up-form-row">
+                <div class="up-form-group">
+                  <label class="up-label" for="pref-protocol">Default Protocol</label>
+                  <select id="pref-protocol" v-model="preferencesForm.default_protocol" class="up-input">
+                    <option value="rest">REST</option>
+                    <option value="mcp">MCP</option>
+                    <option value="a2a">A2A</option>
+                  </select>
+                </div>
+                <div class="up-form-group">
+                  <label class="up-label" for="pref-method">Default REST Method</label>
+                  <select id="pref-method" v-model="preferencesForm.default_method" class="up-input">
+                    <option>GET</option>
+                    <option>POST</option>
+                    <option>PUT</option>
+                    <option>PATCH</option>
+                    <option>DELETE</option>
+                  </select>
+                </div>
+              </div>
+              <div class="up-form-group">
+                <label class="up-label" for="pref-timezone">Timezone</label>
+                <select id="pref-timezone" v-model="preferencesForm.timezone" class="up-input">
+                  <option v-for="tz in timezones" :key="tz" :value="tz">{{ tz }}</option>
+                </select>
+                <p class="up-hint">Used when displaying request timestamps</p>
+              </div>
+              <div class="up-toggle-row" style="border-bottom: none; padding-top: 0">
+                <div class="up-toggle-info">
+                  <div class="up-toggle-label">Compact history view</div>
+                  <div class="up-toggle-desc">Show request history as denser rows in the dashboard</div>
+                </div>
+                <label class="up-toggle">
+                  <input type="checkbox" v-model="preferencesForm.compact_history">
+                  <span class="up-toggle-track"><span class="up-toggle-thumb"></span></span>
+                </label>
+              </div>
+              <div class="up-form-footer">
+                <button type="submit" class="up-btn-save" :disabled="savingPreferences">
+                  {{ savingPreferences ? 'Saving...' : 'Save Preferences' }}
                 </button>
               </div>
             </form>
@@ -271,6 +326,7 @@ onMounted(() => {
   loadScxKeyStatus();
   loadStats();
   loadRecentActivity();
+  loadPreferences();
 });
 
 const userInitial = computed(() => {
@@ -278,7 +334,7 @@ const userInitial = computed(() => {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 });
 
-const VALID_TABS = ['account', 'api-keys', 'usage', 'settings', 'danger'];
+const VALID_TABS = ['account', 'personalisation', 'api-keys', 'usage', 'settings', 'danger'];
 
 const activeTab = ref('account');
 const flashSuccess = ref('');
@@ -292,6 +348,17 @@ const passwordForm = reactive({
 });
 const saving = ref(false);
 const changingPassword = ref(false);
+
+const preferencesForm = reactive({
+  default_protocol: 'rest',
+  default_method: 'GET',
+  timezone: 'UTC',
+  compact_history: false
+});
+const savingPreferences = ref(false);
+const timezones = (typeof Intl.supportedValuesOf === 'function')
+  ? Intl.supportedValuesOf('timeZone')
+  : ['UTC', 'America/New_York', 'Europe/London', 'Australia/Sydney', 'Asia/Singapore'];
 
 const apiKey = ref('');
 const copied = ref(false);
@@ -353,6 +420,30 @@ const loadRecentActivity = async () => {
     recentActivity.value = res.data || [];
   } catch (error) {
     recentActivity.value = [];
+  }
+};
+
+const loadPreferences = async () => {
+  try {
+    const res = await axios.get('/api/user/preferences');
+    Object.assign(preferencesForm, res.data);
+  } catch (error) {
+    // keep defaults
+  }
+};
+
+const updatePreferences = async () => {
+  savingPreferences.value = true;
+  flashSuccess.value = '';
+  flashError.value = '';
+  try {
+    const res = await axios.put('/api/user/preferences', { ...preferencesForm });
+    Object.assign(preferencesForm, res.data);
+    flashSuccess.value = 'Preferences saved';
+  } catch (error) {
+    flashError.value = error.response?.data?.message || 'Failed to save preferences';
+  } finally {
+    savingPreferences.value = false;
   }
 };
 

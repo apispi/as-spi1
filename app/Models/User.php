@@ -34,6 +34,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_admin' => 'boolean',
             'scx_api_key' => 'encrypted',
+            'preferences' => 'array',
         ];
     }
 

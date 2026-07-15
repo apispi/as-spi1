@@ -58,6 +58,43 @@ class UserController extends Controller
         }));
     }
 
+    /**
+     * Default personalisation preferences, merged over whatever the user has
+     * saved so the client always receives a complete set.
+     */
+    public const DEFAULT_PREFERENCES = [
+        'default_protocol' => 'rest',
+        'default_method' => 'GET',
+        'timezone' => 'UTC',
+        'compact_history' => false,
+    ];
+
+    public function preferences(Request $request)
+    {
+        return response()->json($this->resolvePreferences($request->user()->preferences));
+    }
+
+    public function updatePreferences(Request $request)
+    {
+        $validated = $request->validate([
+            'default_protocol' => 'required|in:rest,mcp,a2a',
+            'default_method' => 'required|in:GET,POST,PUT,PATCH,DELETE',
+            'timezone' => 'required|timezone',
+            'compact_history' => 'required|boolean',
+        ]);
+
+        $user = $request->user();
+        $user->preferences = $validated;
+        $user->save();
+
+        return response()->json($this->resolvePreferences($validated));
+    }
+
+    protected function resolvePreferences(?array $saved): array
+    {
+        return array_merge(self::DEFAULT_PREFERENCES, $saved ?? []);
+    }
+
     public function deleteAccount(Request $request)
     {
         $user = $request->user();
