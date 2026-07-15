@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Rules\PubliclyRoutableUrl;
 use App\Services\A2a\A2aClient;
 use Illuminate\Http\Request;
 use Throwable;
@@ -11,7 +12,7 @@ class A2aTestController extends Controller
     public function test(Request $request)
     {
         $validated = $request->validate([
-            'url' => 'required|url',
+            'url' => ['required', 'url', new PubliclyRoutableUrl],
             'method' => 'required|string',
             'params' => 'nullable|array',
             'headers' => 'nullable|array',

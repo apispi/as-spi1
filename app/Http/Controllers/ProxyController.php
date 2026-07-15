@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Rules\PubliclyRoutableUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Exception;
@@ -11,7 +12,7 @@ class ProxyController extends Controller
     public function handle(Request $request)
     {
         $validated = $request->validate([
-            'url' => 'required|url',
+            'url' => ['required', 'url', new PubliclyRoutableUrl],
             'method' => 'required|string|in:GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD',
             'headers' => 'nullable|array',
             'body' => 'nullable|string',

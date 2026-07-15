@@ -50,6 +50,23 @@
         />
       </div>
 
+      <div v-if="protocol === 'mcp'" class="mcp-toolbar flex gap-2 items-center mt-4">
+        <button class="secondary text-sm" @click="discoverTools" :disabled="isDiscovering || !url">
+          {{ isDiscovering ? 'Discovering...' : 'Discover Tools' }}
+        </button>
+        <select
+          v-if="discoveredTools.length"
+          class="input-field method-select"
+          v-model="selectedToolName"
+          @change="applyToolTemplate"
+        >
+          <option value="" disabled>Select a tool...</option>
+          <option v-for="tool in discoveredTools" :key="tool.name" :value="tool.name">{{ tool.name }}</option>
+        </select>
+        <span v-if="discoveredTools.length" class="text-secondary text-sm">{{ discoveredTools.length }} tool(s) found</span>
+        <span v-if="discoverError" class="discover-error text-sm">{{ discoverError }}</span>
+      </div>
+
       <div class="tabs mt-6">
         <div class="tab-list flex gap-4">
           <button
@@ -87,6 +104,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue';
+import axios from 'axios';
 
 const props = defineProps({
   isLoading: Boolean,
@@ -100,6 +118,10 @@ const method = ref('GET');
 const mcpMethod = ref('initialize');
 const a2aMethod = ref('agent-card');
 const url = ref('https://apispi.com/api/gateway/tools');
+const discoveredTools = ref([]);
+const selectedToolName = ref('');
+const isDiscovering = ref(false);
+const discoverError = ref('');
 const activeTab = ref('headers');
 
 const headers = ref([
@@ -164,6 +186,78 @@ const collectHeaders = () => {
     }
   });
   return headerObj;
+};
+
+watch(protocol, () => {
+  discoveredTools.value = [];
+  selectedToolName.value = '';
+  discoverError.value = '';
+});
+
+const defaultForSchema = (schema) => {
+  if (!schema) return null;
+  if ('default' in schema) return schema.default;
+
+  switch (schema.type) {
+    case 'string': return '';
+    case 'number':
+    case 'integer': return 0;
+    case 'boolean': return false;
+    case 'array': return [];
+    case 'object': {
+      const obj = {};
+      Object.entries(schema.properties || {}).forEach(([key, propSchema]) => {
+        obj[key] = defaultForSchema(propSchema);
+      });
+      return obj;
+    }
+    default: return null;
+  }
+};
+
+const discoverTools = async () => {
+  if (!url.value) return;
+
+  isDiscovering.value = true;
+  discoverError.value = '';
+  discoveredTools.value = [];
+
+  try {
+    const res = await axios.post('/api/mcp/test', {
+      url: url.value,
+      method: 'tools/list',
+      params: {},
+      headers: collectHeaders()
+    });
+
+    if (res.data.status !== 200) {
+      discoverError.value = res.data.body || 'Failed to discover tools';
+      return;
+    }
+
+    const result = JSON.parse(res.data.body);
+    discoveredTools.value = result.tools || [];
+
+    if (discoveredTools.value.length === 0) {
+      discoverError.value = 'Server returned no tools';
+    }
+  } catch (error) {
+    discoverError.value = error.response?.data?.body || error.message || 'Failed to discover tools';
+  } finally {
+    isDiscovering.value = false;
+  }
+};
+
+const applyToolTemplate = () => {
+  const tool = discoveredTools.value.find(t => t.name === selectedToolName.value);
+  if (!tool) return;
+
+  mcpMethod.value = 'tools/call';
+  body.value = JSON.stringify({
+    name: tool.name,
+    arguments: defaultForSchema(tool.inputSchema) || {}
+  }, null, 2);
+  activeTab.value = 'body';
 };
 
 const send = () => {
@@ -285,6 +379,14 @@ const save = () => {
   width: 90px;
   font-weight: 600;
   color: var(--accent-color);
+}
+
+.mcp-toolbar {
+  flex-wrap: wrap;
+}
+
+.discover-error {
+  color: var(--error-color);
 }
 
 .mt-6 { margin-top: 24px; }

@@ -89,4 +89,16 @@ class A2aTestControllerTest extends TestCase
 
         $response->assertStatus(422)->assertJsonValidationErrors(['url', 'method']);
     }
+
+    public function test_rejects_ssrf_targets(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->postJson('/api/a2a/test', [
+            'url' => 'http://127.0.0.1:8080/internal',
+            'method' => 'agent-card',
+        ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['url']);
+    }
 }

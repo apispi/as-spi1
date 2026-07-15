@@ -76,4 +76,16 @@ class McpTestControllerTest extends TestCase
 
         $response->assertStatus(422)->assertJsonValidationErrors(['url', 'method']);
     }
+
+    public function test_rejects_ssrf_targets(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->postJson('/api/mcp/test', [
+            'url' => 'http://169.254.169.254/latest/meta-data/',
+            'method' => 'tools/list',
+        ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors(['url']);
+    }
 }
