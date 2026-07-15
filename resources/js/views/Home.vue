@@ -17,8 +17,6 @@
             <button @click="loadSample('rest')" class="sample-btn rest">REST</button>
             <button @click="loadSample('graphql')" class="sample-btn graphql">GraphQL</button>
             <button @click="loadSample('websocket')" class="sample-btn websocket">WebSocket</button>
-            <button @click="loadSample('grpc')" class="sample-btn grpc">gRPC</button>
-            <button @click="loadSample('mqtt')" class="sample-btn mqtt">MQTT</button>
             <button @click="loadSample('soap')" class="sample-btn soap">SOAP</button>
             <button @click="loadSample('mcp')" class="sample-btn mcp">MCP</button>
             <button @click="loadSample('a2a')" class="sample-btn a2a">A2A</button>
@@ -30,13 +28,13 @@
               <option value="rest">REST</option>
               <option value="graphql">GraphQL</option>
               <option value="websocket">WebSocket</option>
-              <option value="grpc">gRPC</option>
-              <option value="mqtt">MQTT</option>
-              <option value="amqp">AMQP</option>
               <option value="soap">SOAP</option>
               <option value="webhook">Webhook</option>
               <option value="mcp">MCP</option>
               <option value="a2a">A2A</option>
+              <option value="grpc" disabled>gRPC (coming soon)</option>
+              <option value="mqtt" disabled>MQTT (coming soon)</option>
+              <option value="amqp" disabled>AMQP (coming soon)</option>
             </select>
             <select v-if="selectedProtocol === 'rest'" v-model="testMethod" class="method-select">
               <option value="GET">GET</option>
@@ -52,13 +50,7 @@
               <option value="mutation">Mutation</option>
               <option value="subscription">Subscription</option>
             </select>
-            <select v-else-if="selectedProtocol === 'grpc'" v-model="grpcCallType" class="method-select">
-              <option value="unary">Unary</option>
-              <option value="server-streaming">Server Streaming</option>
-              <option value="client-streaming">Client Streaming</option>
-              <option value="bidi-streaming">Bidi Streaming</option>
-            </select>
-            <input 
+            <input
               v-model="testUrl" 
               type="text" 
               class="url-input" 
@@ -137,76 +129,6 @@
                   <pre>{{ msg.data }}</pre>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <!-- gRPC Config -->
-          <div v-if="selectedProtocol === 'grpc'" class="protocol-section">
-            <div class="protocol-info">
-              <span class="protocol-badge grpc">gRPC</span>
-              <span class="protocol-hint">Google's high-performance RPC framework</span>
-            </div>
-            <div class="body-row">
-              <label class="body-label">Proto Definition (optional)</label>
-              <textarea 
-                v-model="grpcProto" 
-                class="body-input" 
-                placeholder='syntax = "proto3"; service MyService { rpc MyMethod(Request) returns (Response); }'
-                rows="4"
-              ></textarea>
-            </div>
-            <div class="body-row">
-              <label class="body-label">Request Message (JSON)</label>
-              <textarea 
-                v-model="grpcRequest" 
-                class="body-input" 
-                placeholder='{"name": "test"}'
-                rows="3"
-              ></textarea>
-            </div>
-          </div>
-
-          <!-- MQTT Config -->
-          <div v-if="selectedProtocol === 'mqtt'" class="protocol-section">
-            <div class="protocol-info">
-              <span class="protocol-badge mqtt">MQTT</span>
-              <span class="protocol-hint">Lightweight IoT messaging protocol</span>
-            </div>
-            <div class="body-row">
-              <label class="body-label">Topic</label>
-              <input v-model="mqttTopic" type="text" class="url-input" placeholder="sensors/temperature" />
-            </div>
-            <div class="body-row">
-              <label class="body-label">QoS Level</label>
-              <select v-model="mqttQos" class="method-select">
-                <option value="0">0 - At most once</option>
-                <option value="1">1 - At least once</option>
-                <option value="2">2 - Exactly once</option>
-              </select>
-            </div>
-            <div class="body-row">
-              <label class="body-label">Message Payload (JSON)</label>
-              <textarea v-model="mqttMessage" class="body-input" placeholder='{"temp": 25.5}' rows="2"></textarea>
-            </div>
-          </div>
-
-          <!-- AMQP Config -->
-          <div v-if="selectedProtocol === 'amqp'" class="protocol-section">
-            <div class="protocol-info">
-              <span class="protocol-badge amqp">AMQP</span>
-              <span class="protocol-hint">Advanced Message Queuing Protocol</span>
-            </div>
-            <div class="body-row">
-              <label class="body-label">Exchange</label>
-              <input v-model="amqpExchange" type="text" class="url-input" placeholder="my-exchange" />
-            </div>
-            <div class="body-row">
-              <label class="body-label">Routing Key</label>
-              <input v-model="amqpRoutingKey" type="text" class="url-input" placeholder="my.routing.key" />
-            </div>
-            <div class="body-row">
-              <label class="body-label">Message Body (JSON)</label>
-              <textarea v-model="amqpMessage" class="body-input" placeholder='{"data": "value"}' rows="2"></textarea>
             </div>
           </div>
 
@@ -412,43 +334,6 @@
       </div>
     </section>
 
-    <!-- Testimonials -->
-    <section class="testimonials">
-      <h2>Loved by Developers</h2>
-      <div class="testimonials-grid">
-        <div class="testimonial-card">
-          <p>"Spi made API testing so much easier. I use it daily and couldn't imagine going back to Postman for quick tests."</p>
-          <div class="testimonial-author">
-            <div class="author-avatar">JD</div>
-            <div>
-              <strong>Jane Doe</strong>
-              <span>Senior Developer at TechCorp</span>
-            </div>
-          </div>
-        </div>
-        <div class="testimonial-card">
-          <p>"The simplicity is what sets Spi apart. No account needed for basic testing - just open and start testing."</p>
-          <div class="testimonial-author">
-            <div class="author-avatar">MS</div>
-            <div>
-              <strong>Mike Smith</strong>
-              <span>Freelance Developer</span>
-            </div>
-          </div>
-        </div>
-        <div class="testimonial-card">
-          <p>"Finally, an API tester that just works. Clean interface, fast responses, and the team features are fantastic."</p>
-          <div class="testimonial-author">
-            <div class="author-avatar">SA</div>
-            <div>
-              <strong>Sarah Anderson</strong>
-              <span>CTO at StartupXYZ</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- CTA Section -->
     <section class="cta">
       <h2>Ready to Simplify Your API Testing?</h2>
@@ -509,21 +394,6 @@ const wsMessage = ref('');
 const wsMessages = ref([]);
 let ws = null;
 
-// gRPC
-const grpcCallType = ref('unary');
-const grpcProto = ref('');
-const grpcRequest = ref('');
-
-// MQTT
-const mqttTopic = ref('');
-const mqttQos = ref('0');
-const mqttMessage = ref('');
-
-// AMQP
-const amqpExchange = ref('');
-const amqpRoutingKey = ref('');
-const amqpMessage = ref('');
-
 // SOAP
 const soapAction = ref('');
 const soapEnvelope = ref('');
@@ -546,9 +416,6 @@ const getUrlPlaceholder = () => {
     rest: 'https://api.example.com/endpoint',
     graphql: 'https://api.example.com/graphql',
     websocket: 'wss://api.example.com/ws',
-    grpc: 'grpc://api.example.com:50051',
-    mqtt: 'mqtt://broker.example.com:1883',
-    amqp: 'amqp://broker.example.com:5672',
     soap: 'https://api.example.com/soap',
     webhook: 'https://your-server.com/webhook',
     mcp: 'https://api.example.com/mcp',
@@ -572,12 +439,6 @@ const sendTestRequest = async () => {
   try {
     if (selectedProtocol.value === 'websocket') {
       await testWebSocket(startTime);
-    } else if (selectedProtocol.value === 'grpc') {
-      await testGrpc(startTime);
-    } else if (selectedProtocol.value === 'mqtt') {
-      await testMqtt(startTime);
-    } else if (selectedProtocol.value === 'amqp') {
-      await testAmqp(startTime);
     } else {
       await testHttpProtocol(startTime);
     }
@@ -706,67 +567,6 @@ const testWebSocket = async (startTime) => {
   });
 };
 
-const testGrpc = async (startTime) => {
-  // gRPC would require a backend proxy - sending config for now
-  const res = await axios.post('/api/proxy', {
-    url: testUrl.value,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/grpc' },
-    body: {
-      protocol: 'grpc',
-      callType: grpcCallType.value,
-      proto: grpcProto.value,
-      request: grpcRequest.value ? JSON.parse(grpcRequest.value) : {}
-    }
-  });
-  
-  testResponse.value = {
-    status: res.data.status || 200,
-    body: res.data.body || { message: 'gRPC request configured', config: { callType: grpcCallType.value } },
-    time_ms: Date.now() - startTime
-  };
-};
-
-const testMqtt = async (startTime) => {
-  const res = await axios.post('/api/proxy', {
-    url: testUrl.value,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: {
-      protocol: 'mqtt',
-      topic: mqttTopic.value,
-      qos: parseInt(mqttQos.value),
-      message: mqttMessage.value ? JSON.parse(mqttMessage.value) : {}
-    }
-  });
-  
-  testResponse.value = {
-    status: res.data.status || 200,
-    body: res.data.body || { message: 'MQTT message configured', topic: mqttTopic.value, qos: mqttQos.value },
-    time_ms: Date.now() - startTime
-  };
-};
-
-const testAmqp = async (startTime) => {
-  const res = await axios.post('/api/proxy', {
-    url: testUrl.value,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: {
-      protocol: 'amqp',
-      exchange: amqpExchange.value,
-      routingKey: amqpRoutingKey.value,
-      message: amqpMessage.value ? JSON.parse(amqpMessage.value) : {}
-    }
-  });
-  
-  testResponse.value = {
-    status: res.data.status || 200,
-    body: res.data.body || { message: 'AMQP message configured', exchange: amqpExchange.value },
-    time_ms: Date.now() - startTime
-  };
-};
-
 const getStatusClass = (status) => {
   if (status >= 200 && status < 300) return 'status-success';
   if (status >= 400 && status < 500) return 'status-client-error';
@@ -823,18 +623,6 @@ const loadSample = (protocol) => {
     websocket: () => {
       testUrl.value = 'wss://echo.websocket.org';
       wsMessage.value = 'Hello Spi!';
-    },
-    grpc: () => {
-      testUrl.value = 'http://grpcbin.test.k6.io:9000';
-      grpcCallType.value = 'unary';
-      grpcProto.value = '';
-      grpcRequest.value = '{"name": "World"}';
-    },
-    mqtt: () => {
-      testUrl.value = 'mqtt://test.mosquitto.org:1883';
-      mqttTopic.value = 'spi/test';
-      mqttQos.value = '0';
-      mqttMessage.value = '{"message": "Hello from Spi!"}';
     },
     soap: () => {
       testUrl.value = 'https://www.crcind.com/csp/samples/SOAP.CLS';
@@ -966,22 +754,6 @@ const loadSample = (protocol) => {
 }
 .sample-btn.websocket:hover {
   background: rgba(63, 185, 80, 0.15);
-}
-
-.sample-btn.grpc {
-  color: #58a6ff;
-  border-color: rgba(88, 166, 255, 0.4);
-}
-.sample-btn.grpc:hover {
-  background: rgba(88, 166, 255, 0.15);
-}
-
-.sample-btn.mqtt {
-  color: #d29922;
-  border-color: rgba(210, 153, 34, 0.4);
-}
-.sample-btn.mqtt:hover {
-  background: rgba(210, 153, 34, 0.15);
 }
 
 .sample-btn.soap {
@@ -1142,9 +914,6 @@ const loadSample = (protocol) => {
 .protocol-badge.rest { background: rgba(88, 166, 255, 0.2); color: #58a6ff; }
 .protocol-badge.graphql { background: rgba(233, 84, 178, 0.2); color: #e954b2; }
 .protocol-badge.websocket { background: rgba(63, 185, 80, 0.2); color: #3fb950; }
-.protocol-badge.grpc { background: rgba(88, 166, 255, 0.2); color: #58a6ff; }
-.protocol-badge.mqtt { background: rgba(210, 153, 34, 0.2); color: #d29922; }
-.protocol-badge.amqp { background: rgba(139, 148, 158, 0.2); color: #8b949e; }
 .protocol-badge.soap { background: rgba(210, 153, 34, 0.2); color: #d29922; }
 .protocol-badge.webhook { background: rgba(63, 185, 80, 0.2); color: #3fb950; }
 .protocol-badge.mcp { background: rgba(163, 113, 247, 0.2); color: #a371f7; }
@@ -1410,80 +1179,6 @@ const loadSample = (protocol) => {
   border-bottom: none;
 }
 
-/* Testimonials Section */
-.testimonials {
-  padding: 100px 24px;
-  background: var(--panel-bg);
-  border-top: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.testimonials h2 {
-  font-size: 36px;
-  font-weight: 600;
-  text-align: center;
-  margin: 0 0 48px 0;
-}
-
-.testimonials-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.testimonial-card {
-  background: var(--bg-color);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 32px;
-  transition: all 0.2s;
-}
-
-.testimonial-card:hover {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
-}
-
-.testimonial-card p {
-  font-size: 16px;
-  line-height: 1.6;
-  color: var(--text-primary);
-  margin: 0 0 24px 0;
-  font-style: italic;
-}
-
-.testimonial-author {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.author-avatar {
-  width: 44px;
-  height: 44px;
-  background: var(--accent-color);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.testimonial-author strong {
-  display: block;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.testimonial-author span {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
 /* CTA Section */
 .cta {
   padding: 100px 24px;
@@ -1637,7 +1332,6 @@ const loadSample = (protocol) => {
   
   .features h2,
   .pricing h2,
-  .testimonials h2,
   .cta h2 {
     font-size: 28px;
   }
