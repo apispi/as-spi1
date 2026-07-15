@@ -83,6 +83,53 @@ class SavedRequestControllerTest extends TestCase
         $response->assertStatus(422)->assertJsonValidationErrors(['protocol']);
     }
 
+    public function test_free_plan_users_are_capped_at_ten_saved_requests(): void
+    {
+        $user = User::factory()->create(['is_admin' => false]);
+
+        for ($i = 0; $i < 10; $i++) {
+            SavedRequest::create([
+                'user_id' => $user->id,
+                'name' => "Request {$i}",
+                'protocol' => 'rest',
+                'method' => 'GET',
+                'url' => 'https://api.example.com',
+            ]);
+        }
+
+        $response = $this->actingAs($user)->postJson('/api/saved-requests', [
+            'name' => 'One too many',
+            'method' => 'GET',
+            'url' => 'https://api.example.com',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertSame(10, $user->savedRequests()->count());
+    }
+
+    public function test_admins_are_exempt_from_the_saved_request_cap(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        for ($i = 0; $i < 10; $i++) {
+            SavedRequest::create([
+                'user_id' => $admin->id,
+                'name' => "Request {$i}",
+                'protocol' => 'rest',
+                'method' => 'GET',
+                'url' => 'https://api.example.com',
+            ]);
+        }
+
+        $response = $this->actingAs($admin)->postJson('/api/saved-requests', [
+            'name' => 'Eleventh',
+            'method' => 'GET',
+            'url' => 'https://api.example.com',
+        ]);
+
+        $response->assertStatus(201);
+    }
+
     public function test_users_only_see_their_own_saved_requests(): void
     {
         $owner = User::factory()->create();

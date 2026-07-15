@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\RequestHistory;
 use App\Rules\PubliclyRoutableUrl;
 use App\Services\Mcp\McpClient;
 use Illuminate\Http\Request;
@@ -35,6 +36,15 @@ class McpTestController extends Controller
 
             $timeTakenMs = round((microtime(true) - $startTime) * 1000);
 
+            RequestHistory::record($request->user()->id, [
+                'protocol' => 'mcp',
+                'method' => $validated['method'],
+                'url' => $validated['url'],
+                'params' => $validated['params'] ?? null,
+                'status' => 200,
+                'time_ms' => $timeTakenMs,
+            ]);
+
             return response()->json([
                 'status' => 200,
                 'headers' => array_filter([
@@ -49,6 +59,15 @@ class McpTestController extends Controller
             ]);
         } catch (Throwable $e) {
             $timeTakenMs = round((microtime(true) - $startTime) * 1000);
+
+            RequestHistory::record($request->user()->id, [
+                'protocol' => 'mcp',
+                'method' => $validated['method'],
+                'url' => $validated['url'],
+                'params' => $validated['params'] ?? null,
+                'status' => null,
+                'time_ms' => $timeTakenMs,
+            ]);
 
             return response()->json([
                 'status' => 500,

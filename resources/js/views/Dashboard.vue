@@ -1,10 +1,11 @@
 <template>
   <div class="dashboard-layout">
     <aside class="sidebar">
-      <div class="sidebar-header">
-        <h3>Saved Requests</h3>
+      <div class="sidebar-header sidebar-tabs">
+        <button :class="['sidebar-tab', sidebarTab === 'saved' ? 'active' : '']" @click="sidebarTab = 'saved'">Saved</button>
+        <button :class="['sidebar-tab', sidebarTab === 'history' ? 'active' : '']" @click="switchToHistory">History</button>
       </div>
-      <div class="sidebar-content">
+      <div class="sidebar-content" v-if="sidebarTab === 'saved'">
         <div v-if="requestsStore.isLoading" class="p-4 text-secondary text-sm">Loading...</div>
         <div v-else-if="requestsStore.savedRequests.length === 0" class="p-4 text-secondary text-sm">No saved requests</div>
         <ul v-else class="saved-list">
@@ -18,6 +19,25 @@
             </button>
           </li>
         </ul>
+      </div>
+      <div class="sidebar-content" v-else>
+        <div v-if="historyLoading" class="p-4 text-secondary text-sm">Loading...</div>
+        <div v-else-if="history.length === 0" class="p-4 text-secondary text-sm">No requests yet</div>
+        <template v-else>
+          <ul class="saved-list">
+            <li v-for="entry in history" :key="entry.id" class="saved-item history-item" @click="loadHistoryEntry(entry)">
+              <div class="flex justify-between items-center">
+                <span class="method-badge" :class="entry.protocol !== 'rest' ? entry.protocol : entry.method.toLowerCase()">{{ entry.protocol === 'rest' ? entry.method : entry.protocol.toUpperCase() }}</span>
+                <span class="history-status" :class="entry.status && entry.status < 400 ? 'ok' : 'fail'">{{ entry.status || 'ERR' }}</span>
+              </div>
+              <div class="history-url truncate" :title="entry.url">{{ entry.url }}</div>
+              <div class="history-meta">{{ entry.protocol !== 'rest' ? entry.method + ' · ' : '' }}{{ entry.time_ms }}ms · {{ timeAgo(entry.created_at) }}</div>
+            </li>
+          </ul>
+          <div class="p-4">
+            <button class="clear-history-btn" @click="clearHistory">Clear history</button>
+          </div>
+        </template>
       </div>
     </aside>
     <main class="app-main">
@@ -53,6 +73,9 @@ const authStore = useAuthStore();
 const isLoading = ref(false);
 const responseData = ref(null);
 const currentLoadedRequest = ref(null);
+const sidebarTab = ref('saved');
+const history = ref([]);
+const historyLoading = ref(false);
 
 onMounted(async () => {
   if (authStore.isAuthenticated) {
@@ -62,6 +85,54 @@ onMounted(async () => {
 
 const loadRequest = (req) => {
   currentLoadedRequest.value = { ...req };
+};
+
+const fetchHistory = async () => {
+  historyLoading.value = true;
+  try {
+    const res = await axios.get('/api/history');
+    history.value = res.data;
+  } catch (error) {
+    console.error('Failed to fetch history', error);
+  } finally {
+    historyLoading.value = false;
+  }
+};
+
+const switchToHistory = () => {
+  sidebarTab.value = 'history';
+  fetchHistory();
+};
+
+const loadHistoryEntry = (entry) => {
+  currentLoadedRequest.value = {
+    protocol: entry.protocol,
+    method: entry.method,
+    url: entry.url,
+    body: entry.body || '',
+    params: entry.params || null,
+    headers: null
+  };
+};
+
+const clearHistory = async () => {
+  if (!confirm('Clear your entire request history?')) return;
+  try {
+    await axios.delete('/api/history');
+    history.value = [];
+  } catch (error) {
+    console.error('Failed to clear history', error);
+  }
+};
+
+const timeAgo = (dateStr) => {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 };
 
 const deleteRequest = async (id) => {
@@ -74,7 +145,7 @@ const handleSaveRequest = async (requestData) => {
   try {
     await requestsStore.saveRequest(requestData);
   } catch (error) {
-    alert("Failed to save request. Ensure you are logged in.");
+    alert(error.response?.data?.message || "Failed to save request. Ensure you are logged in.");
   }
 };
 
@@ -122,6 +193,9 @@ const handleRequest = async (requestConfig) => {
     }
   } finally {
     isLoading.value = false;
+    if (sidebarTab.value === 'history') {
+      fetchHistory();
+    }
   }
 };
 </script>
@@ -145,12 +219,33 @@ const handleRequest = async (requestConfig) => {
   border-bottom: 1px solid var(--border-color);
   background-color: var(--panel-bg);
 }
-.sidebar-header h3 {
-  margin: 0;
+
+.sidebar-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+}
+
+.sidebar-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 8px;
   font-size: 13px;
   text-transform: uppercase;
-  color: var(--text-secondary);
   letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+.sidebar-tab:hover {
+  color: var(--text-primary);
+}
+.sidebar-tab.active {
+  color: var(--text-primary);
+  background: var(--bg-color);
+  font-weight: 600;
 }
 
 .sidebar-content {
@@ -189,6 +284,46 @@ const handleRequest = async (requestConfig) => {
 .method-badge.delete { color: #f85149; background: rgba(248, 81, 73, 0.15); }
 .method-badge.mcp { color: #a371f7; background: rgba(163, 113, 247, 0.15); }
 .method-badge.a2a { color: #f85149; background: rgba(248, 81, 73, 0.15); }
+
+.history-item {
+  display: block;
+  cursor: pointer;
+}
+
+.history-status {
+  font-size: 11px;
+  font-weight: 700;
+}
+.history-status.ok { color: #3fb950; }
+.history-status.fail { color: #f85149; }
+
+.history-url {
+  font-size: 12px;
+  color: var(--text-primary);
+  margin-top: 6px;
+}
+
+.history-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.clear-history-btn {
+  width: 100%;
+  padding: 8px;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.clear-history-btn:hover {
+  border-color: #f85149;
+  color: #f85149;
+}
 
 .req-name {
   font-size: 13px;

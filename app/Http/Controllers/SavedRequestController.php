@@ -7,6 +7,12 @@ use App\Models\SavedRequest;
 
 class SavedRequestController extends Controller
 {
+    /**
+     * Saved-request cap for the free plan, matching the pricing page.
+     * Admins are exempt; paid plans will lift this when billing exists.
+     */
+    public const FREE_PLAN_LIMIT = 10;
+
     public function index(Request $request)
     {
         return response()->json($request->user()->savedRequests()->latest()->get());
@@ -14,6 +20,14 @@ class SavedRequestController extends Controller
 
     public function store(Request $request)
     {
+        $user = $request->user();
+
+        if (! $user->isAdmin() && $user->savedRequests()->count() >= self::FREE_PLAN_LIMIT) {
+            return response()->json([
+                'message' => 'Free plan limit reached ('.self::FREE_PLAN_LIMIT.' saved requests). Delete one to save another.',
+            ], 422);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'protocol' => 'nullable|string|in:rest,mcp,a2a',
@@ -26,7 +40,7 @@ class SavedRequestController extends Controller
 
         $validated['protocol'] = $validated['protocol'] ?? 'rest';
 
-        $savedRequest = $request->user()->savedRequests()->create($validated);
+        $savedRequest = $user->savedRequests()->create($validated);
 
         return response()->json($savedRequest, 201);
     }

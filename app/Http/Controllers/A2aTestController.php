@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\RequestHistory;
 use App\Rules\PubliclyRoutableUrl;
 use App\Services\A2a\A2aClient;
 use Illuminate\Http\Request;
@@ -33,6 +34,15 @@ class A2aTestController extends Controller
 
             $timeTakenMs = round((microtime(true) - $startTime) * 1000);
 
+            RequestHistory::record($request->user()->id, [
+                'protocol' => 'a2a',
+                'method' => $validated['method'],
+                'url' => $validated['url'],
+                'params' => $validated['params'] ?? null,
+                'status' => 200,
+                'time_ms' => $timeTakenMs,
+            ]);
+
             return response()->json([
                 'status' => 200,
                 'headers' => [],
@@ -43,6 +53,15 @@ class A2aTestController extends Controller
             ]);
         } catch (Throwable $e) {
             $timeTakenMs = round((microtime(true) - $startTime) * 1000);
+
+            RequestHistory::record($request->user()->id, [
+                'protocol' => 'a2a',
+                'method' => $validated['method'],
+                'url' => $validated['url'],
+                'params' => $validated['params'] ?? null,
+                'status' => null,
+                'time_ms' => $timeTakenMs,
+            ]);
 
             return response()->json([
                 'status' => 500,

@@ -9,6 +9,7 @@ use App\Http\Controllers\UserPreferencesController;
 use App\Http\Controllers\ScxChatController;
 use App\Http\Controllers\McpTestController;
 use App\Http\Controllers\A2aTestController;
+use App\Http\Controllers\RequestHistoryController;
 
 Route::get('/{any}', function () {
     return view('welcome');
@@ -25,6 +26,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/saved-requests', [SavedRequestController::class, 'index']);
     Route::post('/api/saved-requests', [SavedRequestController::class, 'store']);
     Route::delete('/api/saved-requests/{id}', [SavedRequestController::class, 'destroy']);
+    Route::get('/api/history', [RequestHistoryController::class, 'index']);
+    Route::delete('/api/history', [RequestHistoryController::class, 'clear']);
     Route::put('/api/user/scx-api-key', [UserPreferencesController::class, 'updateScxApiKey']);
     Route::get('/api/user/scx-api-key', [UserPreferencesController::class, 'getScxApiKey']);
     Route::put('/api/user/scx-model', [UserPreferencesController::class, 'updateScxModel']);

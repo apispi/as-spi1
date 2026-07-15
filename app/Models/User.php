@@ -41,4 +41,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(SavedRequest::class);
     }
+
+    public function requestHistories()
+    {
+        return $this->hasMany(RequestHistory::class);
+    }
 }

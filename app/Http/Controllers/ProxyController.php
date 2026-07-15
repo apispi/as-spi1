@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\RequestHistory;
 use App\Rules\PubliclyRoutableUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -45,6 +46,17 @@ class ProxyController extends Controller
             $endTime = microtime(true);
             $timeTakenMs = round(($endTime - $startTime) * 1000);
 
+            if ($request->user()) {
+                RequestHistory::record($request->user()->id, [
+                    'protocol' => 'rest',
+                    'method' => $method,
+                    'url' => $url,
+                    'body' => $body,
+                    'status' => $response->status(),
+                    'time_ms' => $timeTakenMs,
+                ]);
+            }
+
             return response()->json([
                 'status' => $response->status(),
                 'headers' => $response->headers(),
@@ -57,6 +69,17 @@ class ProxyController extends Controller
         } catch (Exception $e) {
             $endTime = microtime(true);
             $timeTakenMs = round(($endTime - $startTime) * 1000);
+
+            if ($request->user()) {
+                RequestHistory::record($request->user()->id, [
+                    'protocol' => 'rest',
+                    'method' => $method,
+                    'url' => $url,
+                    'body' => $body,
+                    'status' => null,
+                    'time_ms' => $timeTakenMs,
+                ]);
+            }
 
             return response()->json([
                 'status' => 500,
