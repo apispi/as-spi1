@@ -36,6 +36,7 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/users', [AdminController::class, 'users']);
     Route::get('/api/admin/stats', [AdminController::class, 'stats']);
+    Route::get('/api/admin/actions', [AdminController::class, 'actions']);
     Route::post('/api/admin/users/{id}/toggle-admin', [AdminController::class, 'toggleAdmin']);
     Route::delete('/api/admin/users/{id}', [AdminController::class, 'deleteUser']);
 });

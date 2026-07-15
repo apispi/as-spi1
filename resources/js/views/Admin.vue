@@ -13,6 +13,10 @@
         <div class="stat-label">Total Users</div>
       </div>
       <div class="stat-card">
+        <div class="stat-value">{{ stats.new_users_this_week }}</div>
+        <div class="stat-label">New This Week</div>
+      </div>
+      <div class="stat-card">
         <div class="stat-value">{{ stats.admin_users }}</div>
         <div class="stat-label">Admin Users</div>
       </div>
@@ -23,7 +27,16 @@
     </div>
 
     <div class="users-section">
-      <h3>All Users</h3>
+      <div class="section-header">
+        <h3>All Users</h3>
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Search name or email..."
+          v-model="search"
+          @input="onSearchInput"
+        />
+      </div>
       <div class="table-container">
         <table class="users-table">
           <thead>
@@ -46,6 +59,7 @@
                 <span class="role-badge" :class="user.is_admin ? 'admin' : 'user'">
                   {{ user.is_admin ? 'Admin' : 'User' }}
                 </span>
+                <span v-if="!user.email_verified" class="role-badge unverified" title="Email not verified">Unverified</span>
               </td>
               <td class="count-col">{{ user.saved_requests_count }}</td>
               <td class="date-col">{{ formatDate(user.created_at) }}</td>
@@ -73,6 +87,41 @@
       </div>
       <div v-if="users.length === 0 && !isLoading" class="empty-state">No users found.</div>
       <div v-if="isLoading" class="empty-state">Loading users...</div>
+
+      <div v-if="lastPage > 1" class="pager">
+        <button class="action-btn" :disabled="page <= 1" @click="goToPage(page - 1)">‹ Prev</button>
+        <span class="pager-info">Page {{ page }} of {{ lastPage }} ({{ totalUsers }} users)</span>
+        <button class="action-btn" :disabled="page >= lastPage" @click="goToPage(page + 1)">Next ›</button>
+      </div>
+    </div>
+
+    <div class="users-section audit-section">
+      <h3>Audit Log</h3>
+      <div class="table-container">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Admin</th>
+              <th>Action</th>
+              <th>Target</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="entry in auditEntries" :key="entry.id">
+              <td class="date-col">{{ formatDateTime(entry.created_at) }}</td>
+              <td>{{ entry.admin?.name || 'Unknown' }}</td>
+              <td>
+                <span class="role-badge" :class="actionClass(entry.action)">{{ actionLabel(entry.action) }}</span>
+              </td>
+              <td class="email-col">{{ entry.target_email || '—' }}</td>
+              <td class="date-col">{{ detailsSummary(entry) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-if="auditEntries.length === 0" class="empty-state">No admin actions recorded yet.</div>
     </div>
 
     <div v-if="message" class="toast" :class="messageType">{{ message }}</div>
@@ -91,6 +140,12 @@ const stats = ref(null);
 const isLoading = ref(true);
 const message = ref('');
 const messageType = ref('success');
+const search = ref('');
+const page = ref(1);
+const lastPage = ref(1);
+const totalUsers = ref(0);
+const auditEntries = ref([]);
+let searchDebounce = null;
 
 const isCurrentUser = (user) => {
   return authStore.user && user.id === authStore.user.id;
@@ -102,6 +157,30 @@ const formatDate = (dateStr) => {
   });
 };
 
+const formatDateTime = (dateStr) => {
+  return new Date(dateStr).toLocaleString('en-AU', {
+    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+};
+
+const actionLabel = (action) => ({
+  promote_admin: 'Promoted',
+  demote_admin: 'Demoted',
+  delete_user: 'Deleted'
+}[action] || action);
+
+const actionClass = (action) => action === 'delete_user' ? 'destructive' : 'admin';
+
+const detailsSummary = (entry) => {
+  if (!entry.details) return '—';
+  const parts = [];
+  if (entry.details.name) parts.push(entry.details.name);
+  if (entry.details.saved_requests_deleted != null) {
+    parts.push(`${entry.details.saved_requests_deleted} saved request(s) removed`);
+  }
+  return parts.join(' · ') || '—';
+};
+
 const showMessage = (msg, type = 'success') => {
   message.value = msg;
   messageType.value = type;
@@ -111,17 +190,34 @@ const showMessage = (msg, type = 'success') => {
 const fetchData = async () => {
   isLoading.value = true;
   try {
-    const [usersRes, statsRes] = await Promise.all([
-      axios.get('/api/admin/users'),
-      axios.get('/api/admin/stats')
+    const [usersRes, statsRes, actionsRes] = await Promise.all([
+      axios.get('/api/admin/users', { params: { page: page.value, search: search.value || undefined } }),
+      axios.get('/api/admin/stats'),
+      axios.get('/api/admin/actions')
     ]);
-    users.value = usersRes.data;
+    users.value = usersRes.data.data;
+    lastPage.value = usersRes.data.last_page;
+    totalUsers.value = usersRes.data.total;
     stats.value = statsRes.data;
+    auditEntries.value = actionsRes.data.data;
   } catch (error) {
     showMessage('Failed to load admin data.', 'error');
   } finally {
     isLoading.value = false;
   }
+};
+
+const goToPage = (p) => {
+  page.value = p;
+  fetchData();
+};
+
+const onSearchInput = () => {
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => {
+    page.value = 1;
+    fetchData();
+  }, 300);
 };
 
 const toggleAdmin = async (user) => {
@@ -137,7 +233,8 @@ const toggleAdmin = async (user) => {
 
 const deleteUser = async (user) => {
   if (isCurrentUser(user)) return;
-  if (!confirm(`Are you sure you want to delete "${user.name}" (${user.email})? This cannot be undone.`)) return;
+  const extra = user.saved_requests_count > 0 ? ` Their ${user.saved_requests_count} saved request(s) will also be deleted.` : '';
+  if (!confirm(`Are you sure you want to delete "${user.name}" (${user.email})?${extra} This cannot be undone.`)) return;
   try {
     await axios.delete(`/api/admin/users/${user.id}`);
     showMessage('User deleted successfully.');
@@ -180,7 +277,7 @@ onMounted(fetchData);
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
   margin-bottom: 32px;
 }
@@ -268,6 +365,57 @@ onMounted(fetchData);
 .role-badge.user {
   color: #8b949e;
   background: rgba(139, 148, 158, 0.15);
+}
+.role-badge.unverified {
+  color: #d29922;
+  background: rgba(210, 153, 34, 0.15);
+  margin-left: 6px;
+}
+.role-badge.destructive {
+  color: #f85149;
+  background: rgba(248, 81, 73, 0.15);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.section-header h3 {
+  margin: 0;
+}
+
+.search-input {
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--text-primary);
+  width: 280px;
+}
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+.pager-info {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.audit-section {
+  margin-top: 40px;
 }
 
 .action-btn {
