@@ -67,6 +67,28 @@
         <span v-if="discoverError" class="discover-error text-sm">{{ discoverError }}</span>
       </div>
 
+      <div v-if="protocol === 'a2a'" class="mcp-toolbar flex gap-2 items-center mt-4">
+        <button class="secondary text-sm" @click="fetchAgentCard" :disabled="isFetchingCard || !url">
+          {{ isFetchingCard ? 'Fetching...' : 'Fetch Agent Card' }}
+        </button>
+        <span v-if="agentCard" class="text-secondary text-sm">
+          {{ agentCard.name || 'Unnamed agent' }}
+          <template v-if="agentCard.skills?.length"> · {{ agentCard.skills.length }} skill(s)</template>
+          <template v-if="agentCard.capabilities?.streaming"> · streaming</template>
+        </span>
+        <button v-if="agentCard" class="secondary text-sm" @click="applyMessageTemplate">Fill message/send</button>
+        <span v-if="cardError" class="discover-error text-sm">{{ cardError }}</span>
+      </div>
+
+      <div v-if="protocol === 'a2a' && agentCard?.skills?.length" class="agent-skills mt-4">
+        <span
+          v-for="skill in agentCard.skills"
+          :key="skill.id || skill.name"
+          class="skill-chip"
+          :title="skill.description || ''"
+        >{{ skill.name || skill.id }}</span>
+      </div>
+
       <div class="tabs mt-6">
         <div class="tab-list flex gap-4">
           <button
@@ -122,6 +144,9 @@ const discoveredTools = ref([]);
 const selectedToolName = ref('');
 const isDiscovering = ref(false);
 const discoverError = ref('');
+const agentCard = ref(null);
+const isFetchingCard = ref(false);
+const cardError = ref('');
 const activeTab = ref('headers');
 
 const headers = ref([
@@ -192,6 +217,8 @@ watch(protocol, () => {
   discoveredTools.value = [];
   selectedToolName.value = '';
   discoverError.value = '';
+  agentCard.value = null;
+  cardError.value = '';
 });
 
 const defaultForSchema = (schema) => {
@@ -256,6 +283,46 @@ const applyToolTemplate = () => {
   body.value = JSON.stringify({
     name: tool.name,
     arguments: defaultForSchema(tool.inputSchema) || {}
+  }, null, 2);
+  activeTab.value = 'body';
+};
+
+const fetchAgentCard = async () => {
+  if (!url.value) return;
+
+  isFetchingCard.value = true;
+  cardError.value = '';
+  agentCard.value = null;
+
+  try {
+    const res = await axios.post('/api/a2a/test', {
+      url: url.value,
+      method: 'agent-card',
+      params: {},
+      headers: collectHeaders()
+    });
+
+    if (res.data.status !== 200) {
+      cardError.value = res.data.body || 'Failed to fetch agent card';
+      return;
+    }
+
+    agentCard.value = JSON.parse(res.data.body);
+  } catch (error) {
+    cardError.value = error.response?.data?.body || error.message || 'Failed to fetch agent card';
+  } finally {
+    isFetchingCard.value = false;
+  }
+};
+
+const applyMessageTemplate = () => {
+  a2aMethod.value = 'message/send';
+  body.value = JSON.stringify({
+    message: {
+      role: 'user',
+      parts: [{ kind: 'text', text: '' }],
+      messageId: crypto.randomUUID()
+    }
   }, null, 2);
   activeTab.value = 'body';
 };
@@ -387,6 +454,23 @@ const save = () => {
 
 .discover-error {
   color: var(--error-color);
+}
+
+.agent-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.skill-chip {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #f85149;
+  background: rgba(248, 81, 73, 0.12);
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  cursor: default;
 }
 
 .mt-6 { margin-top: 24px; }

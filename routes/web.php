@@ -14,10 +14,10 @@ Route::get('/{any}', function () {
     return view('welcome');
 })->where('any', '^(?!api\/).*$');
 
-Route::post('/api/proxy', [ProxyController::class, 'handle']);
+Route::post('/api/proxy', [ProxyController::class, 'handle'])->middleware('throttle:proxy');
 
-Route::post('/api/register', [AuthController::class, 'register']);
-Route::post('/api/login', [AuthController::class, 'login']);
+Route::post('/api/register', [AuthController::class, 'register'])->middleware('throttle:auth-attempts');
+Route::post('/api/login', [AuthController::class, 'login'])->middleware('throttle:auth-attempts');
 Route::post('/api/logout', [AuthController::class, 'logout'])->middleware('auth');
 Route::get('/api/user', [AuthController::class, 'user'])->middleware('auth');
 
@@ -29,8 +29,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/user/scx-api-key', [UserPreferencesController::class, 'getScxApiKey']);
     Route::put('/api/user/scx-model', [UserPreferencesController::class, 'updateScxModel']);
     Route::post('/api/scx/chat', [ScxChatController::class, 'chat']);
-    Route::post('/api/mcp/test', [McpTestController::class, 'test']);
-    Route::post('/api/a2a/test', [A2aTestController::class, 'test']);
+    Route::post('/api/mcp/test', [McpTestController::class, 'test'])->middleware('throttle:outbound-test');
+    Route::post('/api/a2a/test', [A2aTestController::class, 'test'])->middleware('throttle:outbound-test');
 });
 
 Route::middleware(['auth', 'admin'])->group(function () {
