@@ -10,6 +10,7 @@ use App\Http\Controllers\ScxChatController;
 use App\Http\Controllers\McpTestController;
 use App\Http\Controllers\A2aTestController;
 use App\Http\Controllers\RequestHistoryController;
+use App\Http\Controllers\UserController;
 
 Route::get('/{any}', function () {
     return view('welcome');
@@ -33,6 +34,10 @@ Route::middleware('auth')->group(function () {
     Route::put('/api/user/scx-model', [UserPreferencesController::class, 'updateScxModel']);
     Route::post('/api/scx/chat', [ScxChatController::class, 'chat']);
     Route::put('/api/user/password', [AuthController::class, 'changePassword']);
+    Route::put('/api/user/profile', [UserController::class, 'updateProfile']);
+    Route::get('/api/user/stats', [UserController::class, 'stats']);
+    Route::get('/api/user/activity', [UserController::class, 'activity']);
+    Route::delete('/api/user/account', [UserController::class, 'deleteAccount']);
     Route::post('/api/mcp/test', [McpTestController::class, 'test'])->middleware('throttle:outbound-test');
     Route::post('/api/a2a/test', [A2aTestController::class, 'test'])->middleware('throttle:outbound-test');
 });
