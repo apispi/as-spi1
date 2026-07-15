@@ -144,4 +144,22 @@ class AdminControllerTest extends TestCase
             ->assertJsonPath('total_users', 3)
             ->assertJsonPath('new_users_this_week', 2);
     }
+
+    public function test_stats_includes_request_volume_and_protocol_breakdown(): void
+    {
+        $admin = $this->admin();
+
+        \App\Models\RequestHistory::record($admin->id, ['protocol' => 'rest', 'method' => 'GET', 'url' => 'https://a.test', 'status' => 200, 'time_ms' => 5]);
+        \App\Models\RequestHistory::record($admin->id, ['protocol' => 'mcp', 'method' => 'tools/list', 'url' => 'https://b.test', 'status' => 200, 'time_ms' => 5]);
+        \App\Models\RequestHistory::record($admin->id, ['protocol' => 'mcp', 'method' => 'ping', 'url' => 'https://c.test', 'status' => 200, 'time_ms' => 5]);
+
+        $response = $this->actingAs($admin)->getJson('/api/admin/stats');
+
+        $response->assertStatus(200)
+            ->assertJsonPath('total_requests', 3)
+            ->assertJsonPath('requests_this_week', 3)
+            ->assertJsonPath('protocol_breakdown.rest', 1)
+            ->assertJsonPath('protocol_breakdown.mcp', 2)
+            ->assertJsonPath('protocol_breakdown.a2a', 0);
+    }
 }

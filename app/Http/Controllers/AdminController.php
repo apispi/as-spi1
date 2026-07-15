@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\AdminAction;
+use App\Models\RequestHistory;
 use App\Models\SavedRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AdminController extends Controller
 {
@@ -53,11 +55,22 @@ class AdminController extends Controller
      */
     public function stats(Request $request)
     {
+        $protocolBreakdown = RequestHistory::select('protocol', DB::raw('count(*) as count'))
+            ->groupBy('protocol')
+            ->pluck('count', 'protocol');
+
         return response()->json([
             'total_users' => User::count(),
             'admin_users' => User::where('is_admin', true)->count(),
             'total_saved_requests' => SavedRequest::count(),
             'new_users_this_week' => User::where('created_at', '>=', now()->subWeek())->count(),
+            'total_requests' => RequestHistory::count(),
+            'requests_this_week' => RequestHistory::where('created_at', '>=', now()->subWeek())->count(),
+            'protocol_breakdown' => [
+                'rest' => (int) ($protocolBreakdown['rest'] ?? 0),
+                'mcp' => (int) ($protocolBreakdown['mcp'] ?? 0),
+                'a2a' => (int) ($protocolBreakdown['a2a'] ?? 0),
+            ],
         ]);
     }
 

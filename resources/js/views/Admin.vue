@@ -26,6 +26,29 @@
       </div>
     </div>
 
+    <div class="stats-grid usage-grid" v-if="stats">
+      <div class="stat-card">
+        <div class="stat-value">{{ stats.total_requests ?? 0 }}</div>
+        <div class="stat-label">Total Requests</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ stats.requests_this_week ?? 0 }}</div>
+        <div class="stat-label">Requests This Week</div>
+      </div>
+      <div class="stat-card protocol-card">
+        <div class="stat-label">By Protocol</div>
+        <div class="protocol-bars" v-if="stats.protocol_breakdown">
+          <div class="protocol-bar-row" v-for="p in protocolRows" :key="p.key">
+            <span class="protocol-name" :class="p.key">{{ p.label }}</span>
+            <div class="protocol-track">
+              <div class="protocol-fill" :class="p.key" :style="{ width: p.pct + '%' }"></div>
+            </div>
+            <span class="protocol-count">{{ p.count }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="users-section">
       <div class="section-header">
         <h3>All Users</h3>
@@ -129,7 +152,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { useAuthStore } from '../store/auth';
 
@@ -170,6 +193,17 @@ const actionLabel = (action) => ({
 }[action] || action);
 
 const actionClass = (action) => action === 'delete_user' ? 'destructive' : 'admin';
+
+const protocolRows = computed(() => {
+  const b = stats.value?.protocol_breakdown;
+  if (!b) return [];
+  const max = Math.max(b.rest, b.mcp, b.a2a, 1);
+  return [
+    { key: 'rest', label: 'REST', count: b.rest },
+    { key: 'mcp', label: 'MCP', count: b.mcp },
+    { key: 'a2a', label: 'A2A', count: b.a2a },
+  ].map(p => ({ ...p, pct: Math.round((p.count / max) * 100) }));
+});
 
 const detailsSummary = (entry) => {
   if (!entry.details) return '—';
@@ -301,6 +335,56 @@ onMounted(fetchData);
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.usage-grid {
+  grid-template-columns: 1fr 1fr 2fr;
+}
+
+.protocol-card {
+  text-align: left;
+}
+.protocol-bars {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.protocol-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.protocol-name {
+  font-size: 11px;
+  font-weight: 700;
+  width: 38px;
+  flex-shrink: 0;
+}
+.protocol-name.rest { color: #58a6ff; }
+.protocol-name.mcp { color: #a371f7; }
+.protocol-name.a2a { color: #f85149; }
+.protocol-track {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-color);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.protocol-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+.protocol-fill.rest { background: #58a6ff; }
+.protocol-fill.mcp { background: #a371f7; }
+.protocol-fill.a2a { background: #f85149; }
+.protocol-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+  width: 40px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 .users-section h3 {

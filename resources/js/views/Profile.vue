@@ -448,17 +448,17 @@ const updateNotifications = async () => {
 
 const updateScxApiKey = async () => {
   savingScx.value = true;
-    axios.put('/api/user/scx-model', { scx_model: scxModelForm.value });
   flashSuccess.value = '';
   flashError.value = '';
   try {
-    await axios.put('/api/user/scx-api-key', {
-      scx_api_key: scxApiKeyForm.value
-    });
-    flashSuccess.value = 'SCX API key saved';
-    hasScxKey.value = true;
+    await Promise.all([
+      axios.put('/api/user/scx-api-key', { scx_api_key: scxApiKeyForm.value }),
+      axios.put('/api/user/scx-model', { scx_model: scxModelForm.value }),
+    ]);
+    flashSuccess.value = 'SCX settings saved';
+    hasScxKey.value = scxApiKeyForm.value !== '' || hasScxKey.value;
   } catch (error) {
-    flashError.value = 'Failed to save SCX API key';
+    flashError.value = 'Failed to save SCX settings';
   } finally {
     savingScx.value = false;
   }
