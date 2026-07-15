@@ -32,6 +32,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/user/scx-api-key', [UserPreferencesController::class, 'getScxApiKey']);
     Route::put('/api/user/scx-model', [UserPreferencesController::class, 'updateScxModel']);
     Route::post('/api/scx/chat', [ScxChatController::class, 'chat']);
+    Route::put('/api/user/password', [AuthController::class, 'changePassword']);
     Route::post('/api/mcp/test', [McpTestController::class, 'test'])->middleware('throttle:outbound-test');
     Route::post('/api/a2a/test', [A2aTestController::class, 'test'])->middleware('throttle:outbound-test');
 });
