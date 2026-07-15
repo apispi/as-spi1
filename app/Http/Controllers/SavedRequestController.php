@@ -16,11 +16,15 @@ class SavedRequestController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'protocol' => 'nullable|string|in:rest,mcp,a2a',
             'method' => 'required|string',
             'url' => 'required|url',
             'headers' => 'nullable|array',
             'body' => 'nullable|string',
+            'params' => 'nullable|array',
         ]);
+
+        $validated['protocol'] = $validated['protocol'] ?? 'rest';
 
         $savedRequest = $request->user()->savedRequests()->create($validated);
 

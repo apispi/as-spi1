@@ -124,10 +124,17 @@ watch(() => props.loadedRequest, (newReq) => {
   if (newReq) {
     protocol.value = newReq.protocol || 'rest';
     url.value = newReq.url;
-    method.value = newReq.method;
-    mcpMethod.value = newReq.protocolMethod || 'initialize';
-    a2aMethod.value = newReq.protocolMethod || 'agent-card';
-    body.value = newReq.body || '';
+
+    if (protocol.value === 'mcp') {
+      mcpMethod.value = newReq.method || 'initialize';
+      body.value = newReq.params ? JSON.stringify(newReq.params, null, 2) : '';
+    } else if (protocol.value === 'a2a') {
+      a2aMethod.value = newReq.method || 'agent-card';
+      body.value = newReq.params ? JSON.stringify(newReq.params, null, 2) : '';
+    } else {
+      method.value = newReq.method;
+      body.value = newReq.body || '';
+    }
 
     headers.value = [];
     if (newReq.headers) {
@@ -209,13 +216,31 @@ const save = () => {
   const name = prompt("Enter a name for this saved request:");
   if (!name) return;
 
-  if (protocol.value !== 'rest') {
-    alert('Saving MCP/A2A requests is not supported yet — only REST requests can be saved.');
+  if (protocol.value === 'mcp' || protocol.value === 'a2a') {
+    let params = {};
+    if (body.value.trim()) {
+      try {
+        params = JSON.parse(body.value);
+      } catch (e) {
+        alert('Params must be valid JSON');
+        return;
+      }
+    }
+
+    emit('save-request', {
+      name,
+      protocol: protocol.value,
+      method: protocol.value === 'mcp' ? mcpMethod.value : a2aMethod.value,
+      url: url.value,
+      headers: collectHeaders(),
+      params
+    });
     return;
   }
 
   emit('save-request', {
     name,
+    protocol: 'rest',
     method: method.value,
     url: url.value,
     headers: collectHeaders(),

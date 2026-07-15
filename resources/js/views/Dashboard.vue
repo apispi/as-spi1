@@ -10,7 +10,7 @@
         <ul v-else class="saved-list">
           <li v-for="req in requestsStore.savedRequests" :key="req.id" class="saved-item flex justify-between items-center group">
             <div class="flex-1 cursor-pointer truncate mr-2" @click="loadRequest(req)">
-              <span class="method-badge" :class="req.method.toLowerCase()">{{ req.method }}</span>
+              <span class="method-badge" :class="req.protocol && req.protocol !== 'rest' ? req.protocol : req.method.toLowerCase()">{{ req.protocol === 'mcp' || req.protocol === 'a2a' ? req.protocol.toUpperCase() : req.method }}</span>
               <span class="req-name">{{ req.name }}</span>
             </div>
             <button class="delete-icon" @click="deleteRequest(req.id)" title="Delete request">
@@ -187,6 +187,8 @@ const handleRequest = async (requestConfig) => {
 .method-badge.put { color: #d29922; background: rgba(210, 153, 34, 0.15); }
 .method-badge.patch { color: #d29922; background: rgba(210, 153, 34, 0.15); }
 .method-badge.delete { color: #f85149; background: rgba(248, 81, 73, 0.15); }
+.method-badge.mcp { color: #a371f7; background: rgba(163, 113, 247, 0.15); }
+.method-badge.a2a { color: #f85149; background: rgba(248, 81, 73, 0.15); }
 
 .req-name {
   font-size: 13px;
