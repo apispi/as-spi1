@@ -150,6 +150,7 @@ class McpClient
     protected function client(): PendingRequest
     {
         $client = Http::acceptJson()
+            ->withOptions(['allow_redirects' => false])
             ->withHeaders(array_merge([
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json, text/event-stream',

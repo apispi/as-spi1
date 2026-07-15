@@ -121,6 +121,7 @@ class A2aClient
     protected function client()
     {
         $client = Http::acceptJson()
+            ->withOptions(['allow_redirects' => false])
             ->withHeaders(array_merge([
                 'Content-Type' => 'application/json',
             ], $this->extraHeaders));

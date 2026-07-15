@@ -31,7 +31,11 @@ class ProxyController extends Controller
         $startTime = microtime(true);
 
         try {
-            $pendingRequest = Http::withHeaders($headers)->withoutVerifying();
+            // Do not follow redirects: a redirect to an internal address
+            // would bypass the SSRF validation done on the original URL.
+            $pendingRequest = Http::withHeaders($headers)
+                ->withoutVerifying()
+                ->withOptions(['allow_redirects' => false]);
             
             $response = null;
             if (in_array($method, ['POST', 'PUT', 'PATCH']) && !empty($body)) {
