@@ -1,3 +1,10 @@
+# Always resolve the directory index to Laravel's front controller. Without
+# this, Apache's default order serves any stray index.html ahead of index.php
+# and shadows the whole app.
+<IfModule mod_dir.c>
+    DirectoryIndex index.php
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
