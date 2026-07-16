@@ -63,6 +63,12 @@
               </span>
             </td>
             <td class="cat-actions-col">
+              <button
+                v-if="item.type === 'connector'"
+                class="cat-btn cat-btn-sync"
+                :disabled="syncingId === item.id"
+                @click="sync(item)"
+              >{{ syncingId === item.id ? 'Syncing...' : 'Sync' }}</button>
               <button class="cat-btn" @click="toggleActive(item)">
                 {{ item.is_active ? 'Deactivate' : 'Activate' }}
               </button>
@@ -97,6 +103,28 @@
           <label class="cat-label">Description</label>
           <textarea v-model="form.description" class="cat-input" rows="2"></textarea>
         </div>
+
+        <template v-if="currentTab.type === 'connector'">
+          <div class="cat-form-row cat-conn-row">
+            <div class="cat-form-group">
+              <label class="cat-label">Endpoint URL</label>
+              <input v-model="form.endpoint" required class="cat-input" placeholder="https://server.example.com/mcp" />
+            </div>
+            <div class="cat-form-group">
+              <label class="cat-label">Protocol</label>
+              <select v-model="form.protocol" class="cat-input">
+                <option value="mcp">MCP</option>
+                <option value="a2a">A2A</option>
+              </select>
+            </div>
+          </div>
+          <div class="cat-form-group">
+            <label class="cat-label">Auth header (optional)</label>
+            <input v-model="form.authHeader" class="cat-input" placeholder="Bearer YOUR_TOKEN" />
+            <p class="cat-hint">Sent as the Authorization header when syncing this connector.</p>
+          </div>
+        </template>
+
         <div class="cat-form-actions">
           <button type="submit" class="cat-btn-primary" :disabled="saving">
             {{ saving ? 'Saving...' : 'Save' }}
@@ -135,8 +163,9 @@ const loading = ref(false);
 const flash = ref('');
 const showCreate = ref(false);
 const saving = ref(false);
+const syncingId = ref(null);
 const formError = ref('');
-const form = ref({ name: '', provider: '', version: '', description: '' });
+const form = ref({ name: '', provider: '', version: '', description: '', endpoint: '', protocol: 'mcp', authHeader: '' });
 
 const currentTab = computed(() => tabs.find((t) => t.key === activeTab.value) || tabs[0]);
 const singular = computed(() => currentTab.value.label.replace(/s$/, ''));
@@ -191,7 +220,7 @@ watch(mode, () => {
 });
 
 const openCreate = () => {
-  form.value = { name: '', provider: '', version: '', description: '' };
+  form.value = { name: '', provider: '', version: '', description: '', endpoint: '', protocol: 'mcp', authHeader: '' };
   formError.value = '';
   showCreate.value = true;
 };
@@ -199,15 +228,48 @@ const openCreate = () => {
 const create = async () => {
   saving.value = true;
   formError.value = '';
+
+  const payload = {
+    type: currentTab.value.type,
+    name: form.value.name,
+    provider: form.value.provider,
+    version: form.value.version,
+    description: form.value.description,
+  };
+
+  // Connectors carry their endpoint wiring in metadata.
+  if (currentTab.value.type === 'connector') {
+    payload.metadata = {
+      endpoint: form.value.endpoint,
+      protocol: form.value.protocol,
+      ...(form.value.authHeader ? { auth_header: form.value.authHeader } : {}),
+    };
+  }
+
   try {
-    await axios.post('/api/admin/catalog', { ...form.value, type: currentTab.value.type });
+    await axios.post('/api/admin/catalog', payload);
     showCreate.value = false;
     showFlash(`${singular.value} added.`);
     await fetchAll();
   } catch (error) {
-    formError.value = error.response?.data?.message || 'Failed to save.';
+    formError.value = error.response?.data?.message
+      || Object.values(error.response?.data?.errors || {})[0]?.[0]
+      || 'Failed to save.';
   } finally {
     saving.value = false;
+  }
+};
+
+const sync = async (connector) => {
+  syncingId.value = connector.id;
+  try {
+    const res = await axios.post(`/api/admin/catalog/${connector.id}/sync`);
+    showFlash(res.data.message);
+    await fetchAll();
+  } catch (error) {
+    showFlash(error.response?.data?.message || 'Sync failed.');
+  } finally {
+    syncingId.value = null;
   }
 };
 
@@ -306,6 +368,10 @@ onMounted(fetchAll);
 }
 .cat-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
 .cat-btn-danger:hover { border-color: #f85149; color: #f85149; }
+.cat-btn-sync:hover:not(:disabled) { border-color: #3fb950; color: #3fb950; }
+.cat-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.cat-conn-row { grid-template-columns: 2fr 1fr; }
+.cat-hint { font-size: 0.72rem; color: var(--text-secondary); margin-top: 0.25rem; }
 .cat-btn-primary {
   padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.8rem; font-weight: 700;
   cursor: pointer; border: 1px solid var(--accent-color);

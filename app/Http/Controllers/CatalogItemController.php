@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CatalogItem;
+use App\Rules\PubliclyRoutableUrl;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
@@ -63,6 +64,13 @@ class CatalogItemController extends Controller
             'provider' => 'nullable|string|max:255',
             'metadata' => 'nullable|array',
             'is_active' => 'nullable|boolean',
+            // Connector wiring (stored inside metadata).
+            'metadata.endpoint' => [
+                Rule::requiredIf(fn () => $request->input('type') === 'connector'),
+                'nullable', 'url', new PubliclyRoutableUrl,
+            ],
+            'metadata.protocol' => ['nullable', Rule::in(['mcp', 'a2a'])],
+            'metadata.auth_header' => 'nullable|string|max:1000',
         ]);
 
         $validated['slug'] = $this->uniqueSlug($validated['type'], $validated['name']);

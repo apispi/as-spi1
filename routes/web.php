@@ -12,6 +12,7 @@ use App\Http\Controllers\A2aTestController;
 use App\Http\Controllers\RequestHistoryController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CatalogItemController;
+use App\Http\Controllers\ConnectorSyncController;
 
 Route::get('/{any}', function () {
     return view('welcome');
@@ -57,6 +58,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::put('/api/admin/catalog/{catalogItem}', [CatalogItemController::class, 'update']);
     Route::delete('/api/admin/catalog/{catalogItem}', [CatalogItemController::class, 'destroy']);
     Route::post('/api/admin/catalog/{catalogItem}/toggle-active', [CatalogItemController::class, 'toggleActive']);
+    Route::post('/api/admin/catalog/{catalogItem}/sync', [ConnectorSyncController::class, 'sync']);
     Route::post('/api/admin/users/{id}/toggle-admin', [AdminController::class, 'toggleAdmin']);
     Route::delete('/api/admin/users/{id}', [AdminController::class, 'deleteUser']);
 });
