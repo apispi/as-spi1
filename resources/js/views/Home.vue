@@ -7,6 +7,28 @@
       </div>
     </section>
 
+    <!-- Quick start examples -->
+    <section class="quickstart">
+      <div class="quickstart-inner">
+        <div class="quickstart-head">
+          <h2>Quick start</h2>
+          <p>New here? Pick an example — it fills the tester below, ready to send.</p>
+        </div>
+        <div class="quickstart-grid">
+          <button
+            v-for="ex in examples"
+            :key="ex.title"
+            class="example-card"
+            @click="loadExample(ex)"
+          >
+            <span class="example-badge" :class="ex.protocol">{{ ex.label }}</span>
+            <span class="example-title">{{ ex.title }}</span>
+            <span class="example-desc">{{ ex.desc }}</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
     <!-- API Tester Demo -->
     <section class="demo" id="tester">
       <div class="demo-container">
@@ -593,6 +615,93 @@ const formatJson = (str) => {
   }
 };
 
+// Curated, ready-to-run starting points. Each card fills the tester below.
+const examples = [
+  {
+    label: 'REST',
+    protocol: 'rest',
+    title: 'Fetch a blog post',
+    desc: 'A simple GET request that returns JSON. Just hit Send.',
+    apply: () => {
+      testMethod.value = 'GET';
+      testUrl.value = 'https://jsonplaceholder.typicode.com/posts/1';
+      testHeaders.value = '';
+      testBody.value = '';
+    },
+  },
+  {
+    label: 'REST',
+    protocol: 'rest',
+    title: 'Create a resource (POST)',
+    desc: 'Send a JSON body with a POST request and inspect the response.',
+    apply: () => {
+      testMethod.value = 'POST';
+      testUrl.value = 'https://jsonplaceholder.typicode.com/posts';
+      testHeaders.value = '{"Content-Type": "application/json"}';
+      testBody.value = '{\n  "title": "Hello from Spi",\n  "body": "Testing a POST",\n  "userId": 1\n}';
+    },
+  },
+  {
+    label: 'GraphQL',
+    protocol: 'graphql',
+    title: 'Query country data',
+    desc: 'Run a GraphQL query against a public countries API.',
+    apply: () => {
+      testUrl.value = 'https://countries.trevorblades.com/graphql';
+      testHeaders.value = '';
+      graphqlOperation.value = 'query';
+      graphqlQuery.value = 'query {\n  country(code: "AU") {\n    name\n    capital\n    currency\n    languages { name }\n  }\n}';
+      graphqlVariables.value = '';
+    },
+  },
+  {
+    label: 'WebSocket',
+    protocol: 'websocket',
+    title: 'Echo over WebSocket',
+    desc: 'Open a live WebSocket connection and echo a message back.',
+    apply: () => {
+      testUrl.value = 'wss://echo.websocket.org';
+      wsMessage.value = 'Hello Spi!';
+    },
+  },
+  {
+    label: 'MCP',
+    protocol: 'mcp',
+    title: 'List an MCP server’s tools',
+    desc: 'Call tools/list on an MCP server. Add your key in Headers, then Send.',
+    apply: () => {
+      testUrl.value = 'https://apispi.com/api/gateway/mcp';
+      testHeaders.value = '{"Authorization": "Bearer YOUR_API_KEY"}';
+      mcpMethod.value = 'tools/list';
+      mcpParams.value = '';
+    },
+  },
+  {
+    label: 'A2A',
+    protocol: 'a2a',
+    title: 'Message an A2A agent',
+    desc: 'Send a task to an Agent-to-Agent endpoint and read the reply.',
+    apply: () => {
+      testUrl.value = 'https://agents.example.com/a2a';
+      testHeaders.value = '';
+      a2aAgentId.value = 'agent-123';
+      a2aAction.value = 'send_message';
+      a2aPayload.value = '{"message": "What is the status of my order?"}';
+    },
+  },
+];
+
+const loadExample = (ex) => {
+  selectedProtocol.value = ex.protocol;
+  testResponse.value = null;
+  testError.value = '';
+  wsMessages.value = [];
+  ex.apply();
+
+  // Bring the now-filled tester into view.
+  document.getElementById('tester')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
 const loadSample = (protocol) => {
   selectedProtocol.value = protocol;
   testResponse.value = null;
@@ -686,6 +795,76 @@ const loadSample = (protocol) => {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Quick start */
+.quickstart {
+  padding: 8px 24px 8px;
+  background: var(--bg-color);
+}
+.quickstart-inner {
+  max-width: 800px;
+  margin: 0 auto;
+}
+.quickstart-head {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.quickstart-head h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+}
+.quickstart-head p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+.quickstart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+.example-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  text-align: left;
+  padding: 14px 16px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.example-card:hover {
+  border-color: var(--accent-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+.example-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.example-badge.rest { color: #58a6ff; background: rgba(88, 166, 255, 0.15); }
+.example-badge.graphql { color: #e954b2; background: rgba(233, 84, 178, 0.15); }
+.example-badge.websocket { color: #3fb950; background: rgba(63, 185, 80, 0.15); }
+.example-badge.mcp { color: #a371f7; background: rgba(163, 113, 247, 0.15); }
+.example-badge.a2a { color: #f85149; background: rgba(248, 81, 73, 0.15); }
+.example-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.example-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
 
 /* Demo Section */
