@@ -8,6 +8,7 @@ import Register from './views/Register.vue';
 import Admin from './views/Admin.vue';
 import Profile from './views/Profile.vue';
 import Chat from './views/Chat.vue';
+import CatalogSection from './views/CatalogSection.vue';
 
 const routes = [
     {
@@ -51,6 +52,18 @@ const routes = [
         name: 'admin',
         component: Admin,
         meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+        path: '/catalog',
+        name: 'catalog',
+        component: CatalogSection,
+        meta: { requiresAuth: true, requiresAdmin: true, section: 'catalog' }
+    },
+    {
+        path: '/active',
+        name: 'active',
+        component: CatalogSection,
+        meta: { requiresAuth: true, requiresAdmin: true, section: 'active' }
     }
 ];
 

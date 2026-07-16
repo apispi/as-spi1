@@ -31,6 +31,19 @@
         <router-link to="/profile" class="db-nav-link" @click="closeOnMobile">
           <span class="db-nav-icon">◈</span> Profile
         </router-link>
+
+        <template v-if="authStore.user && authStore.user.is_admin">
+          <span class="db-nav-label">Admin</span>
+          <router-link to="/admin" class="db-nav-link" @click="closeOnMobile">
+            <span class="db-nav-icon">⚙</span> Admin Panel
+          </router-link>
+          <router-link to="/catalog" class="db-nav-link" @click="closeOnMobile">
+            <span class="db-nav-icon">▣</span> Catalog
+          </router-link>
+          <router-link to="/active" class="db-nav-link" @click="closeOnMobile">
+            <span class="db-nav-icon">◉</span> Active
+          </router-link>
+        </template>
       </nav>
 
       <div class="db-sidebar-footer">
