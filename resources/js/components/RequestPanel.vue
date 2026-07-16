@@ -50,6 +50,14 @@
         />
       </div>
 
+      <div v-if="protocol === 'mcp' && activeTools && activeTools.length" class="mcp-toolbar flex gap-2 items-center mt-4">
+        <span class="text-secondary text-sm">Active tools:</span>
+        <select class="input-field method-select" v-model="selectedActiveTool" @change="applyActiveTool">
+          <option value="" disabled>Pick a synced tool...</option>
+          <option v-for="t in activeTools" :key="t.id" :value="t.id">{{ t.name }} ({{ t.provider }})</option>
+        </select>
+      </div>
+
       <div v-if="protocol === 'mcp'" class="mcp-toolbar flex gap-2 items-center mt-4">
         <button class="secondary text-sm" @click="discoverTools" :disabled="isDiscovering || !url">
           {{ isDiscovering ? 'Discovering...' : 'Discover Tools' }}
@@ -131,7 +139,8 @@ import axios from 'axios';
 const props = defineProps({
   isLoading: Boolean,
   loadedRequest: Object,
-  defaults: Object
+  defaults: Object,
+  activeTools: Array
 });
 
 const emit = defineEmits(['send-request', 'save-request']);
@@ -145,6 +154,7 @@ const a2aMethod = ref('agent-card');
 const url = ref('https://apispi.com/api/gateway/tools');
 const discoveredTools = ref([]);
 const selectedToolName = ref('');
+const selectedActiveTool = ref('');
 const isDiscovering = ref(false);
 const discoverError = ref('');
 const agentCard = ref(null);
@@ -295,6 +305,21 @@ const applyToolTemplate = () => {
   body.value = JSON.stringify({
     name: tool.name,
     arguments: defaultForSchema(tool.inputSchema) || {}
+  }, null, 2);
+  activeTab.value = 'body';
+};
+
+// Pick a synced, active tool: set the connector URL and a call template from
+// its stored schema. Auth is not injected — add it in the Headers tab.
+const applyActiveTool = () => {
+  const tool = (props.activeTools || []).find(t => t.id === selectedActiveTool.value);
+  if (!tool) return;
+
+  url.value = tool.endpoint;
+  mcpMethod.value = 'tools/call';
+  body.value = JSON.stringify({
+    name: tool.name,
+    arguments: defaultForSchema(tool.input_schema) || {}
   }, null, 2);
   activeTab.value = 'body';
 };

@@ -48,6 +48,7 @@
           :isLoading="isLoading"
           :loadedRequest="currentLoadedRequest"
           :defaults="preferences"
+          :activeTools="activeTools"
         />
       </div>
       <div class="panel-container">
@@ -78,6 +79,7 @@ const sidebarTab = ref('saved');
 const history = ref([]);
 const historyLoading = ref(false);
 const preferences = ref(null);
+const activeTools = ref([]);
 
 onMounted(async () => {
   if (authStore.isAuthenticated) {
@@ -87,6 +89,12 @@ onMounted(async () => {
       preferences.value = res.data;
     } catch (error) {
       preferences.value = null;
+    }
+    try {
+      const res = await axios.get('/api/tools/active');
+      activeTools.value = res.data;
+    } catch (error) {
+      activeTools.value = [];
     }
   }
 });

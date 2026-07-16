@@ -127,6 +127,28 @@ class ConnectorSyncTest extends TestCase
         $this->assertDatabaseHas('catalog_items', ['type' => 'skill', 'slug' => 'demo-a2a-summarise', 'provider' => 'Demo A2A']);
     }
 
+    public function test_imported_tools_carry_the_endpoint_but_not_the_auth_header(): void
+    {
+        Http::fake([
+            'mcp.test/*' => Http::sequence()
+                ->push(['jsonrpc' => '2.0', 'id' => 1, 'result' => []], 200)->push('', 202)
+                ->push(['jsonrpc' => '2.0', 'id' => 2, 'result' => ['tools' => [['name' => 'echo']]]], 200)
+                ->push(['jsonrpc' => '2.0', 'id' => 3, 'result' => ['prompts' => []]], 200),
+        ]);
+
+        $admin = $this->admin();
+        $connector = $this->connector(['auth_header' => 'Bearer top-secret']);
+
+        $this->actingAs($admin)->postJson("/api/admin/catalog/{$connector->id}/sync")->assertStatus(200);
+
+        $tool = CatalogItem::where('slug', 'demo-mcp-echo')->firstOrFail();
+        $this->assertSame('https://mcp.test/mcp', $tool->metadata['endpoint']);
+        $this->assertSame('demo-mcp', $tool->metadata['connector_slug']);
+        // The connector's credential must never propagate to imported items.
+        $this->assertArrayNotHasKey('auth_header', $tool->metadata);
+        $this->assertStringNotContainsString('top-secret', json_encode($tool->metadata));
+    }
+
     public function test_sync_reports_upstream_failure(): void
     {
         Http::fake(['mcp.test/*' => Http::response(['error' => 'boom'], 500)]);

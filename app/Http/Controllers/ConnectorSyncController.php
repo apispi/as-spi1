@@ -129,13 +129,21 @@ class ConnectorSyncController extends Controller
     protected function import(string $type, CatalogItem $connector, string $name, ?string $description, array $metadata): void
     {
         $slug = $connector->slug.'-'.(Str::slug($name) ?: 'item');
+        $connectorMeta = $connector->metadata ?? [];
 
         $item = CatalogItem::firstOrNew(['type' => $type, 'slug' => $slug]);
         $item->fill([
             'name' => $name,
             'description' => $description,
             'provider' => $connector->name,
-            'metadata' => $metadata,
+            // Store how to reach the item's connector so the tester can call
+            // it, but never the connector's auth header — that stays with the
+            // admin-only connector record.
+            'metadata' => array_merge($metadata, [
+                'connector_slug' => $connector->slug,
+                'endpoint' => $connectorMeta['endpoint'] ?? null,
+                'protocol' => $connectorMeta['protocol'] ?? 'mcp',
+            ]),
         ]);
         $item->save();
     }
