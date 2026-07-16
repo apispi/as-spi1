@@ -20,8 +20,8 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 SSH_HOST="${DEPLOY_SSH_HOST:-as}"
-SERVER_PATH="${DEPLOY_SERVER_PATH:-~/www/apispi.com}"
-SITE_URL="${DEPLOY_SITE_URL:-https://apispi.com/}"
+SERVER_PATH="${DEPLOY_SERVER_PATH:-~/www/spi.apispi.com}"
+SITE_URL="${DEPLOY_SITE_URL:-https://spi.apispi.com/}"
 
 verify() {
     echo "==> Verifying live site..."
@@ -31,8 +31,9 @@ verify() {
 }
 
 # ----------------------------------------------------------------- server mode
-# Detected by running from inside the deploy directory on the server.
-if [[ "$(pwd -P)" == */www/apispi.com ]]; then
+# Detected by running from inside the SiteGround web root (~/www/<site>).
+# Matches any site directory so it is not tied to one domain name.
+if [[ "$(pwd -P)" == */www/* ]]; then
     echo "==> Server mode: refreshing to origin/main..."
     git fetch -q origin
     git reset -q --hard origin/main
