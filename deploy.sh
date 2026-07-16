@@ -12,7 +12,7 @@
 #
 # Config (env vars):
 #   DEPLOY_SSH_HOST      SSH host/alias        (default: as)
-#   DEPLOY_SERVER_PATH   Remote app directory  (default: ~/www/apispi.com)
+#   DEPLOY_SERVER_PATH   Remote app directory  (default: ~/www/spi.apispi.com)
 #   DEPLOY_SEED=1        Also run seeders on the server (idempotent; off by default)
 
 set -euo pipefail
@@ -58,6 +58,22 @@ fi
 
 # ------------------------------------------------------------------ local mode
 MSG="${1:-Deploy site updates}"
+
+# Guard: local mode needs a build toolchain. If it is missing we are almost
+# certainly on the server with a stale copy of this script (server mode is
+# detected from the */www/* path), so fail with something actionable rather
+# than a bare "vite: command not found".
+if [[ ! -x node_modules/.bin/vite ]]; then
+    echo "Error: no local build toolchain found (node_modules/.bin/vite is missing)." >&2
+    echo "  Current path: $(pwd -P)" >&2
+    echo "" >&2
+    echo "If you are on the SERVER, this script is out of date. Refresh it first:" >&2
+    echo "  git fetch origin && git reset --hard origin/main && ./deploy.sh" >&2
+    echo "" >&2
+    echo "If you are on your LOCAL machine, install dependencies first:" >&2
+    echo "  npm install" >&2
+    exit 1
+fi
 
 echo "==> Building Vite assets..."
 npm run build   # laravel-vite-plugin writes straight to public_html/build
