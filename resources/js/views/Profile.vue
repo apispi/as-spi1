@@ -159,28 +159,36 @@
           <div class="up-card">
             <div class="up-card-header">
               <h2 class="up-card-title">Your API Key</h2>
-              <p class="up-card-sub">Use this key to authenticate your API requests</p>
+              <p class="up-card-sub">Authenticate programmatic requests to <code class="up-inline-code">/api/v1</code></p>
             </div>
-            <div class="up-api-key-row">
+
+            <div v-if="apiKeyInfo.has_key" class="up-api-key-row">
               <div class="up-api-key-display">
-                <code>{{ apiKey || 'Generating...' }}</code>
-                <button @click="copyApiKey" class="btn btn-icon" :title="copied ? 'Copied!' : 'Copy'">
-                  <svg v-if="!copied" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                  </svg>
-                  <svg v-else viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
-                </button>
+                <code>{{ apiKeyInfo.masked }}</code>
+                <span class="up-key-meta">created {{ formatMemberSince(apiKeyInfo.created_at) }}</span>
               </div>
+              <p class="up-hint">For your security the full key is only shown once, when it is created.</p>
             </div>
+            <div v-else class="up-empty">You don't have an API key yet.</div>
+
             <div class="up-api-key-actions">
               <button @click="regenerateApiKey" class="up-btn-save" :disabled="regenerating">
-                {{ regenerating ? 'Regenerating...' : 'Regenerate Key' }}
+                {{ regenerating ? 'Generating...' : (apiKeyInfo.has_key ? 'Regenerate Key' : 'Generate Key') }}
               </button>
-              <p class="up-hint">Regenerating will invalidate your old key</p>
+              <p class="up-hint" v-if="apiKeyInfo.has_key">Regenerating will immediately invalidate your old key</p>
             </div>
+          </div>
+
+          <div class="up-card">
+            <div class="up-card-header">
+              <h2 class="up-card-title">Using your key</h2>
+              <p class="up-card-sub">Send it as a bearer token</p>
+            </div>
+            <pre class="up-code-block">curl -X POST {{ origin }}/api/v1/proxy \
+  -H "Authorization: Bearer YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://api.example.com","method":"GET"}'</pre>
+            <p class="up-hint">Also available: <code class="up-inline-code">/api/v1/mcp/test</code> and <code class="up-inline-code">/api/v1/a2a/test</code></p>
           </div>
         </template>
 
@@ -234,46 +242,29 @@
         <template v-else-if="activeTab === 'settings'">
           <div class="up-card">
             <div class="up-card-header">
-              <h2 class="up-card-title">Notification Settings</h2>
-              <p class="up-card-sub">Choose which emails you receive from ApiSpi</p>
+              <h2 class="up-card-title">SCX AI Integration</h2>
+              <p class="up-card-sub">Connect your SCX AI account using an API key</p>
             </div>
-            <form @submit.prevent="updateNotifications">
-              <div class="up-toggle-row">
-                <div class="up-toggle-info">
-                  <div class="up-toggle-label">Subscription updates</div>
-                  <div class="up-toggle-desc">Agent status changes, renewals, and expiry notices</div>
-                </div>
-                <label class="up-toggle">
-                  <input type="checkbox" v-model="notificationsForm.subscription_updates">
-                  <span class="up-toggle-track"><span class="up-toggle-thumb"></span></span>
-                </label>
+            <form @submit.prevent="updateScxApiKey">
+              <div class="up-form-group">
+                <label class="up-label" for="scx-api-key">SCX API Key</label>
+                <span v-if="hasScxKey" class="scx-key-status">••••••••</span>
+                <input id="scx-api-key" type="password" v-model="scxApiKeyForm" class="up-input" placeholder="Enter your SCX API key">
+                <p v-if="hasScxKey" class="up-hint">A key is saved. Enter a new value to replace it.</p>
               </div>
-
-              <div class="up-toggle-row">
-                <div class="up-toggle-info">
-                  <div class="up-toggle-label">New features & announcements</div>
-                  <div class="up-toggle-desc">Product updates, new agents, and platform news</div>
-                </div>
-                <label class="up-toggle">
-                  <input type="checkbox" v-model="notificationsForm.new_features">
-                  <span class="up-toggle-track"><span class="up-toggle-thumb"></span></span>
-                </label>
+              <div class="up-form-group">
+                <label class="up-label" for="scx-model">AI Model</label>
+                <select id="scx-model" v-model="scxModelForm" class="up-input">
+                  <option value="scx-ai">SCX AI (Default)</option>
+                  <option value="gpt-4o-mini">GPT-4o Mini</option>
+                  <option value="MAGPIE">MAGPIE</option>
+                  <option value="coder">Coder</option>
+                  <option value="MiniMax-M2.7">MiniMax-M2.7</option>
+                </select>
               </div>
-
-              <div class="up-card" style="margin-top: 1.5rem"><div class="up-card-header"><h2 class="up-card-title">SCX AI Integration</h2><p class="up-card-sub">Connect your SCX AI account using an API key</p></div><form @submit.prevent="updateScxApiKey"><div class="up-form-group"><label class="up-label" for="scx-api-key">SCX API Key</label><span v-if="hasScxKey" class="scx-key-status">••••••••</span><input id="scx-api-key" type="password" v-model="scxApiKeyForm" class="up-input" placeholder="Enter your SCX API key"></div><p v-if="hasScxKey" class="up-hint">A key is saved. Enter a new value to replace it.</p><div class="up-form-group"><label class="up-label" for="scx-model">AI Model</label><select id="scx-model" v-model="scxModelForm" class="up-input"><option value="scx-ai">SCX AI (Default)</option><option value="gpt-4o-mini">GPT-4o Mini</option><option value="MAGPIE">MAGPIE</option><option value="coder">Coder</option><option value="MiniMax-M2.7">MiniMax-M2.7</option></select></div><div class="up-form-footer"><button type="submit" class="up-btn-save" :disabled="savingScx">Save SCX API Key</button></div></form></div><div class="up-toggle-row" style="border-bottom: none">
-                <div class="up-toggle-info">
-                  <div class="up-toggle-label">Tips & best practices</div>
-                  <div class="up-toggle-desc">Occasional guides on getting more from your agents</div>
-                </div>
-                <label class="up-toggle">
-                  <input type="checkbox" v-model="notificationsForm.tips">
-                  <span class="up-toggle-track"><span class="up-toggle-thumb"></span></span>
-                </label>
-              </div>
-
               <div class="up-form-footer">
-                <button type="submit" class="up-btn-save" :disabled="savingNotifications">
-                  {{ savingNotifications ? 'Saving...' : 'Save Settings' }}
+                <button type="submit" class="up-btn-save" :disabled="savingScx">
+                  {{ savingScx ? 'Saving...' : 'Save SCX Settings' }}
                 </button>
               </div>
             </form>
@@ -360,23 +351,16 @@ const timezones = (typeof Intl.supportedValuesOf === 'function')
   ? Intl.supportedValuesOf('timeZone')
   : ['UTC', 'America/New_York', 'Europe/London', 'Australia/Sydney', 'Asia/Singapore'];
 
-const apiKey = ref('');
-const copied = ref(false);
+const apiKeyInfo = ref({ has_key: false, masked: null, created_at: null });
 const regenerating = ref(false);
 const newKey = ref('');
 const newKeyName = ref('');
 const showKeyBanner = ref(false);
 const copiedKey = ref(false);
+const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
 const stats = ref({});
 const recentActivity = ref([]);
-
-const notificationsForm = reactive({
-  subscription_updates: true,
-  new_features: true,
-  tips: false
-});
-const savingNotifications = ref(false);
 
 const scxApiKeyForm = ref('');
 const scxModelForm = ref('scx-ai');
@@ -399,9 +383,9 @@ const loadScxKeyStatus = async () => {
 const loadApiKey = async () => {
   try {
     const res = await axios.get('/api/user/api-key');
-    apiKey.value = res.data.api_key || 'No key generated';
+    apiKeyInfo.value = res.data;
   } catch (error) {
-    apiKey.value = 'Error loading key';
+    apiKeyInfo.value = { has_key: false, masked: null, created_at: null };
   }
 };
 
@@ -483,16 +467,6 @@ const updatePassword = async () => {
   }
 };
 
-const copyApiKey = async () => {
-  try {
-    await navigator.clipboard.writeText(apiKey.value);
-    copied.value = true;
-    setTimeout(() => { copied.value = false; }, 2000);
-  } catch (error) {
-    console.error('Failed to copy');
-  }
-};
-
 const copyNewKey = async () => {
   try {
     await navigator.clipboard.writeText(newKey.value);
@@ -504,36 +478,20 @@ const copyNewKey = async () => {
 };
 
 const regenerateApiKey = async () => {
-  if (!confirm('Are you sure? Your old API key will stop working.')) return;
+  if (apiKeyInfo.value.has_key && !confirm('Are you sure? Your old API key will stop working immediately.')) return;
   regenerating.value = true;
-  try {
-    const res = await axios.post('/api/user/api-key/regenerate');
-    apiKey.value = res.data.api_key;
-    newKey.value = res.data.api_key;
-    newKeyName.value = 'API Key';
-    showKeyBanner.value = true;
-  } catch (error) {
-    flashError.value = 'Failed to regenerate key';
-  } finally {
-    regenerating.value = false;
-  }
-};
-
-const updateNotifications = async () => {
-  savingNotifications.value = true;
-  flashSuccess.value = '';
   flashError.value = '';
   try {
-    await axios.put('/api/user/notifications', {
-      subscription_updates: notificationsForm.subscription_updates,
-      new_features: notificationsForm.new_features,
-      tips: notificationsForm.tips
-    });
-    flashSuccess.value = 'Notification settings saved';
+    const res = await axios.post('/api/user/api-key/regenerate');
+    // Plaintext is returned once only — surface it in the copy banner.
+    newKey.value = res.data.api_key;
+    newKeyName.value = 'Your new API key';
+    showKeyBanner.value = true;
+    await loadApiKey();
   } catch (error) {
-    flashError.value = 'Failed to save settings';
+    flashError.value = 'Failed to generate key';
   } finally {
-    savingNotifications.value = false;
+    regenerating.value = false;
   }
 };
 
@@ -720,6 +678,17 @@ const deleteAccount = async () => {
 }
 .up-api-key-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .up-api-key-actions .up-hint { margin: 0; }
+.up-key-meta { font-size: 0.75rem; color: #4b5563; flex-shrink: 0; }
+.up-inline-code {
+  font-family: monospace; font-size: 0.85em; color: #60A5FA;
+  background: rgba(0,0,0,0.3); padding: 0.1rem 0.35rem; border-radius: 0.25rem;
+}
+.up-code-block {
+  font-family: 'Courier New', monospace; font-size: 0.78rem; color: #e5e7eb;
+  background: rgba(10,8,5,0.9); border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 0.625rem; padding: 1rem; overflow-x: auto;
+  white-space: pre; margin-bottom: 0.75rem;
+}
 
 /* Stats Grid */
 .up-stats-grid {

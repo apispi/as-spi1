@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -56,6 +57,37 @@ class UserController extends Controller
                 'created_at' => $entry->created_at->toIso8601String(),
             ];
         }));
+    }
+
+    /**
+     * Describe the user's personal API key. The plaintext is never stored, so
+     * only a masked hint is available after creation.
+     */
+    public function apiKey(Request $request)
+    {
+        $user = $request->user();
+
+        return response()->json([
+            'has_key' => $user->api_token !== null,
+            'masked' => $user->api_token
+                ? User::API_KEY_PREFIX.str_repeat('•', 8).$user->api_token_last_four
+                : null,
+            'created_at' => $user->api_token_created_at?->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Issue a new key, invalidating any previous one. The plaintext is
+     * returned here and never again.
+     */
+    public function regenerateApiKey(Request $request)
+    {
+        $plain = $request->user()->generateApiKey();
+
+        return response()->json([
+            'api_key' => $plain,
+            'message' => 'Copy this key now — it will not be shown again.',
+        ], 201);
     }
 
     /**
