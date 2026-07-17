@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use Throwable;
@@ -32,6 +33,13 @@ class GoogleAuthController extends Controller
         try {
             $googleUser = Socialite::driver('google')->user();
         } catch (Throwable $e) {
+            // Log the real cause (invalid state, bad secret, redirect mismatch)
+            // so failures are diagnosable instead of an opaque error code.
+            Log::warning('Google OAuth callback failed', [
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+
             return redirect('/login?error=google_failed');
         }
 

@@ -2,29 +2,27 @@
   <div class="auth-container">
     <div class="auth-box">
       <h2>Register for ApiSpi</h2>
-      <form @submit.prevent="handleRegister">
-        <div class="form-group">
-          <label>Name</label>
-          <input type="text" v-model="form.name" required class="input-field" />
-        </div>
+
+      <div v-if="sent" class="check-inbox">
+        <div class="check-icon">✉️</div>
+        <p class="check-title">Check your inbox</p>
+        <p class="check-body">{{ sentMessage }}</p>
+        <p class="check-hint">The link expires in 60 minutes.</p>
+      </div>
+
+      <form v-else @submit.prevent="handleRegister">
+        <p class="register-lead">Enter your email and we'll send you a link to set up your account.</p>
         <div class="form-group">
           <label>Email</label>
-          <input type="email" v-model="form.email" required class="input-field" />
-        </div>
-        <div class="form-group">
-          <label>Password</label>
-          <input type="password" v-model="form.password" required class="input-field" minlength="8" />
-        </div>
-        <div class="form-group">
-          <label>Confirm Password</label>
-          <input type="password" v-model="form.password_confirmation" required class="input-field" minlength="8" />
+          <input type="email" v-model="email" required class="input-field" placeholder="you@example.com" />
         </div>
         <div v-if="error" class="error-msg">{{ error }}</div>
         <button type="submit" class="btn btn-primary w-full mt-4" :disabled="isLoading">
-          {{ isLoading ? 'Registering...' : 'Register' }}
+          {{ isLoading ? 'Sending...' : 'Continue with email' }}
         </button>
       </form>
-      <GoogleButton />
+
+      <GoogleButton v-if="!sent" />
 
       <div class="auth-links mt-4 text-center text-sm text-secondary">
         Already have an account? <router-link to="/login" class="link">Login here</router-link>
@@ -34,41 +32,27 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
-import { useRouter } from 'vue-router';
-import { useAuthStore } from '../store/auth';
+import { ref } from 'vue';
+import axios from 'axios';
 import GoogleButton from '../components/GoogleButton.vue';
 
-const router = useRouter();
-const authStore = useAuthStore();
-
-const form = reactive({
-  name: '',
-  email: '',
-  password: '',
-  password_confirmation: ''
-});
-
+const email = ref('');
 const error = ref('');
 const isLoading = ref(false);
+const sent = ref(false);
+const sentMessage = ref('');
 
 const handleRegister = async () => {
   error.value = '';
-  if (form.password !== form.password_confirmation) {
-    error.value = "Passwords do not match!";
-    return;
-  }
-  
   isLoading.value = true;
   try {
-    await authStore.register(form);
-    router.push('/');
+    const res = await axios.post('/api/register/start', { email: email.value });
+    sentMessage.value = res.data.message;
+    sent.value = true;
   } catch (err) {
-    if (err.response && err.response.data && err.response.data.message) {
-      error.value = err.response.data.message;
-    } else {
-      error.value = "Failed to register. Please check your details.";
-    }
+    error.value = err.response?.data?.message
+      || Object.values(err.response?.data?.errors || {})[0]?.[0]
+      || 'Something went wrong. Please try again.';
   } finally {
     isLoading.value = false;
   }
@@ -141,4 +125,10 @@ const handleRegister = async () => {
 .text-secondary { color: var(--text-secondary); }
 .link { color: var(--accent-color); text-decoration: none; }
 .link:hover { text-decoration: underline; }
+.register-lead { color: var(--text-secondary); font-size: 14px; margin: 0 0 16px; text-align: center; }
+.check-inbox { text-align: center; padding: 8px 0 4px; }
+.check-icon { font-size: 40px; margin-bottom: 8px; }
+.check-title { font-size: 18px; font-weight: 600; color: var(--text-primary); margin: 0 0 8px; }
+.check-body { color: var(--text-secondary); font-size: 14px; margin: 0 0 8px; }
+.check-hint { color: var(--text-secondary); font-size: 12px; margin: 0; }
 </style>

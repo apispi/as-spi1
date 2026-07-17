@@ -15,6 +15,7 @@ use App\Http\Controllers\CatalogItemController;
 use App\Http\Controllers\ConnectorSyncController;
 use App\Http\Controllers\ToolController;
 use App\Http\Controllers\GoogleAuthController;
+use App\Http\Controllers\RegistrationController;
 
 // Google OAuth (full-page redirect flow). Registered before the SPA
 // catch-all, which also excludes the auth/ prefix.
@@ -30,6 +31,8 @@ Route::get('/{any}', function () {
 Route::post('/api/proxy', [ProxyController::class, 'handle'])->middleware('throttle:proxy');
 
 Route::post('/api/register', [AuthController::class, 'register'])->middleware('throttle:auth-attempts');
+Route::post('/api/register/start', [RegistrationController::class, 'start'])->middleware('throttle:auth-attempts');
+Route::post('/api/register/complete', [RegistrationController::class, 'complete'])->middleware('throttle:auth-attempts');
 Route::post('/api/login', [AuthController::class, 'login'])->middleware('throttle:auth-attempts');
 Route::post('/api/logout', [AuthController::class, 'logout'])->middleware('auth');
 Route::get('/api/user', [AuthController::class, 'user'])->middleware('auth');

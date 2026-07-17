@@ -21,7 +21,7 @@ class User extends Authenticatable
     /**
      * @var list<string>
      */
-    protected $hidden = ['password', 'remember_token', 'scx_api_key', 'api_token'];
+    protected $hidden = ['password', 'remember_token', 'scx_api_key', 'api_token', 'registration_token'];
 
     /**
      * Prefix on generated personal API keys, so they are recognisable.
@@ -42,6 +42,7 @@ class User extends Authenticatable
             'scx_api_key' => 'encrypted',
             'preferences' => 'array',
             'api_token_created_at' => 'datetime',
+            'registration_token_expires_at' => 'datetime',
         ];
     }
 
