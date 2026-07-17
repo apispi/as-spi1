@@ -16,6 +16,8 @@
           {{ isLoading ? 'Logging in...' : 'Login' }}
         </button>
       </form>
+      <GoogleButton />
+
       <div class="auth-links mt-4 text-center text-sm text-secondary">
         Don't have an account? <router-link to="/register" class="link">Register here</router-link>
       </div>
@@ -24,10 +26,12 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, reactive, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../store/auth';
+import GoogleButton from '../components/GoogleButton.vue';
 
+const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 
@@ -38,6 +42,20 @@ const form = reactive({
 
 const error = ref('');
 const isLoading = ref(false);
+
+// Surface errors handed back from the Google OAuth redirect flow.
+const OAUTH_ERRORS = {
+  google_failed: 'Google sign-in failed. Please try again.',
+  google_unavailable: 'Google sign-in is not configured.',
+  google_no_email: 'Your Google account did not share an email address.',
+};
+
+onMounted(() => {
+  const code = route.query.error;
+  if (code && OAUTH_ERRORS[code]) {
+    error.value = OAUTH_ERRORS[code];
+  }
+});
 
 const handleLogin = async () => {
   error.value = '';

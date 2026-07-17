@@ -14,10 +14,18 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\CatalogItemController;
 use App\Http\Controllers\ConnectorSyncController;
 use App\Http\Controllers\ToolController;
+use App\Http\Controllers\GoogleAuthController;
+
+// Google OAuth (full-page redirect flow). Registered before the SPA
+// catch-all, which also excludes the auth/ prefix.
+Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect'])
+    ->middleware('throttle:auth-attempts');
+Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])
+    ->middleware('throttle:auth-attempts');
 
 Route::get('/{any}', function () {
     return view('welcome');
-})->where('any', '^(?!api\/).*$');
+})->where('any', '^(?!api\/|auth\/).*$');
 
 Route::post('/api/proxy', [ProxyController::class, 'handle'])->middleware('throttle:proxy');
 

@@ -24,6 +24,8 @@
           {{ isLoading ? 'Registering...' : 'Register' }}
         </button>
       </form>
+      <GoogleButton />
+
       <div class="auth-links mt-4 text-center text-sm text-secondary">
         Already have an account? <router-link to="/login" class="link">Login here</router-link>
       </div>
@@ -35,6 +37,7 @@
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../store/auth';
+import GoogleButton from '../components/GoogleButton.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();

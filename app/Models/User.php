@@ -16,7 +16,7 @@ class User extends Authenticatable
     /**
      * @var list<string>
      */
-    protected $fillable = ['name', 'email', 'password', 'is_admin', 'scx_api_key'];
+    protected $fillable = ['name', 'email', 'password', 'is_admin', 'scx_api_key', 'google_id', 'avatar'];
 
     /**
      * @var list<string>
