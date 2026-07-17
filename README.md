@@ -5,6 +5,17 @@ inspect REST, MCP (Model Context Protocol), and A2A (Agent-to-Agent) requests
 from the browser, save and replay them, and review request history — with an
 admin panel for user management.
 
+## Documentation
+
+Detailed specs live in [`docs/`](docs/):
+
+- [SPECS.md](docs/SPECS.md) — canonical top-level specification (rebuild from scratch)
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) — request lifecycle, auth model, routing, deployment
+- [MODELS.md](docs/MODELS.md) — Eloquent models, casts, relations, rules
+- [DATABASE-SCHEMA.md](docs/DATABASE-SCHEMA.md) — tables, columns, indexes, migrations
+- [FRONTEND.md](docs/FRONTEND.md) — Vue SPA: router, stores, views, components
+- [CATALOG.md](docs/CATALOG.md) — Catalog/Active sections and connector sync
+
 ## Stack
 
 - **Backend:** Laravel 11 (PHP 8.2+), session-cookie auth

@@ -5,6 +5,17 @@ scratch. It describes intent, data model, API surface, behaviour, and the
 non-obvious decisions. Where a rule matters (security, validation), it is
 stated explicitly.
 
+> **Companion documents** (deep-dives on each area):
+> - [ARCHITECTURE.md](ARCHITECTURE.md) — request lifecycle, auth model, routing, deployment
+> - [MODELS.md](MODELS.md) — Eloquent models, casts, relations, business rules
+> - [DATABASE-SCHEMA.md](DATABASE-SCHEMA.md) — every table, column, index, migration
+> - [FRONTEND.md](FRONTEND.md) — Vue SPA: router, store, views, components
+> - [CATALOG.md](CATALOG.md) — Catalog/Active sections and connector sync
+>
+> This file (SPECS.md) is the canonical top-level spec; the companions expand
+> specific areas. If they ever disagree, treat SPECS.md as authoritative and
+> fix the companion.
+
 ---
 
 ## 1. Product overview
