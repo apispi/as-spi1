@@ -1,0 +1,2 @@
+## Git push
+Auto-push to GitHub after every completed change, without waiting to be told "deploy". Build assets (`npm run build`) and run the test suite first; only push if tests pass. Production deploys still happen manually since there's no SSH access from this environment — after pushing, remind the user to run `deploy.sh` on SiteGround (`ssh <user>@<host> "~/www/strata.apispi.com/deploy.sh"`), which pulls, installs, migrates, and refreshes caches in one step.
