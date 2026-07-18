@@ -4,6 +4,9 @@ Eloquent models in `app/Models`. For raw table/column definitions see
 [DATABASE-SCHEMA.md](DATABASE-SCHEMA.md); for the catalog specifics see
 [CATALOG.md](CATALOG.md).
 
+> **Primary source files:** `app/Models/{User,SavedRequest,RequestHistory,
+> AdminAction,CatalogItem}.php`.
+
 ---
 
 ## User

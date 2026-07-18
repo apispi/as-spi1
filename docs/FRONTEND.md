@@ -3,6 +3,10 @@
 Vue 3 SPA in `resources/js`, built by Vite into `public_html/build/`. Backend
 API surface in [SPECS.md](SPECS.md) §6; catalog UI in [CATALOG.md](CATALOG.md).
 
+> **Primary source files:** `resources/js/app.js`, `resources/js/router.js`,
+> `resources/js/store/{auth,requests}.js`, `resources/js/views/`,
+> `resources/js/components/`, `resources/css/app.css`, `vite.config.js`.
+
 ---
 
 ## 1. Stack & build

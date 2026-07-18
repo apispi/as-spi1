@@ -2,8 +2,14 @@
 
 The admin **Catalog** and **Active** sections, and the connector **sync** that
 populates them from live MCP/A2A servers. Data model in
-[DATABASE-SCHEMA.md](DATABASE-SCHEMA.md#catalog_items) and
-[MODELS.md](MODELS.md#catalogitem); UI shell in [FRONTEND.md](FRONTEND.md).
+[DATABASE-SCHEMA.md](DATABASE-SCHEMA.md) and [MODELS.md](MODELS.md); UI shell in
+[FRONTEND.md](FRONTEND.md).
+
+> **Primary source files:** `app/Models/CatalogItem.php`,
+> `app/Http/Controllers/CatalogItemController.php`,
+> `app/Http/Controllers/ConnectorSyncController.php`,
+> `app/Http/Controllers/ToolController.php`,
+> `resources/js/views/CatalogSection.vue`.
 
 ---
 

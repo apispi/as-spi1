@@ -3,6 +3,10 @@
 High-level shape of apispi.com (Spi). See [SPECS.md](SPECS.md) for the full
 specification and the other companion docs for detail.
 
+> **Primary source files:** `bootstrap/app.php`, `routes/web.php`,
+> `routes/api.php`, `app/Http/Middleware/`, `app/Providers/AppServiceProvider.php`,
+> `deploy.sh`, `public_html/.htaccess`.
+
 ---
 
 ## 1. Shape

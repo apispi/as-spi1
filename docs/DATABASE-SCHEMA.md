@@ -4,6 +4,9 @@ Authoritative table/column reference. For model behaviour see
 [MODELS.md](MODELS.md). All tables use `bigIncrements id` and Laravel
 `created_at`/`updated_at` timestamps unless noted.
 
+> **Primary source:** `database/migrations/`. Regenerate the live column list
+> with `php artisan db:table <name>` or `Schema::getColumnListing('<name>')`.
+
 ---
 
 ## Migration order
