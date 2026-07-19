@@ -80,14 +80,30 @@ class CatalogItemController extends Controller
 
     public function update(Request $request, CatalogItem $catalogItem)
     {
+        $isConnector = $catalogItem->type === 'connector';
+
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string|max:2000',
             'version' => 'nullable|string|max:50',
             'provider' => 'nullable|string|max:255',
             'metadata' => 'nullable|array',
+            // Connector wiring is re-validated (incl. SSRF) whenever metadata
+            // is edited on a connector.
+            'metadata.endpoint' => [
+                Rule::requiredIf($isConnector && $request->has('metadata')),
+                'nullable', 'url', new PubliclyRoutableUrl,
+            ],
+            'metadata.protocol' => ['nullable', Rule::in(['mcp', 'a2a'])],
+            'metadata.auth_header' => 'nullable|string|max:1000',
             'is_active' => 'sometimes|boolean',
         ]);
+
+        // Merge edited metadata over the existing blob so sync/check
+        // timestamps (last_synced_at, last_checked_at) are preserved.
+        if (array_key_exists('metadata', $validated)) {
+            $validated['metadata'] = array_merge($catalogItem->metadata ?? [], $validated['metadata'] ?? []);
+        }
 
         $catalogItem->update($validated);
 

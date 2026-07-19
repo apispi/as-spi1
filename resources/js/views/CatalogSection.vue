@@ -54,6 +54,13 @@
             <td>
               <div class="cat-item-name">{{ item.name }}</div>
               <div class="cat-item-desc">{{ item.description || '—' }}</div>
+              <div v-if="item.type === 'connector'" class="cat-conn-meta">
+                <span class="cat-endpoint">{{ item.metadata?.endpoint }}</span>
+                <span v-if="connectorStatus(item)" class="cat-status" :class="connectorStatus(item).cls">
+                  ● {{ connectorStatus(item).label }}
+                </span>
+                <span v-if="item.metadata?.last_synced_at" class="cat-muted"> · synced {{ ago(item.metadata.last_synced_at) }}</span>
+              </div>
             </td>
             <td class="cat-muted">{{ item.provider || '—' }}</td>
             <td class="cat-muted">{{ item.version || '—' }}</td>
@@ -63,12 +70,15 @@
               </span>
             </td>
             <td class="cat-actions-col">
-              <button
-                v-if="item.type === 'connector'"
-                class="cat-btn cat-btn-sync"
-                :disabled="syncingId === item.id"
-                @click="sync(item)"
-              >{{ syncingId === item.id ? 'Syncing...' : 'Sync' }}</button>
+              <template v-if="item.type === 'connector'">
+                <button class="cat-btn" :disabled="checkingId === item.id" @click="check(item)">
+                  {{ checkingId === item.id ? 'Checking...' : 'Check' }}
+                </button>
+                <button class="cat-btn cat-btn-sync" :disabled="syncingId === item.id" @click="sync(item)">
+                  {{ syncingId === item.id ? 'Syncing...' : 'Sync' }}
+                </button>
+                <button class="cat-btn" @click="edit(item)">Edit</button>
+              </template>
               <button class="cat-btn" @click="toggleActive(item)">
                 {{ item.is_active ? 'Deactivate' : 'Activate' }}
               </button>
@@ -79,12 +89,12 @@
       </table>
     </div>
 
-    <!-- Create form -->
+    <!-- Create / edit form -->
     <div v-if="showCreate" class="cat-panel cat-create">
       <div class="cat-panel-head">
-        <h2 class="cat-panel-title">Add {{ singular }}</h2>
+        <h2 class="cat-panel-title">{{ editingId ? 'Edit' : 'Add' }} {{ singular }}</h2>
       </div>
-      <form @submit.prevent="create">
+      <form @submit.prevent="save">
         <div class="cat-form-row">
           <div class="cat-form-group">
             <label class="cat-label">Name</label>
@@ -162,8 +172,11 @@ const counts = ref({});
 const loading = ref(false);
 const flash = ref('');
 const showCreate = ref(false);
+const editingId = ref(null);
 const saving = ref(false);
 const syncingId = ref(null);
+const checkingId = ref(null);
+const checkResults = ref({}); // id -> { reachable, latency_ms, info }
 const formError = ref('');
 const form = ref({ name: '', provider: '', version: '', description: '', endpoint: '', protocol: 'mcp', authHeader: '' });
 
@@ -220,17 +233,32 @@ watch(mode, () => {
 });
 
 const openCreate = () => {
+  editingId.value = null;
   form.value = { name: '', provider: '', version: '', description: '', endpoint: '', protocol: 'mcp', authHeader: '' };
   formError.value = '';
   showCreate.value = true;
 };
 
-const create = async () => {
+const edit = (item) => {
+  editingId.value = item.id;
+  form.value = {
+    name: item.name || '',
+    provider: item.provider || '',
+    version: item.version || '',
+    description: item.description || '',
+    endpoint: item.metadata?.endpoint || '',
+    protocol: item.metadata?.protocol || 'mcp',
+    authHeader: item.metadata?.auth_header || '',
+  };
+  formError.value = '';
+  showCreate.value = true;
+};
+
+const save = async () => {
   saving.value = true;
   formError.value = '';
 
   const payload = {
-    type: currentTab.value.type,
     name: form.value.name,
     provider: form.value.provider,
     version: form.value.version,
@@ -242,14 +270,19 @@ const create = async () => {
     payload.metadata = {
       endpoint: form.value.endpoint,
       protocol: form.value.protocol,
-      ...(form.value.authHeader ? { auth_header: form.value.authHeader } : {}),
+      auth_header: form.value.authHeader || '',
     };
   }
 
   try {
-    await axios.post('/api/admin/catalog', payload);
+    if (editingId.value) {
+      await axios.put(`/api/admin/catalog/${editingId.value}`, payload);
+      showFlash(`${singular.value} updated.`);
+    } else {
+      await axios.post('/api/admin/catalog', { ...payload, type: currentTab.value.type });
+      showFlash(`${singular.value} added.`);
+    }
     showCreate.value = false;
-    showFlash(`${singular.value} added.`);
     await fetchAll();
   } catch (error) {
     formError.value = error.response?.data?.message
@@ -271,6 +304,40 @@ const sync = async (connector) => {
   } finally {
     syncingId.value = null;
   }
+};
+
+const check = async (connector) => {
+  checkingId.value = connector.id;
+  try {
+    const res = await axios.post(`/api/admin/catalog/${connector.id}/check`);
+    checkResults.value = { ...checkResults.value, [connector.id]: res.data };
+    showFlash(res.data.reachable
+      ? `Reachable (${res.data.latency_ms}ms)${res.data.info ? ' — ' + res.data.info : ''}`
+      : `Unreachable: ${res.data.message}`);
+  } catch (error) {
+    showFlash(error.response?.data?.message || 'Check failed.');
+  } finally {
+    checkingId.value = null;
+  }
+};
+
+// Prefer a fresh in-session check result; fall back to the stored last check.
+const connectorStatus = (item) => {
+  const r = checkResults.value[item.id];
+  if (r) return r.reachable
+    ? { cls: 'ok', label: `reachable ${r.latency_ms}ms` }
+    : { cls: 'bad', label: 'unreachable' };
+  if (item.metadata?.last_check_ok === true) return { cls: 'ok', label: 'reachable' };
+  if (item.metadata?.last_check_ok === false) return { cls: 'bad', label: 'unreachable' };
+  return null;
+};
+
+const ago = (iso) => {
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
 };
 
 const toggleActive = async (item) => {
@@ -354,6 +421,11 @@ onMounted(fetchAll);
 .cat-table tr:last-child td { border-bottom: none; }
 .cat-item-name { font-weight: 600; }
 .cat-item-desc { font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem; }
+.cat-conn-meta { font-size: 0.72rem; margin-top: 0.35rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+.cat-endpoint { font-family: monospace; color: var(--accent-color); word-break: break-all; }
+.cat-status { font-weight: 600; }
+.cat-status.ok { color: #3fb950; }
+.cat-status.bad { color: #f85149; }
 .cat-muted { color: var(--text-secondary); }
 .cat-actions-col { white-space: nowrap; text-align: right; }
 

@@ -149,6 +149,78 @@ class ConnectorSyncTest extends TestCase
         $this->assertStringNotContainsString('top-secret', json_encode($tool->metadata));
     }
 
+    public function test_check_reports_reachable_for_a_responding_mcp_server(): void
+    {
+        Http::fake([
+            'mcp.test/*' => Http::response(['jsonrpc' => '2.0', 'id' => 1, 'result' => [
+                'protocolVersion' => '2025-06-18',
+                'serverInfo' => ['name' => 'demo-mcp', 'version' => '1.0'],
+            ]], 200),
+        ]);
+
+        $admin = $this->admin();
+        $connector = $this->connector();
+
+        $response = $this->actingAs($admin)->postJson("/api/admin/catalog/{$connector->id}/check");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('reachable', true)
+            ->assertJsonPath('info', 'demo-mcp 1.0');
+
+        // The check result is persisted on the connector.
+        $this->assertTrue($connector->fresh()->metadata['last_check_ok']);
+    }
+
+    public function test_check_reports_unreachable_without_erroring(): void
+    {
+        Http::fake(['mcp.test/*' => Http::response('down', 503)]);
+
+        $admin = $this->admin();
+        $connector = $this->connector();
+
+        // Unreachable is a 200 answer (reachable=false), not a server error.
+        $this->actingAs($admin)->postJson("/api/admin/catalog/{$connector->id}/check")
+            ->assertStatus(200)
+            ->assertJsonPath('reachable', false);
+
+        $this->assertFalse($connector->fresh()->metadata['last_check_ok']);
+    }
+
+    public function test_check_rejects_a_non_connector_and_ssrf_endpoint(): void
+    {
+        $admin = $this->admin();
+
+        $tool = CatalogItem::create(['type' => 'tool', 'name' => 'X', 'slug' => 'x']);
+        $this->actingAs($admin)->postJson("/api/admin/catalog/{$tool->id}/check")->assertStatus(422);
+
+        $internal = $this->connector(['endpoint' => 'http://127.0.0.1/mcp']);
+        $this->actingAs($admin)->postJson("/api/admin/catalog/{$internal->id}/check")->assertStatus(422);
+    }
+
+    public function test_connector_endpoint_can_be_edited_and_is_ssrf_validated(): void
+    {
+        $admin = $this->admin();
+        $connector = $this->connector();
+        // Seed a sync timestamp that editing must preserve.
+        $connector->update(['metadata' => array_merge($connector->metadata, ['last_synced_at' => '2026-01-01T00:00:00+00:00'])]);
+
+        // Valid edit.
+        $this->actingAs($admin)->putJson("/api/admin/catalog/{$connector->id}", [
+            'metadata' => ['endpoint' => 'https://new.test/mcp', 'protocol' => 'mcp', 'auth_header' => 'Bearer k'],
+        ])->assertStatus(200);
+
+        $meta = $connector->fresh()->metadata;
+        $this->assertSame('https://new.test/mcp', $meta['endpoint']);
+        $this->assertSame('Bearer k', $meta['auth_header']);
+        // Existing sync timestamp preserved through the merge.
+        $this->assertSame('2026-01-01T00:00:00+00:00', $meta['last_synced_at']);
+
+        // SSRF endpoint rejected on edit.
+        $this->actingAs($admin)->putJson("/api/admin/catalog/{$connector->id}", [
+            'metadata' => ['endpoint' => 'http://localhost/mcp', 'protocol' => 'mcp'],
+        ])->assertStatus(422)->assertJsonValidationErrors(['metadata.endpoint']);
+    }
+
     public function test_sync_reports_upstream_failure(): void
     {
         Http::fake(['mcp.test/*' => Http::response(['error' => 'boom'], 500)]);

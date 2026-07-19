@@ -24,30 +24,9 @@ class ConnectorSyncController extends Controller
 {
     public function sync(Request $request, CatalogItem $catalogItem)
     {
-        if ($catalogItem->type !== 'connector') {
-            return response()->json(['message' => 'Only connectors can be synced.'], 422);
-        }
-
-        $meta = $catalogItem->metadata ?? [];
-        $endpoint = $meta['endpoint'] ?? null;
-        $protocol = $meta['protocol'] ?? 'mcp';
-
-        if (! $endpoint) {
-            return response()->json(['message' => 'This connector has no endpoint configured.'], 422);
-        }
-
-        // Re-validate the endpoint at sync time: the connector makes an
-        // outbound request, and DNS for a stored host may have changed.
-        $check = Validator::make(['endpoint' => $endpoint], [
-            'endpoint' => ['required', 'url', new PubliclyRoutableUrl],
-        ]);
-        if ($check->fails()) {
-            return response()->json(['message' => 'Connector endpoint is not a valid public URL.'], 422);
-        }
-
-        $headers = [];
-        if (! empty($meta['auth_header'])) {
-            $headers['Authorization'] = $meta['auth_header'];
+        [$endpoint, $protocol, $headers, $error] = $this->resolveConnector($catalogItem);
+        if ($error) {
+            return $error;
         }
 
         try {
@@ -58,13 +37,98 @@ class ConnectorSyncController extends Controller
             return response()->json(['message' => 'Sync failed: '.$e->getMessage()], 502);
         }
 
-        $catalogItem->metadata = array_merge($meta, ['last_synced_at' => now()->toIso8601String()]);
+        $catalogItem->metadata = array_merge($catalogItem->metadata ?? [], [
+            'last_synced_at' => now()->toIso8601String(),
+        ]);
         $catalogItem->save();
 
         return response()->json([
             'message' => 'Synced '.array_sum($counts).' item(s) from '.$catalogItem->name.'.',
             'counts' => $counts,
         ]);
+    }
+
+    /**
+     * Lightweight reachability probe: handshake with the connector (MCP
+     * initialize / A2A agent-card) and report whether it responded, with
+     * latency. Unreachable is a normal answer (200 with reachable=false), not
+     * a server error — the UI shows it as a status badge.
+     */
+    public function check(Request $request, CatalogItem $catalogItem)
+    {
+        [$endpoint, $protocol, $headers, $error] = $this->resolveConnector($catalogItem);
+        if ($error) {
+            return $error;
+        }
+
+        $start = microtime(true);
+        $reachable = true;
+        $message = 'Connector is reachable.';
+        $info = null;
+
+        try {
+            if ($protocol === 'a2a') {
+                $card = (new A2aClient($endpoint, null, $headers))->getAgentCard();
+                $info = $card['name'] ?? null;
+            } else {
+                $init = (new McpClient($endpoint, null, $headers))->initialize();
+                $info = trim(($init['serverInfo']['name'] ?? '').' '.($init['serverInfo']['version'] ?? '')) ?: null;
+            }
+        } catch (Throwable $e) {
+            $reachable = false;
+            $message = $e->getMessage();
+        }
+
+        $latencyMs = (int) round((microtime(true) - $start) * 1000);
+
+        $catalogItem->metadata = array_merge($catalogItem->metadata ?? [], [
+            'last_checked_at' => now()->toIso8601String(),
+            'last_check_ok' => $reachable,
+        ]);
+        $catalogItem->save();
+
+        return response()->json([
+            'reachable' => $reachable,
+            'latency_ms' => $latencyMs,
+            'info' => $info,
+            'message' => $message,
+        ]);
+    }
+
+    /**
+     * Shared guard: ensure the item is a connector with a valid, public
+     * endpoint. Returns [endpoint, protocol, headers, null] on success or
+     * [null, null, null, JsonResponse] on failure.
+     */
+    protected function resolveConnector(CatalogItem $item): array
+    {
+        if ($item->type !== 'connector') {
+            return [null, null, null, response()->json(['message' => 'Only connectors support this action.'], 422)];
+        }
+
+        $meta = $item->metadata ?? [];
+        $endpoint = $meta['endpoint'] ?? null;
+        $protocol = $meta['protocol'] ?? 'mcp';
+
+        if (! $endpoint) {
+            return [null, null, null, response()->json(['message' => 'This connector has no endpoint configured.'], 422)];
+        }
+
+        // Re-validate at call time: the connector makes an outbound request and
+        // DNS for a stored host may have changed.
+        $check = Validator::make(['endpoint' => $endpoint], [
+            'endpoint' => ['required', 'url', new PubliclyRoutableUrl],
+        ]);
+        if ($check->fails()) {
+            return [null, null, null, response()->json(['message' => 'Connector endpoint is not a valid public URL.'], 422)];
+        }
+
+        $headers = [];
+        if (! empty($meta['auth_header'])) {
+            $headers['Authorization'] = $meta['auth_header'];
+        }
+
+        return [$endpoint, $protocol, $headers, null];
     }
 
     protected function syncMcp(CatalogItem $connector, string $endpoint, array $headers): array

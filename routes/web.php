@@ -72,6 +72,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::delete('/api/admin/catalog/{catalogItem}', [CatalogItemController::class, 'destroy']);
     Route::post('/api/admin/catalog/{catalogItem}/toggle-active', [CatalogItemController::class, 'toggleActive']);
     Route::post('/api/admin/catalog/{catalogItem}/sync', [ConnectorSyncController::class, 'sync']);
+    Route::post('/api/admin/catalog/{catalogItem}/check', [ConnectorSyncController::class, 'check']);
     Route::post('/api/admin/users/{id}/toggle-admin', [AdminController::class, 'toggleAdmin']);
     Route::delete('/api/admin/users/{id}', [AdminController::class, 'deleteUser']);
 });
