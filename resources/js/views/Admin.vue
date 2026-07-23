@@ -49,6 +49,33 @@
       </div>
     </div>
 
+    <div class="users-section" v-if="connectors.length">
+      <div class="section-header">
+        <h3>Connectors</h3>
+        <router-link to="/catalog" class="back-link">Manage in Catalog →</router-link>
+      </div>
+      <div class="table-container">
+        <table class="users-table">
+          <thead>
+            <tr><th>Name</th><th>Endpoint</th><th>Protocol</th><th>Health</th><th>Last synced</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="c in connectors" :key="c.id">
+              <td>{{ c.name }}</td>
+              <td class="email-col conn-endpoint">{{ c.metadata?.endpoint || '—' }}</td>
+              <td><span class="role-badge user">{{ (c.metadata?.protocol || 'mcp').toUpperCase() }}</span></td>
+              <td>
+                <span v-if="c.metadata?.last_check_ok === true" class="role-badge health-ok">● Reachable</span>
+                <span v-else-if="c.metadata?.last_check_ok === false" class="role-badge health-bad">● Unreachable</span>
+                <span v-else class="role-badge user">Unchecked</span>
+              </td>
+              <td class="date-col">{{ c.metadata?.last_synced_at ? formatDateTime(c.metadata.last_synced_at) : 'Never' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="users-section">
       <div class="section-header">
         <h3>All Users</h3>
@@ -168,6 +195,7 @@ const page = ref(1);
 const lastPage = ref(1);
 const totalUsers = ref(0);
 const auditEntries = ref([]);
+const connectors = ref([]);
 let searchDebounce = null;
 
 const isCurrentUser = (user) => {
@@ -224,16 +252,18 @@ const showMessage = (msg, type = 'success') => {
 const fetchData = async () => {
   isLoading.value = true;
   try {
-    const [usersRes, statsRes, actionsRes] = await Promise.all([
+    const [usersRes, statsRes, actionsRes, connectorsRes] = await Promise.all([
       axios.get('/api/admin/users', { params: { page: page.value, search: search.value || undefined } }),
       axios.get('/api/admin/stats'),
-      axios.get('/api/admin/actions')
+      axios.get('/api/admin/actions'),
+      axios.get('/api/admin/catalog', { params: { type: 'connector' } })
     ]);
     users.value = usersRes.data.data;
     lastPage.value = usersRes.data.last_page;
     totalUsers.value = usersRes.data.total;
     stats.value = statsRes.data;
     auditEntries.value = actionsRes.data.data;
+    connectors.value = connectorsRes.data;
   } catch (error) {
     showMessage('Failed to load admin data.', 'error');
   } finally {
@@ -459,6 +489,9 @@ onMounted(fetchData);
   color: #f85149;
   background: rgba(248, 81, 73, 0.15);
 }
+.role-badge.health-ok { color: #3fb950; background: rgba(63, 185, 80, 0.15); }
+.role-badge.health-bad { color: #f85149; background: rgba(248, 81, 73, 0.15); }
+.conn-endpoint { font-family: monospace; font-size: 12px; }
 
 .section-header {
   display: flex;

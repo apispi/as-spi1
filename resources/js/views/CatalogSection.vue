@@ -77,6 +77,9 @@
                 <button class="cat-btn cat-btn-sync" :disabled="syncingId === item.id" @click="sync(item)">
                   {{ syncingId === item.id ? 'Syncing...' : 'Sync' }}
                 </button>
+                <button class="cat-btn cat-btn-sync" :disabled="syncingId === item.id" @click="sync(item, true)" title="Sync and activate everything it imports">
+                  Sync + Activate
+                </button>
                 <button class="cat-btn" @click="edit(item)">Edit</button>
               </template>
               <button class="cat-btn" @click="toggleActive(item)">
@@ -293,10 +296,10 @@ const save = async () => {
   }
 };
 
-const sync = async (connector) => {
+const sync = async (connector, activate = false) => {
   syncingId.value = connector.id;
   try {
-    const res = await axios.post(`/api/admin/catalog/${connector.id}/sync`);
+    const res = await axios.post(`/api/admin/catalog/${connector.id}/sync`, { activate });
     showFlash(res.data.message);
     await fetchAll();
   } catch (error) {

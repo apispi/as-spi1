@@ -58,6 +58,14 @@
         </select>
       </div>
 
+      <div v-if="protocol === 'mcp' && activePrompts && activePrompts.length" class="mcp-toolbar flex gap-2 items-center mt-4">
+        <span class="text-secondary text-sm">Active prompts:</span>
+        <select class="input-field method-select" v-model="selectedActivePrompt" @change="applyActivePrompt">
+          <option value="" disabled>Pick a synced prompt...</option>
+          <option v-for="p in activePrompts" :key="p.id" :value="p.id">{{ p.name }} ({{ p.provider }})</option>
+        </select>
+      </div>
+
       <div v-if="protocol === 'mcp'" class="mcp-toolbar flex gap-2 items-center mt-4">
         <button class="secondary text-sm" @click="discoverTools" :disabled="isDiscovering || !url">
           {{ isDiscovering ? 'Discovering...' : 'Discover Tools' }}
@@ -140,7 +148,8 @@ const props = defineProps({
   isLoading: Boolean,
   loadedRequest: Object,
   defaults: Object,
-  activeTools: Array
+  activeTools: Array,
+  activePrompts: Array
 });
 
 const emit = defineEmits(['send-request', 'save-request']);
@@ -155,6 +164,7 @@ const url = ref('https://apispi.com/api/gateway/tools');
 const discoveredTools = ref([]);
 const selectedToolName = ref('');
 const selectedActiveTool = ref('');
+const selectedActivePrompt = ref('');
 const isDiscovering = ref(false);
 const discoverError = ref('');
 const agentCard = ref(null);
@@ -321,6 +331,23 @@ const applyActiveTool = () => {
     name: tool.name,
     arguments: defaultForSchema(tool.input_schema) || {}
   }, null, 2);
+  activeTab.value = 'body';
+};
+
+// Pick a synced, active prompt: set the connector URL and a prompts/get
+// template from its declared arguments (an array of {name, ...}).
+const applyActivePrompt = () => {
+  const prompt = (props.activePrompts || []).find(p => p.id === selectedActivePrompt.value);
+  if (!prompt) return;
+
+  const args = {};
+  (Array.isArray(prompt.arguments) ? prompt.arguments : []).forEach(a => {
+    if (a && a.name) args[a.name] = '';
+  });
+
+  url.value = prompt.endpoint;
+  mcpMethod.value = 'prompts/get';
+  body.value = JSON.stringify({ name: prompt.name, arguments: args }, null, 2);
   activeTab.value = 'body';
 };
 

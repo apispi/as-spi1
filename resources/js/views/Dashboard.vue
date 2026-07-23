@@ -49,6 +49,7 @@
           :loadedRequest="currentLoadedRequest"
           :defaults="preferences"
           :activeTools="activeTools"
+          :activePrompts="activePrompts"
         />
       </div>
       <div class="panel-container">
@@ -80,6 +81,7 @@ const history = ref([]);
 const historyLoading = ref(false);
 const preferences = ref(null);
 const activeTools = ref([]);
+const activePrompts = ref([]);
 
 onMounted(async () => {
   if (authStore.isAuthenticated) {
@@ -91,10 +93,15 @@ onMounted(async () => {
       preferences.value = null;
     }
     try {
-      const res = await axios.get('/api/tools/active');
-      activeTools.value = res.data;
+      const [toolsRes, promptsRes] = await Promise.all([
+        axios.get('/api/tools/active'),
+        axios.get('/api/prompts/active'),
+      ]);
+      activeTools.value = toolsRes.data;
+      activePrompts.value = promptsRes.data;
     } catch (error) {
       activeTools.value = [];
+      activePrompts.value = [];
     }
   }
 });

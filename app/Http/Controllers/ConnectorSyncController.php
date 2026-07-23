@@ -22,12 +22,18 @@ use Throwable;
  */
 class ConnectorSyncController extends Controller
 {
+    /** Items imported during the current sync run (collected by import()). */
+    protected array $imported = [];
+
     public function sync(Request $request, CatalogItem $catalogItem)
     {
         [$endpoint, $protocol, $headers, $error] = $this->resolveConnector($catalogItem);
         if ($error) {
             return $error;
         }
+
+        $activate = $request->boolean('activate');
+        $this->imported = [];
 
         try {
             $counts = $protocol === 'a2a'
@@ -37,14 +43,29 @@ class ConnectorSyncController extends Controller
             return response()->json(['message' => 'Sync failed: '.$e->getMessage()], 502);
         }
 
+        // Optionally activate everything this connector just contributed, in
+        // one go, so an admin doesn't have to toggle each item.
+        $activatedCount = 0;
+        if ($activate && $this->imported !== []) {
+            $activatedCount = CatalogItem::whereIn('id', $this->imported)
+                ->where('is_active', false)
+                ->update(['is_active' => true]);
+        }
+
         $catalogItem->metadata = array_merge($catalogItem->metadata ?? [], [
             'last_synced_at' => now()->toIso8601String(),
         ]);
         $catalogItem->save();
 
+        $message = 'Synced '.array_sum($counts).' item(s) from '.$catalogItem->name.'.';
+        if ($activate) {
+            $message .= ' Activated '.$activatedCount.'.';
+        }
+
         return response()->json([
-            'message' => 'Synced '.array_sum($counts).' item(s) from '.$catalogItem->name.'.',
+            'message' => $message,
             'counts' => $counts,
+            'activated' => $activatedCount,
         ]);
     }
 
@@ -210,5 +231,7 @@ class ConnectorSyncController extends Controller
             ]),
         ]);
         $item->save();
+
+        $this->imported[] = $item->id;
     }
 }

@@ -149,6 +149,47 @@ class ConnectorSyncTest extends TestCase
         $this->assertStringNotContainsString('top-secret', json_encode($tool->metadata));
     }
 
+    public function test_sync_with_activate_flag_activates_imported_items(): void
+    {
+        Http::fake([
+            'mcp.test/*' => Http::sequence()
+                ->push(['jsonrpc' => '2.0', 'id' => 1, 'result' => []], 200)->push('', 202)
+                ->push(['jsonrpc' => '2.0', 'id' => 2, 'result' => ['tools' => [
+                    ['name' => 'echo'], ['name' => 'search'],
+                ]]], 200)
+                ->push(['jsonrpc' => '2.0', 'id' => 3, 'result' => ['prompts' => [['name' => 'greet']]]], 200),
+        ]);
+
+        $admin = $this->admin();
+        $connector = $this->connector();
+
+        $response = $this->actingAs($admin)->postJson("/api/admin/catalog/{$connector->id}/sync", ['activate' => true]);
+
+        $response->assertStatus(200)->assertJsonPath('activated', 3);
+
+        // Every imported item is now active.
+        $this->assertSame(0, CatalogItem::whereIn('type', ['tool', 'prompt'])->where('is_active', false)->count());
+        $this->assertSame(3, CatalogItem::whereIn('type', ['tool', 'prompt'])->where('is_active', true)->count());
+    }
+
+    public function test_sync_without_activate_leaves_items_inactive(): void
+    {
+        Http::fake([
+            'mcp.test/*' => Http::sequence()
+                ->push(['jsonrpc' => '2.0', 'id' => 1, 'result' => []], 200)->push('', 202)
+                ->push(['jsonrpc' => '2.0', 'id' => 2, 'result' => ['tools' => [['name' => 'echo']]]], 200)
+                ->push(['jsonrpc' => '2.0', 'id' => 3, 'result' => ['prompts' => []]], 200),
+        ]);
+
+        $admin = $this->admin();
+        $connector = $this->connector();
+
+        $this->actingAs($admin)->postJson("/api/admin/catalog/{$connector->id}/sync")
+            ->assertStatus(200)->assertJsonPath('activated', 0);
+
+        $this->assertFalse(CatalogItem::where('slug', 'demo-mcp-echo')->value('is_active'));
+    }
+
     public function test_check_reports_reachable_for_a_responding_mcp_server(): void
     {
         Http::fake([
