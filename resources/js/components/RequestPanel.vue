@@ -66,6 +66,14 @@
         </select>
       </div>
 
+      <div v-if="protocol === 'mcp' && activeResources && activeResources.length" class="mcp-toolbar flex gap-2 items-center mt-4">
+        <span class="text-secondary text-sm">Active resources:</span>
+        <select class="input-field method-select" v-model="selectedActiveResource" @change="applyActiveResource">
+          <option value="" disabled>Pick a synced resource...</option>
+          <option v-for="r in activeResources" :key="r.id" :value="r.id">{{ r.name }} ({{ r.provider }})</option>
+        </select>
+      </div>
+
       <div v-if="protocol === 'mcp'" class="mcp-toolbar flex gap-2 items-center mt-4">
         <button class="secondary text-sm" @click="discoverTools" :disabled="isDiscovering || !url">
           {{ isDiscovering ? 'Discovering...' : 'Discover Tools' }}
@@ -149,7 +157,8 @@ const props = defineProps({
   loadedRequest: Object,
   defaults: Object,
   activeTools: Array,
-  activePrompts: Array
+  activePrompts: Array,
+  activeResources: Array
 });
 
 const emit = defineEmits(['send-request', 'save-request']);
@@ -165,6 +174,7 @@ const discoveredTools = ref([]);
 const selectedToolName = ref('');
 const selectedActiveTool = ref('');
 const selectedActivePrompt = ref('');
+const selectedActiveResource = ref('');
 const isDiscovering = ref(false);
 const discoverError = ref('');
 const agentCard = ref(null);
@@ -348,6 +358,18 @@ const applyActivePrompt = () => {
   url.value = prompt.endpoint;
   mcpMethod.value = 'prompts/get';
   body.value = JSON.stringify({ name: prompt.name, arguments: args }, null, 2);
+  activeTab.value = 'body';
+};
+
+// Pick a synced, active resource: set the connector URL and a resources/read
+// template using its stored URI.
+const applyActiveResource = () => {
+  const resource = (props.activeResources || []).find(r => r.id === selectedActiveResource.value);
+  if (!resource) return;
+
+  url.value = resource.endpoint;
+  mcpMethod.value = 'resources/read';
+  body.value = JSON.stringify({ uri: resource.uri }, null, 2);
   activeTab.value = 'body';
 };
 

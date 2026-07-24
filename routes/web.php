@@ -15,6 +15,7 @@ use App\Http\Controllers\CatalogItemController;
 use App\Http\Controllers\ConnectorSyncController;
 use App\Http\Controllers\ToolController;
 use App\Http\Controllers\PromptController;
+use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\RegistrationController;
 
@@ -44,6 +45,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/api/saved-requests/{id}', [SavedRequestController::class, 'destroy']);
     Route::get('/api/tools/active', [ToolController::class, 'active']);
     Route::get('/api/prompts/active', [PromptController::class, 'active']);
+    Route::get('/api/resources/active', [ResourceController::class, 'active']);
     Route::get('/api/history', [RequestHistoryController::class, 'index']);
     Route::delete('/api/history', [RequestHistoryController::class, 'clear']);
     Route::put('/api/user/scx-api-key', [UserPreferencesController::class, 'updateScxApiKey']);

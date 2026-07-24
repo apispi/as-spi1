@@ -50,6 +50,7 @@
           :defaults="preferences"
           :activeTools="activeTools"
           :activePrompts="activePrompts"
+          :activeResources="activeResources"
         />
       </div>
       <div class="panel-container">
@@ -82,6 +83,7 @@ const historyLoading = ref(false);
 const preferences = ref(null);
 const activeTools = ref([]);
 const activePrompts = ref([]);
+const activeResources = ref([]);
 
 onMounted(async () => {
   if (authStore.isAuthenticated) {
@@ -93,15 +95,18 @@ onMounted(async () => {
       preferences.value = null;
     }
     try {
-      const [toolsRes, promptsRes] = await Promise.all([
+      const [toolsRes, promptsRes, resourcesRes] = await Promise.all([
         axios.get('/api/tools/active'),
         axios.get('/api/prompts/active'),
+        axios.get('/api/resources/active'),
       ]);
       activeTools.value = toolsRes.data;
       activePrompts.value = promptsRes.data;
+      activeResources.value = resourcesRes.data;
     } catch (error) {
       activeTools.value = [];
       activePrompts.value = [];
+      activeResources.value = [];
     }
   }
 });

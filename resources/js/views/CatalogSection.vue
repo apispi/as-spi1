@@ -167,6 +167,7 @@ const tabs = [
   { key: 'connectors', type: 'connector', label: 'Connectors', icon: '⇄', description: 'Integrations that link agents to external systems and data.' },
   { key: 'tools', type: 'tool', label: 'Tools', icon: '⚙', description: 'Individual MCP/A2A tools callable by agents.' },
   { key: 'prompts', type: 'prompt', label: 'Prompts', icon: '❝', description: 'Prompt templates available to agents and skills.' },
+  { key: 'resources', type: 'resource', label: 'Resources', icon: '⧉', description: 'Readable data exposed by MCP servers (files, records, context).' },
 ];
 
 const activeTab = ref('agents');

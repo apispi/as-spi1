@@ -157,7 +157,7 @@ class ConnectorSyncController extends Controller
         $client = new McpClient($endpoint, null, $headers);
         $client->initialize();
 
-        $counts = ['tools' => 0, 'prompts' => 0];
+        $counts = ['tools' => 0, 'prompts' => 0, 'resources' => 0];
 
         foreach ($client->listTools()['tools'] ?? [] as $tool) {
             if (empty($tool['name'])) {
@@ -182,6 +182,24 @@ class ConnectorSyncController extends Controller
             }
         } catch (Throwable $e) {
             // Server does not support prompts/list — leave the count at zero.
+        }
+
+        // resources/list is also optional. Resources are keyed by URI; fall
+        // back to the URI as the display name when unnamed.
+        try {
+            foreach ($client->listResources()['resources'] ?? [] as $resource) {
+                $uri = $resource['uri'] ?? null;
+                if (! $uri) {
+                    continue;
+                }
+                $this->import('resource', $connector, $resource['name'] ?? $uri, $resource['description'] ?? null, [
+                    'uri' => $uri,
+                    'mimeType' => $resource['mimeType'] ?? null,
+                ]);
+                $counts['resources']++;
+            }
+        } catch (Throwable $e) {
+            // Server does not support resources/list — leave the count at zero.
         }
 
         return $counts;

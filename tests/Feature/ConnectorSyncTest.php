@@ -45,7 +45,7 @@ class ConnectorSyncTest extends TestCase
             ->assertStatus(422);
     }
 
-    public function test_mcp_connector_imports_tools_and_prompts(): void
+    public function test_mcp_connector_imports_tools_prompts_and_resources(): void
     {
         Http::fake([
             'mcp.test/*' => Http::sequence()
@@ -57,6 +57,10 @@ class ConnectorSyncTest extends TestCase
                 ]]], 200)
                 ->push(['jsonrpc' => '2.0', 'id' => 3, 'result' => ['prompts' => [
                     ['name' => 'greeting', 'description' => 'A greeting'],
+                ]]], 200)
+                ->push(['jsonrpc' => '2.0', 'id' => 4, 'result' => ['resources' => [
+                    ['uri' => 'file:///readme.md', 'name' => 'Readme', 'mimeType' => 'text/markdown'],
+                    ['uri' => 'file:///data.json'], // unnamed — falls back to URI
                 ]]], 200),
         ]);
 
@@ -67,22 +71,30 @@ class ConnectorSyncTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonPath('counts.tools', 2)
-            ->assertJsonPath('counts.prompts', 1);
+            ->assertJsonPath('counts.prompts', 1)
+            ->assertJsonPath('counts.resources', 2);
 
         $this->assertDatabaseHas('catalog_items', ['type' => 'tool', 'slug' => 'demo-mcp-echo', 'provider' => 'Demo MCP']);
         $this->assertDatabaseHas('catalog_items', ['type' => 'prompt', 'slug' => 'demo-mcp-greeting']);
+        $this->assertDatabaseHas('catalog_items', ['type' => 'resource', 'slug' => 'demo-mcp-readme']);
+
+        $resource = CatalogItem::where('type', 'resource')->where('slug', 'demo-mcp-readme')->firstOrFail();
+        $this->assertSame('file:///readme.md', $resource->metadata['uri']);
+        $this->assertSame('https://mcp.test/mcp', $resource->metadata['endpoint']);
     }
 
     public function test_resync_is_idempotent_and_preserves_activation(): void
     {
         $toolsResult = ['jsonrpc' => '2.0', 'id' => 2, 'result' => ['tools' => [['name' => 'echo']]]];
+        $empty = ['jsonrpc' => '2.0', 'id' => 3, 'result' => ['prompts' => []]];
+        $noRes = ['jsonrpc' => '2.0', 'id' => 4, 'result' => ['resources' => []]];
 
         Http::fake([
             'mcp.test/*' => Http::sequence()
                 ->push(['jsonrpc' => '2.0', 'id' => 1, 'result' => []], 200)->push('', 202)
-                ->push($toolsResult, 200)->push(['jsonrpc' => '2.0', 'id' => 3, 'result' => ['prompts' => []]], 200)
+                ->push($toolsResult, 200)->push($empty, 200)->push($noRes, 200)
                 ->push(['jsonrpc' => '2.0', 'id' => 1, 'result' => []], 200)->push('', 202)
-                ->push($toolsResult, 200)->push(['jsonrpc' => '2.0', 'id' => 3, 'result' => ['prompts' => []]], 200),
+                ->push($toolsResult, 200)->push($empty, 200)->push($noRes, 200),
         ]);
 
         $admin = $this->admin();
@@ -133,7 +145,8 @@ class ConnectorSyncTest extends TestCase
             'mcp.test/*' => Http::sequence()
                 ->push(['jsonrpc' => '2.0', 'id' => 1, 'result' => []], 200)->push('', 202)
                 ->push(['jsonrpc' => '2.0', 'id' => 2, 'result' => ['tools' => [['name' => 'echo']]]], 200)
-                ->push(['jsonrpc' => '2.0', 'id' => 3, 'result' => ['prompts' => []]], 200),
+                ->push(['jsonrpc' => '2.0', 'id' => 3, 'result' => ['prompts' => []]], 200)
+                ->push(['jsonrpc' => '2.0', 'id' => 4, 'result' => ['resources' => []]], 200),
         ]);
 
         $admin = $this->admin();
@@ -157,7 +170,8 @@ class ConnectorSyncTest extends TestCase
                 ->push(['jsonrpc' => '2.0', 'id' => 2, 'result' => ['tools' => [
                     ['name' => 'echo'], ['name' => 'search'],
                 ]]], 200)
-                ->push(['jsonrpc' => '2.0', 'id' => 3, 'result' => ['prompts' => [['name' => 'greet']]]], 200),
+                ->push(['jsonrpc' => '2.0', 'id' => 3, 'result' => ['prompts' => [['name' => 'greet']]]], 200)
+                ->push(['jsonrpc' => '2.0', 'id' => 4, 'result' => ['resources' => []]], 200),
         ]);
 
         $admin = $this->admin();
@@ -178,7 +192,8 @@ class ConnectorSyncTest extends TestCase
             'mcp.test/*' => Http::sequence()
                 ->push(['jsonrpc' => '2.0', 'id' => 1, 'result' => []], 200)->push('', 202)
                 ->push(['jsonrpc' => '2.0', 'id' => 2, 'result' => ['tools' => [['name' => 'echo']]]], 200)
-                ->push(['jsonrpc' => '2.0', 'id' => 3, 'result' => ['prompts' => []]], 200),
+                ->push(['jsonrpc' => '2.0', 'id' => 3, 'result' => ['prompts' => []]], 200)
+                ->push(['jsonrpc' => '2.0', 'id' => 4, 'result' => ['resources' => []]], 200),
         ]);
 
         $admin = $this->admin();

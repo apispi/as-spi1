@@ -10,7 +10,7 @@ class CatalogItem extends Model
      * The entity types the catalog holds. Each maps to a tab in the Catalog
      * and Active admin sections.
      */
-    public const TYPES = ['agent', 'skill', 'connector', 'tool', 'prompt'];
+    public const TYPES = ['agent', 'skill', 'connector', 'tool', 'prompt', 'resource'];
 
     protected $fillable = [
         'type',
