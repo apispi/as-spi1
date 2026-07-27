@@ -3,13 +3,27 @@
     <div class="panel-header flex items-center justify-between">
       <div class="flex items-center gap-4">
         <h2>Request</h2>
-        <button class="secondary text-sm" @click="save" :disabled="isLoading || !url">Save Request</button>
+        <button class="secondary text-sm" @click="openSave" :disabled="isLoading || !url">Save Request</button>
       </div>
-      <button class="primary flex items-center gap-2" @click="send" :disabled="isLoading">
+      <button class="primary flex items-center gap-2" @click="send" :disabled="isLoading" title="Send (⌘/Ctrl + Enter)">
         <svg v-if="!isLoading" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="icon"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         <span v-else class="loader"></span>
         Send
       </button>
+    </div>
+
+    <!-- Inline save row (replaces the native prompt) -->
+    <div v-if="showSave" class="save-row flex items-center gap-2">
+      <input
+        ref="saveInput"
+        v-model="saveName"
+        class="input-field w-full"
+        placeholder="Name this request..."
+        @keyup.enter="confirmSave"
+        @keyup.esc="showSave = false"
+      />
+      <button class="primary text-sm" @click="confirmSave" :disabled="!saveName.trim()">Save</button>
+      <button class="secondary text-sm" @click="showSave = false">Cancel</button>
     </div>
     
     <div class="panel-content">
@@ -141,7 +155,9 @@
             class="input-field w-full body-editor"
             :placeholder="bodyPlaceholder"
             v-model="body"
+            @input="bodyError = ''"
           ></textarea>
+          <p v-if="bodyError" class="body-error">{{ bodyError }}</p>
         </div>
       </div>
     </div>
@@ -149,7 +165,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 
 const props = defineProps({
@@ -187,6 +203,23 @@ const headers = ref([
 ]);
 
 const body = ref('');
+
+// Inline save (replaces window.prompt).
+const showSave = ref(false);
+const saveName = ref('');
+const saveInput = ref(null);
+// Inline JSON error (replaces alert()).
+const bodyError = ref('');
+
+// Send on Cmd/Ctrl+Enter from anywhere in the panel.
+const onKeydown = (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !props.isLoading) {
+    e.preventDefault();
+    send();
+  }
+};
+onMounted(() => window.addEventListener('keydown', onKeydown));
+onUnmounted(() => window.removeEventListener('keydown', onKeydown));
 
 // Apply the user's saved defaults once, when they arrive, and only if the
 // user hasn't already loaded a specific request into the panel.
@@ -422,7 +455,8 @@ const send = () => {
       try {
         params = JSON.parse(body.value);
       } catch (e) {
-        alert('Params must be valid JSON');
+        bodyError.value = 'Params must be valid JSON.';
+        activeTab.value = 'body';
         return;
       }
     }
@@ -458,9 +492,15 @@ const send = () => {
   });
 };
 
-const save = () => {
+const openSave = () => {
   if (!url.value) return;
-  const name = prompt("Enter a name for this saved request:");
+  saveName.value = '';
+  showSave.value = true;
+  nextTick(() => saveInput.value?.focus());
+};
+
+const confirmSave = () => {
+  const name = saveName.value.trim();
   if (!name) return;
 
   if (protocol.value === 'mcp' || protocol.value === 'a2a') {
@@ -469,7 +509,9 @@ const save = () => {
       try {
         params = JSON.parse(body.value);
       } catch (e) {
-        alert('Params must be valid JSON');
+        bodyError.value = 'Params must be valid JSON.';
+        activeTab.value = 'body';
+        showSave.value = false;
         return;
       }
     }
@@ -482,6 +524,7 @@ const save = () => {
       headers: collectHeaders(),
       params
     });
+    showSave.value = false;
     return;
   }
 
@@ -493,6 +536,7 @@ const save = () => {
     headers: collectHeaders(),
     body: ['GET', 'HEAD'].includes(method.value) ? null : body.value
   });
+  showSave.value = false;
 };
 </script>
 
@@ -507,6 +551,18 @@ const save = () => {
 .panel-header {
   padding: 16px 24px;
   border-bottom: 1px solid var(--border-color);
+}
+
+.save-row {
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(88, 166, 255, 0.05);
+}
+
+.body-error {
+  color: #f85149;
+  font-size: 13px;
+  margin-top: 8px;
 }
 
 .panel-header h2 {

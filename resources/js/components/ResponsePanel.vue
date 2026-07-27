@@ -43,10 +43,13 @@
             :class="['tab', activeTab === 'reqBody' ? 'active' : '']" 
             @click="activeTab = 'reqBody'"
           >Request Body</button>
-          <button 
-            :class="['tab', activeTab === 'reqHeaders' ? 'active' : '']" 
+          <button
+            :class="['tab', activeTab === 'reqHeaders' ? 'active' : '']"
             @click="activeTab = 'reqHeaders'"
           >Request Headers</button>
+          <button class="copy-btn" @click="copyActive" :title="'Copy ' + activeTabLabel">
+            {{ copied ? '✓ Copied' : 'Copy' }}
+          </button>
         </div>
 
         <div class="tab-content mt-4" v-show="activeTab === 'body'">
@@ -90,6 +93,31 @@ const props = defineProps({
 });
 
 const activeTab = ref('body');
+const copied = ref(false);
+
+const activeTabLabel = computed(() => ({
+  body: 'response body', headers: 'response headers',
+  reqBody: 'request body', reqHeaders: 'request headers',
+}[activeTab.value] || 'content'));
+
+// Copy the raw text of whatever tab is showing.
+const copyActive = () => {
+  if (!props.response) return;
+  let text = '';
+  const r = props.response;
+  if (activeTab.value === 'body') {
+    text = typeof r.body === 'string' ? r.body : JSON.stringify(r.body, null, 2);
+  } else if (activeTab.value === 'reqBody') {
+    text = typeof r.request_payload === 'string' ? r.request_payload : JSON.stringify(r.request_payload ?? '', null, 2);
+  } else if (activeTab.value === 'headers') {
+    text = Object.entries(r.headers || {}).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n');
+  } else if (activeTab.value === 'reqHeaders') {
+    text = Object.entries(r.request_headers || {}).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n');
+  }
+  navigator.clipboard?.writeText(text);
+  copied.value = true;
+  setTimeout(() => { copied.value = false; }, 1500);
+};
 
 const statusClass = computed(() => {
   if (!props.response) return '';
@@ -255,6 +283,19 @@ const formattedReqBody = computed(() => {
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 8px;
 }
+
+.copy-btn {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.copy-btn:hover { color: var(--accent-color); border-color: var(--accent-color); }
 
 .tab {
   background: none;
