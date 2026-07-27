@@ -64,9 +64,10 @@ Guests get the plain routed view (Home/Login/Register).
 
 - **Home** — marketing sections + a live tester (posts `/api/proxy`) + a
   **Quick start** row of example cards that fill the tester and scroll to it.
-  Protocols: REST, GraphQL, WebSocket, SOAP, Webhook, MCP, A2A. gRPC/MQTT/AMQP
-  appear as **disabled "coming soon"** (never implemented — do not fake). No
-  fabricated testimonials.
+  Protocols: REST, GraphQL, WebSocket, SOAP, Webhook, MCP, A2A, gRPC, MQTT,
+  AMQP. gRPC/MQTT/AMQP connect to real backends via the authenticated
+  `/api/{grpc,mqtt,amqp}/test` endpoints, so a logged-out visitor is prompted
+  to sign in. No fabricated testimonials.
 - **Login** — email/password + `GoogleButton`; surfaces `?error=` OAuth codes.
 - **Register** — **email only** → `POST /api/register/start` → "check your
   inbox" state. (Email-first flow; see SPECS.md §7.)

@@ -331,9 +331,11 @@ applied on the dashboard tester).
 **Profile > API Keys:** generate/regenerate key (show-once banner; only masked
 hint afterward) + a `curl` example for `/api/v1`.
 
-**Homepage tester** posts to `/api/proxy`. Protocols offered: REST, GraphQL,
-WebSocket, SOAP, Webhook, MCP, A2A (gRPC/MQTT/AMQP shown **disabled "coming
-soon"** — never implemented; do not fake them). No fabricated testimonials.
+**Homepage tester** posts to `/api/proxy` for HTTP-based protocols. Protocols
+offered: REST, GraphQL, WebSocket, SOAP, Webhook, MCP, A2A, gRPC, MQTT, AMQP.
+The last three connect to real backends and post to the authenticated
+`/api/{grpc,mqtt,amqp}/test` endpoints (logged-out visitors are prompted to
+sign in). No fabricated testimonials.
 
 ---
 

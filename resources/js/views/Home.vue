@@ -54,9 +54,9 @@
               <option value="webhook">Webhook</option>
               <option value="mcp">MCP</option>
               <option value="a2a">A2A</option>
-              <option value="grpc" disabled>gRPC (coming soon)</option>
-              <option value="mqtt" disabled>MQTT (coming soon)</option>
-              <option value="amqp" disabled>AMQP (coming soon)</option>
+              <option value="grpc">gRPC</option>
+              <option value="mqtt">MQTT</option>
+              <option value="amqp">AMQP</option>
             </select>
             <select v-if="selectedProtocol === 'rest'" v-model="testMethod" class="method-select">
               <option value="GET">GET</option>
@@ -236,6 +236,95 @@
             <div class="body-row">
               <label class="body-label">Payload (JSON)</label>
               <textarea v-model="a2aPayload" class="body-input" placeholder='{"task": "do something"}' rows="3"></textarea>
+            </div>
+          </div>
+
+          <!-- gRPC Config -->
+          <div v-if="selectedProtocol === 'grpc'" class="protocol-section">
+            <div class="protocol-info">
+              <span class="protocol-badge grpc">gRPC</span>
+              <span class="protocol-hint">Unary call over HTTP/2 · enter host in the URL field above</span>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Port &amp; TLS</label>
+              <div class="inline-row">
+                <input v-model="grpcPort" type="number" class="url-input" placeholder="443" />
+                <label class="checkbox-inline"><input type="checkbox" v-model="grpcTls" /> TLS (HTTP/2)</label>
+              </div>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Service / Method</label>
+              <input v-model="grpcMethod" type="text" class="url-input" placeholder="package.Service/Method" />
+            </div>
+            <div class="body-row">
+              <label class="body-label">Request message (JSON field list)</label>
+              <textarea v-model="grpcRequest" class="body-input" placeholder='[{"field": 1, "type": "string", "value": "world"}]' rows="3"></textarea>
+            </div>
+          </div>
+
+          <!-- MQTT Config -->
+          <div v-if="selectedProtocol === 'mqtt'" class="protocol-section">
+            <div class="protocol-info">
+              <span class="protocol-badge mqtt">MQTT</span>
+              <span class="protocol-hint">Publish/subscribe against a broker · enter host in the URL field above</span>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Port &amp; TLS</label>
+              <div class="inline-row">
+                <input v-model="mqttPort" type="number" class="url-input" placeholder="1883" />
+                <label class="checkbox-inline"><input type="checkbox" v-model="mqttTls" /> TLS</label>
+              </div>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Action</label>
+              <select v-model="mqttAction" class="method-select">
+                <option value="publish">publish</option>
+                <option value="subscribe">subscribe</option>
+                <option value="publish_subscribe">publish + subscribe</option>
+              </select>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Topic</label>
+              <input v-model="mqttTopic" type="text" class="url-input" placeholder="sensors/temperature" />
+            </div>
+            <div class="body-row">
+              <label class="body-label">Message</label>
+              <textarea v-model="mqttMessage" class="body-input" placeholder='{"temp": 21.5}' rows="2"></textarea>
+            </div>
+          </div>
+
+          <!-- AMQP Config -->
+          <div v-if="selectedProtocol === 'amqp'" class="protocol-section">
+            <div class="protocol-info">
+              <span class="protocol-badge amqp">AMQP</span>
+              <span class="protocol-hint">Publish/consume against RabbitMQ · enter host in the URL field above</span>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Port &amp; TLS</label>
+              <div class="inline-row">
+                <input v-model="amqpPort" type="number" class="url-input" placeholder="5672" />
+                <label class="checkbox-inline"><input type="checkbox" v-model="amqpTls" /> TLS</label>
+              </div>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Action</label>
+              <select v-model="amqpAction" class="method-select">
+                <option value="publish">publish</option>
+                <option value="get">get</option>
+                <option value="publish_get">publish + get</option>
+              </select>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Exchange / Routing key / Queue</label>
+              <div class="inline-row">
+                <input v-model="amqpExchange" type="text" class="url-input" placeholder="exchange" />
+                <input v-model="amqpRoutingKey" type="text" class="url-input" placeholder="routing key" />
+                <input v-model="amqpQueue" type="text" class="url-input" placeholder="queue" />
+              </div>
+            </div>
+            <div class="body-row">
+              <label class="body-label">Message</label>
+              <textarea v-model="amqpMessage" class="body-input" placeholder='{"id": 1}' rows="2"></textarea>
             </div>
           </div>
 
@@ -433,6 +522,28 @@ const a2aAgentId = ref('');
 const a2aAction = ref('send_task');
 const a2aPayload = ref('');
 
+// gRPC
+const grpcPort = ref('');
+const grpcTls = ref(true);
+const grpcMethod = ref('');
+const grpcRequest = ref('');
+
+// MQTT
+const mqttPort = ref('');
+const mqttTls = ref(false);
+const mqttAction = ref('publish');
+const mqttTopic = ref('');
+const mqttMessage = ref('');
+
+// AMQP
+const amqpPort = ref('');
+const amqpTls = ref(false);
+const amqpAction = ref('publish');
+const amqpExchange = ref('');
+const amqpRoutingKey = ref('');
+const amqpQueue = ref('');
+const amqpMessage = ref('');
+
 const getUrlPlaceholder = () => {
   const placeholders = {
     rest: 'https://api.example.com/endpoint',
@@ -441,9 +552,22 @@ const getUrlPlaceholder = () => {
     soap: 'https://api.example.com/soap',
     webhook: 'https://your-server.com/webhook',
     mcp: 'https://api.example.com/mcp',
-    a2a: 'https://agents.example.com/a2a'
+    a2a: 'https://agents.example.com/a2a',
+    grpc: 'grpc.example.com',
+    mqtt: 'broker.example.com',
+    amqp: 'rabbit.example.com'
   };
   return placeholders[selectedProtocol.value] || 'https://api.example.com';
+};
+
+// Split "host" or "host:port"; an explicit port field wins.
+const splitHostPort = (raw, explicitPort, fallback) => {
+  let host = (raw || '').trim().replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').replace(/\/.*$/, '');
+  let parsed = null;
+  const m = host.match(/^(.*):(\d+)$/);
+  if (m) { host = m[1]; parsed = parseInt(m[2], 10); }
+  const explicit = explicitPort !== '' && explicitPort != null ? parseInt(explicitPort, 10) : null;
+  return { host, port: explicit || parsed || fallback };
 };
 
 const sendTestRequest = async () => {
@@ -461,6 +585,8 @@ const sendTestRequest = async () => {
   try {
     if (selectedProtocol.value === 'websocket') {
       await testWebSocket(startTime);
+    } else if (['grpc', 'mqtt', 'amqp'].includes(selectedProtocol.value)) {
+      await testBrokerProtocol(startTime);
     } else {
       await testHttpProtocol(startTime);
     }
@@ -468,6 +594,53 @@ const sendTestRequest = async () => {
     testError.value = error.message || 'Request failed';
   } finally {
     isTesting.value = false;
+  }
+};
+
+// gRPC/MQTT/AMQP connect to real brokers, so they run through the
+// authenticated test endpoints. A logged-out visitor gets a 401, which we
+// turn into a friendly prompt to sign in.
+const testBrokerProtocol = async (startTime) => {
+  const protocol = selectedProtocol.value;
+  let payload;
+
+  if (protocol === 'grpc') {
+    const { host, port } = splitHostPort(testUrl.value, grpcPort.value, grpcTls.value ? 443 : 80);
+    let request = [];
+    if (grpcRequest.value.trim()) {
+      try { request = JSON.parse(grpcRequest.value); }
+      catch { testError.value = 'Request message must be a JSON array of fields'; return; }
+    }
+    payload = { host, port, tls: grpcTls.value, service_method: grpcMethod.value, request };
+  } else if (protocol === 'mqtt') {
+    const { host, port } = splitHostPort(testUrl.value, mqttPort.value, mqttTls.value ? 8883 : 1883);
+    payload = { host, port, tls: mqttTls.value, action: mqttAction.value, topic: mqttTopic.value, message: mqttMessage.value };
+  } else {
+    const { host, port } = splitHostPort(testUrl.value, amqpPort.value, amqpTls.value ? 5671 : 5672);
+    payload = {
+      host, port, tls: amqpTls.value, action: amqpAction.value,
+      exchange: amqpExchange.value, routing_key: amqpRoutingKey.value, queue: amqpQueue.value, message: amqpMessage.value,
+    };
+  }
+
+  try {
+    const res = await axios.post(`/api/${protocol}/test`, payload);
+    testResponse.value = {
+      status: 200,
+      body: JSON.stringify(res.data, null, 2),
+      time_ms: res.data.time_ms ?? (Date.now() - startTime),
+    };
+  } catch (error) {
+    if (error.response?.status === 401) {
+      testError.value = `Sign in to run live ${protocol.toUpperCase()} tests — these connect to a real broker and need an account.`;
+      return;
+    }
+    const data = error.response?.data;
+    testResponse.value = {
+      status: error.response?.status || 0,
+      body: data ? JSON.stringify(data, null, 2) : (error.message || 'Request failed'),
+      time_ms: Date.now() - startTime,
+    };
   }
 };
 
@@ -1097,10 +1270,38 @@ const loadSample = (protocol) => {
 .protocol-badge.webhook { background: rgba(63, 185, 80, 0.2); color: #3fb950; }
 .protocol-badge.mcp { background: rgba(163, 113, 247, 0.2); color: #a371f7; }
 .protocol-badge.a2a { background: rgba(248, 81, 73, 0.2); color: #f85149; }
+.protocol-badge.grpc { background: rgba(88, 166, 255, 0.2); color: #58a6ff; }
+.protocol-badge.mqtt { background: rgba(219, 119, 45, 0.2); color: #db772d; }
+.protocol-badge.amqp { background: rgba(255, 102, 0, 0.2); color: #ff6600; }
 
 .protocol-hint {
   font-size: 13px;
   color: var(--text-secondary);
+}
+
+.inline-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.inline-row .url-input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.checkbox-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.checkbox-inline input {
+  width: auto;
 }
 
 .ws-messages {

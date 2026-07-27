@@ -32,6 +32,9 @@
           <option value="rest">REST</option>
           <option value="mcp">MCP</option>
           <option value="a2a">A2A</option>
+          <option value="grpc">gRPC</option>
+          <option value="mqtt">MQTT</option>
+          <option value="amqp">AMQP</option>
         </select>
         <select v-if="protocol === 'rest'" class="input-field method-select" v-model="method">
           <option>GET</option>
@@ -49,11 +52,21 @@
           <option value="prompts/list">prompts/list</option>
           <option value="ping">ping</option>
         </select>
-        <select v-else class="input-field method-select" v-model="a2aMethod">
+        <select v-else-if="protocol === 'a2a'" class="input-field method-select" v-model="a2aMethod">
           <option value="agent-card">agent-card</option>
           <option value="message/send">message/send</option>
           <option value="tasks/get">tasks/get</option>
           <option value="tasks/cancel">tasks/cancel</option>
+        </select>
+        <select v-else-if="protocol === 'mqtt'" class="input-field method-select" v-model="mqttAction">
+          <option value="publish">publish</option>
+          <option value="subscribe">subscribe</option>
+          <option value="publish_subscribe">pub + sub</option>
+        </select>
+        <select v-else-if="protocol === 'amqp'" class="input-field method-select" v-model="amqpAction">
+          <option value="publish">publish</option>
+          <option value="get">get</option>
+          <option value="publish_get">pub + get</option>
         </select>
         <input
           type="text"
@@ -127,16 +140,93 @@
         >{{ skill.name || skill.id }}</span>
       </div>
 
+      <!-- gRPC / MQTT / AMQP connection + protocol options -->
+      <div v-if="isBrokerProtocol" class="proto-config mt-4">
+        <div class="proto-grid">
+          <label class="proto-field">
+            <span>Port</span>
+            <input type="number" class="input-field" v-model="port" :placeholder="String(defaultPort)" />
+          </label>
+          <label class="proto-field checkbox">
+            <input type="checkbox" v-model="tls" />
+            <span>TLS{{ protocol === 'grpc' ? ' (HTTP/2)' : '' }}</span>
+          </label>
+          <label v-if="tls" class="proto-field checkbox">
+            <input type="checkbox" v-model="tlsVerify" />
+            <span>Verify certificate</span>
+          </label>
+        </div>
+
+        <div v-if="protocol === 'grpc'" class="proto-grid mt-2">
+          <label class="proto-field wide">
+            <span>Service / Method</span>
+            <input type="text" class="input-field" v-model="grpcMethod" placeholder="package.Service/Method" />
+          </label>
+        </div>
+
+        <div v-if="protocol === 'mqtt'" class="proto-grid mt-2">
+          <label class="proto-field wide">
+            <span>Topic</span>
+            <input type="text" class="input-field" v-model="mqttTopic" placeholder="sensors/temperature" />
+          </label>
+          <label class="proto-field">
+            <span>QoS</span>
+            <select class="input-field" v-model="mqttQos">
+              <option value="0">0</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+            </select>
+          </label>
+          <label class="proto-field checkbox">
+            <input type="checkbox" v-model="mqttRetain" />
+            <span>Retain</span>
+          </label>
+        </div>
+
+        <div v-if="protocol === 'amqp'" class="proto-grid mt-2">
+          <label class="proto-field">
+            <span>Exchange</span>
+            <input type="text" class="input-field" v-model="amqpExchange" placeholder="(default)" />
+          </label>
+          <label class="proto-field">
+            <span>Routing key</span>
+            <input type="text" class="input-field" v-model="amqpRoutingKey" placeholder="jobs" />
+          </label>
+          <label class="proto-field">
+            <span>Queue</span>
+            <input type="text" class="input-field" v-model="amqpQueue" placeholder="jobs" />
+          </label>
+          <label class="proto-field">
+            <span>Vhost</span>
+            <input type="text" class="input-field" v-model="amqpVhost" placeholder="/" />
+          </label>
+        </div>
+
+        <div v-if="protocol === 'mqtt' || protocol === 'amqp'" class="proto-grid mt-2">
+          <label class="proto-field">
+            <span>Username</span>
+            <input type="text" class="input-field" v-model="brokerUsername" autocomplete="off" />
+          </label>
+          <label class="proto-field">
+            <span>Password</span>
+            <input type="password" class="input-field" v-model="brokerPassword" autocomplete="new-password" />
+          </label>
+        </div>
+
+        <p class="proto-hint mt-2">{{ brokerHint }}</p>
+      </div>
+
       <div class="tabs mt-6">
         <div class="tab-list flex gap-4">
           <button
+            v-if="protocol !== 'mqtt' && protocol !== 'amqp'"
             :class="['tab', activeTab === 'headers' ? 'active' : '']"
             @click="activeTab = 'headers'"
-          >Headers</button>
+          >{{ protocol === 'grpc' ? 'Metadata' : 'Headers' }}</button>
           <button
             :class="['tab', activeTab === 'body' ? 'active' : '']"
             @click="activeTab = 'body'"
-          >{{ protocol === 'rest' ? 'Body' : 'Params' }}</button>
+          >{{ bodyTabLabel }}</button>
         </div>
 
         <div class="tab-content mt-4" v-show="activeTab === 'headers'">
@@ -204,6 +294,62 @@ const headers = ref([
 
 const body = ref('');
 
+// gRPC / MQTT / AMQP shared connection + per-protocol options. For these the
+// URL field holds a host (optionally host:port); the port/tls live here.
+const port = ref('');
+const tls = ref(false);
+const tlsVerify = ref(true);
+const brokerUsername = ref('');
+const brokerPassword = ref('');
+const grpcMethod = ref('');
+const mqttAction = ref('publish');
+const mqttTopic = ref('');
+const mqttQos = ref('0');
+const mqttRetain = ref(false);
+const amqpAction = ref('publish');
+const amqpExchange = ref('');
+const amqpRoutingKey = ref('');
+const amqpQueue = ref('');
+const amqpVhost = ref('/');
+
+const isBrokerProtocol = computed(() => ['grpc', 'mqtt', 'amqp'].includes(protocol.value));
+
+const defaultPort = computed(() => {
+  if (protocol.value === 'grpc') return tls.value ? 443 : 80;
+  if (protocol.value === 'mqtt') return tls.value ? 8883 : 1883;
+  if (protocol.value === 'amqp') return tls.value ? 5671 : 5672;
+  return 443;
+});
+
+const bodyTabLabel = computed(() => {
+  if (protocol.value === 'grpc') return 'Request';
+  if (protocol.value === 'mqtt' || protocol.value === 'amqp') return 'Message';
+  if (protocol.value === 'rest') return 'Body';
+  return 'Params';
+});
+
+const brokerHint = computed(() => ({
+  grpc: 'Unary calls only. Describe the request message as a JSON array of fields, e.g. [{"field":1,"type":"string","value":"world"}].',
+  mqtt: 'Publishes and/or subscribes with a bounded timeout. The Message tab holds the payload to publish.',
+  amqp: 'Publishes to an exchange/routing-key and/or pulls messages from a queue. The Message tab holds the body to publish.',
+}[protocol.value] || ''));
+
+// Split a "host" or "host:port" string; an explicit Port field wins.
+const parseHostPort = () => {
+  let host = (url.value || '').trim();
+  // Strip any scheme the user pasted.
+  host = host.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '');
+  host = host.replace(/\/.*$/, '');
+  let parsedPort = null;
+  const m = host.match(/^(.*):(\d+)$/);
+  if (m) {
+    host = m[1];
+    parsedPort = parseInt(m[2], 10);
+  }
+  const explicit = port.value !== '' ? parseInt(port.value, 10) : null;
+  return { host, port: explicit || parsedPort || defaultPort.value };
+};
+
 // Inline save (replaces window.prompt).
 const showSave = ref(false);
 const saveName = ref('');
@@ -233,12 +379,17 @@ watch(() => props.defaults, (prefs) => {
 const urlPlaceholder = computed(() => {
   if (protocol.value === 'mcp') return 'https://api.example.com/mcp';
   if (protocol.value === 'a2a') return 'https://agents.example.com/a2a';
+  if (protocol.value === 'grpc') return 'grpc.example.com';
+  if (protocol.value === 'mqtt') return 'broker.example.com';
+  if (protocol.value === 'amqp') return 'rabbit.example.com';
   return 'https://apispi.com/api/gateway/tools';
 });
 
 const bodyPlaceholder = computed(() => {
   if (protocol.value === 'mcp') return '{\n  "name": "my-tool",\n  "arguments": {}\n}';
   if (protocol.value === 'a2a') return '{\n  "message": {"role": "user", "parts": [{"text": "Hello"}]}\n}';
+  if (protocol.value === 'grpc') return '[\n  {"field": 1, "type": "string", "value": "world"}\n]';
+  if (protocol.value === 'mqtt' || protocol.value === 'amqp') return '{"event": "ping"}';
   return '{\n  "key": "value"\n}';
 });
 
@@ -253,6 +404,8 @@ watch(() => props.loadedRequest, (newReq) => {
     } else if (protocol.value === 'a2a') {
       a2aMethod.value = newReq.method || 'agent-card';
       body.value = newReq.params ? JSON.stringify(newReq.params, null, 2) : '';
+    } else if (['grpc', 'mqtt', 'amqp'].includes(protocol.value)) {
+      restoreBrokerRequest(newReq);
     } else {
       method.value = newReq.method;
       body.value = newReq.body || '';
@@ -294,7 +447,64 @@ watch(protocol, () => {
   discoverError.value = '';
   agentCard.value = null;
   cardError.value = '';
+  // The Headers tab is hidden for MQTT/AMQP; fall back to the Message tab.
+  if ((protocol.value === 'mqtt' || protocol.value === 'amqp') && activeTab.value === 'headers') {
+    activeTab.value = 'body';
+  }
 });
+
+// Restore a saved gRPC/MQTT/AMQP request from its stored payload (in params).
+const restoreBrokerRequest = (newReq) => {
+  const p = newReq.params || {};
+  port.value = p.port != null ? String(p.port) : '';
+  tls.value = !!p.tls;
+  tlsVerify.value = p.tls_verify !== false;
+  brokerUsername.value = p.username || '';
+  brokerPassword.value = p.password || '';
+
+  if (protocol.value === 'grpc') {
+    grpcMethod.value = p.service_method || newReq.method || '';
+    body.value = p.request ? JSON.stringify(p.request, null, 2) : '';
+  } else if (protocol.value === 'mqtt') {
+    mqttAction.value = p.action || 'publish';
+    mqttTopic.value = p.topic || '';
+    mqttQos.value = String(p.qos ?? 0);
+    mqttRetain.value = !!p.retain;
+    body.value = p.message || '';
+  } else {
+    amqpAction.value = p.action || 'publish';
+    amqpExchange.value = p.exchange || '';
+    amqpRoutingKey.value = p.routing_key || '';
+    amqpQueue.value = p.queue || '';
+    amqpVhost.value = p.vhost || '/';
+    body.value = p.message || '';
+  }
+  activeTab.value = 'body';
+};
+
+// Build the exact API payload for a broker-style protocol (gRPC/MQTT/AMQP).
+const buildBrokerPayload = () => {
+  const { host, port: resolvedPort } = parseHostPort();
+  const base = { host, port: resolvedPort, tls: tls.value, tls_verify: tlsVerify.value };
+
+  if (protocol.value === 'grpc') {
+    let request = [];
+    if (body.value.trim()) request = JSON.parse(body.value);
+    return { ...base, service_method: grpcMethod.value, request, metadata: collectHeaders() };
+  }
+  if (protocol.value === 'mqtt') {
+    return {
+      ...base, action: mqttAction.value, topic: mqttTopic.value,
+      message: body.value, qos: Number(mqttQos.value), retain: mqttRetain.value,
+      username: brokerUsername.value || null, password: brokerPassword.value || null,
+    };
+  }
+  return {
+    ...base, action: amqpAction.value, exchange: amqpExchange.value,
+    routing_key: amqpRoutingKey.value, queue: amqpQueue.value, vhost: amqpVhost.value || '/',
+    message: body.value, username: brokerUsername.value || null, password: brokerPassword.value || null,
+  };
+};
 
 const defaultForSchema = (schema) => {
   if (!schema) return null;
@@ -449,6 +659,29 @@ const applyMessageTemplate = () => {
 const send = () => {
   if (!url.value) return;
 
+  if (isBrokerProtocol.value) {
+    let payload;
+    try {
+      payload = buildBrokerPayload();
+    } catch (e) {
+      bodyError.value = protocol.value === 'grpc'
+        ? 'Request must be a JSON array of field descriptors.'
+        : 'Message must be valid.';
+      activeTab.value = 'body';
+      return;
+    }
+    if (protocol.value === 'grpc' && !grpcMethod.value.trim()) {
+      bodyError.value = 'Set a Service / Method (package.Service/Method).';
+      return;
+    }
+    if (protocol.value === 'mqtt' && !mqttTopic.value.trim()) {
+      bodyError.value = 'Set an MQTT topic.';
+      return;
+    }
+    emit('send-request', { protocol: protocol.value, payload });
+    return;
+  }
+
   if (protocol.value === 'mcp' || protocol.value === 'a2a') {
     let params = {};
     if (body.value.trim()) {
@@ -502,6 +735,28 @@ const openSave = () => {
 const confirmSave = () => {
   const name = saveName.value.trim();
   if (!name) return;
+
+  if (isBrokerProtocol.value) {
+    let payload;
+    try {
+      payload = buildBrokerPayload();
+    } catch (e) {
+      bodyError.value = 'Message/request is not valid.';
+      activeTab.value = 'body';
+      showSave.value = false;
+      return;
+    }
+    emit('save-request', {
+      name,
+      protocol: protocol.value,
+      method: protocol.value === 'grpc' ? grpcMethod.value : payload.action,
+      url: url.value,
+      headers: protocol.value === 'grpc' ? collectHeaders() : {},
+      params: payload,
+    });
+    showSave.value = false;
+    return;
+  }
 
   if (protocol.value === 'mcp' || protocol.value === 'a2a') {
     let params = {};
@@ -592,6 +847,54 @@ const confirmSave = () => {
 
 .mcp-toolbar {
   flex-wrap: wrap;
+}
+
+.proto-config {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: rgba(88, 166, 255, 0.04);
+}
+
+.proto-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  align-items: flex-end;
+}
+
+.proto-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.proto-field.wide {
+  flex: 1;
+  min-width: 220px;
+}
+
+.proto-field .input-field {
+  min-width: 90px;
+}
+
+.proto-field.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 8px;
+}
+
+.proto-field.checkbox input {
+  width: auto;
+}
+
+.proto-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
 
 .discover-error {

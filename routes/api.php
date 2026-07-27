@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\A2aTestController;
+use App\Http\Controllers\AmqpTestController;
+use App\Http\Controllers\GrpcTestController;
 use App\Http\Controllers\McpTestController;
+use App\Http\Controllers\MqttTestController;
 use App\Http\Controllers\ProxyController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,4 +26,7 @@ Route::middleware(['auth.apitoken', 'throttle:outbound-test'])->group(function (
     Route::post('/proxy', [ProxyController::class, 'handle']);
     Route::post('/mcp/test', [McpTestController::class, 'test']);
     Route::post('/a2a/test', [A2aTestController::class, 'test']);
+    Route::post('/grpc/test', [GrpcTestController::class, 'test']);
+    Route::post('/mqtt/test', [MqttTestController::class, 'test']);
+    Route::post('/amqp/test', [AmqpTestController::class, 'test']);
 });

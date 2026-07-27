@@ -46,15 +46,24 @@ Beyond the standard Laravel keys:
 
 ## Protocols
 
-The authenticated dashboard tests three protocols; the public homepage offers a
-demo of REST/GraphQL/WebSocket/SOAP/Webhook/MCP/A2A (gRPC, MQTT, and AMQP are
-marked "coming soon" — not yet implemented server-side).
+The authenticated dashboard and the public homepage both test the full protocol
+set: REST/GraphQL/WebSocket/SOAP/Webhook/MCP/A2A/gRPC/MQTT/AMQP. gRPC, MQTT, and
+AMQP connect to real backends, so they run only through the authenticated test
+endpoints (a logged-out homepage visitor is prompted to sign in).
 
 - **MCP** — `App\Services\Mcp\McpClient`, Streamable HTTP transport (JSON + SSE),
   session handling, and a "Discover Tools" flow that reads `tools/list` and
   auto-fills a `tools/call` template from each tool's `inputSchema`.
 - **A2A** — `App\Services\A2a\A2aClient`, JSON-RPC with agent-card discovery
   (`.well-known/agent-card.json`) and a `message/send` template filler.
+- **gRPC** — `App\Services\Grpc\GrpcClient`, unary calls over HTTP/2 with a
+  pure-PHP protobuf codec (`ProtobufCodec`). Request messages are described as
+  explicit field lists; responses are decoded generically and the gRPC status
+  trailer is surfaced. Streaming is out of scope.
+- **MQTT** — `App\Services\Mqtt\MqttTester` (php-mqtt/client). Publish and/or
+  subscribe with a bounded timeout and message cap.
+- **AMQP** — `App\Services\Amqp\AmqpTester` (php-amqplib). Publish to an
+  exchange/routing-key and/or pull messages from a queue via `basic_get`.
 
 A CLI client is also available: `php artisan mcp:test <url>` (interactive REPL
 or `--method=` for one-shot calls).
@@ -66,7 +75,9 @@ require the CSRF token (axios sends it automatically from the `XSRF-TOKEN`
 cookie).
 
 - `POST /proxy` — REST proxy (open to guests; rate-limited)
-- `POST /mcp/test`, `POST /a2a/test` — protocol testers (auth)
+- `POST /mcp/test`, `POST /a2a/test` — MCP/A2A testers (auth)
+- `POST /grpc/test`, `POST /mqtt/test`, `POST /amqp/test` — gRPC/MQTT/AMQP
+  testers (auth; also under `/api/v1` with a personal API key)
 - `GET/POST/DELETE /saved-requests` — saved requests (free plan capped at 10)
 - `GET/DELETE /history` — request history (200/user retention)
 - `PUT /user/profile`, `/user/password`, `GET /user/stats`, `/user/activity`,

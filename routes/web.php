@@ -9,6 +9,9 @@ use App\Http\Controllers\UserPreferencesController;
 use App\Http\Controllers\ScxChatController;
 use App\Http\Controllers\McpTestController;
 use App\Http\Controllers\A2aTestController;
+use App\Http\Controllers\GrpcTestController;
+use App\Http\Controllers\MqttTestController;
+use App\Http\Controllers\AmqpTestController;
 use App\Http\Controllers\RequestHistoryController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CatalogItemController;
@@ -63,6 +66,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/api/user/account', [UserController::class, 'deleteAccount']);
     Route::post('/api/mcp/test', [McpTestController::class, 'test'])->middleware('throttle:outbound-test');
     Route::post('/api/a2a/test', [A2aTestController::class, 'test'])->middleware('throttle:outbound-test');
+    Route::post('/api/grpc/test', [GrpcTestController::class, 'test'])->middleware('throttle:outbound-test');
+    Route::post('/api/mqtt/test', [MqttTestController::class, 'test'])->middleware('throttle:outbound-test');
+    Route::post('/api/amqp/test', [AmqpTestController::class, 'test'])->middleware('throttle:outbound-test');
 });
 
 Route::middleware(['auth', 'admin'])->group(function () {

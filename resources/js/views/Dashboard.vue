@@ -177,6 +177,17 @@ const handleSaveRequest = async (requestData) => {
   }
 };
 
+// gRPC/MQTT/AMQP endpoints return protocol-specific JSON; reshape it into the
+// {status, headers, body, ...} form ResponsePanel renders.
+const normalizeBrokerResponse = (requestConfig, data, status) => ({
+  status,
+  headers: data.metadata || {},
+  body: JSON.stringify(data, null, 2),
+  time_ms: data.time_ms ?? 0,
+  request_payload: JSON.stringify(requestConfig.payload, null, 2),
+  request_headers: requestConfig.payload?.metadata || {},
+});
+
 const handleRequest = async (requestConfig) => {
   isLoading.value = true;
   responseData.value = null;
@@ -198,6 +209,16 @@ const handleRequest = async (requestConfig) => {
         params: requestConfig.params,
         headers: requestConfig.headers
       });
+    } else if (['grpc', 'mqtt', 'amqp'].includes(requestConfig.protocol)) {
+      try {
+        res = await axios.post(`/api/${requestConfig.protocol}/test`, requestConfig.payload);
+        responseData.value = normalizeBrokerResponse(requestConfig, res.data, 200);
+      } catch (err) {
+        const status = err.response?.status || 0;
+        const data = err.response?.data || { error: 'Network error or endpoint unreachable' };
+        responseData.value = normalizeBrokerResponse(requestConfig, data, status);
+      }
+      return;
     } else {
       res = await axios.post('/api/proxy', {
         url: requestConfig.url,

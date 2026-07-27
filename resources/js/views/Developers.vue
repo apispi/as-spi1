@@ -6,8 +6,8 @@
         <h1>Developer API</h1>
         <p class="dev-lead">
           Drive the Spi testers from your own scripts. Every request you can make
-          in the dashboard — REST, MCP, and A2A — is available over a small,
-          token-authenticated HTTP API.
+          in the dashboard — REST, MCP, A2A, gRPC, MQTT, and AMQP — is available
+          over a small, token-authenticated HTTP API.
         </p>
       </header>
 
@@ -18,6 +18,9 @@
         <a href="#proxy">REST proxy</a>
         <a href="#mcp">MCP</a>
         <a href="#a2a">A2A</a>
+        <a href="#grpc">gRPC</a>
+        <a href="#mqtt">MQTT</a>
+        <a href="#amqp">AMQP</a>
         <a href="#limits">Rate limits</a>
         <a href="#errors">Errors</a>
       </nav>
@@ -94,6 +97,67 @@
         <CodeBlock :code="a2aExample" />
       </section>
 
+      <!-- gRPC -->
+      <section id="grpc" class="dev-section">
+        <h2><span class="dev-verb">POST</span> /grpc/test</h2>
+        <p>Make a <strong>unary</strong> gRPC call over HTTP/2. Messages are
+          described as explicit field lists (no <code>.proto</code> compilation);
+          the response is decoded generically and the gRPC status is returned.</p>
+        <h3>Request body</h3>
+        <table class="dev-table">
+          <tbody>
+            <tr><td><code>host</code></td><td>required</td><td>Server hostname (must be publicly routable).</td></tr>
+            <tr><td><code>port</code></td><td>optional</td><td>Defaults to 443 (TLS) or 80.</td></tr>
+            <tr><td><code>tls</code></td><td>optional</td><td>Use HTTP/2 over TLS. Default <code>false</code>.</td></tr>
+            <tr><td><code>service_method</code></td><td>required</td><td>e.g. <code>helloworld.Greeter/SayHello</code>.</td></tr>
+            <tr><td><code>request</code></td><td>optional</td><td>Array of <code>{ field, type, value }</code> descriptors.</td></tr>
+            <tr><td><code>metadata</code></td><td>optional</td><td>Extra call metadata (headers).</td></tr>
+          </tbody>
+        </table>
+        <h3>Example</h3>
+        <CodeBlock :code="grpcExample" />
+      </section>
+
+      <!-- MQTT -->
+      <section id="mqtt" class="dev-section">
+        <h2><span class="dev-verb">POST</span> /mqtt/test</h2>
+        <p>Publish to and/or subscribe to a broker topic. Subscribe loops are
+          bounded by <code>timeout</code> and <code>max_messages</code>.</p>
+        <h3>Request body</h3>
+        <table class="dev-table">
+          <tbody>
+            <tr><td><code>host</code></td><td>required</td><td>Broker hostname.</td></tr>
+            <tr><td><code>port</code></td><td>optional</td><td>Defaults to 1883 (or 8883 for TLS).</td></tr>
+            <tr><td><code>action</code></td><td>required</td><td><code>publish</code>, <code>subscribe</code>, or <code>publish_subscribe</code>.</td></tr>
+            <tr><td><code>topic</code></td><td>required</td><td>Topic to publish/subscribe.</td></tr>
+            <tr><td><code>message</code></td><td>optional</td><td>Payload to publish.</td></tr>
+            <tr><td><code>qos</code></td><td>optional</td><td>0, 1, or 2. Default 0.</td></tr>
+          </tbody>
+        </table>
+        <h3>Example</h3>
+        <CodeBlock :code="mqttExample" />
+      </section>
+
+      <!-- AMQP -->
+      <section id="amqp" class="dev-section">
+        <h2><span class="dev-verb">POST</span> /amqp/test</h2>
+        <p>Publish to an exchange/routing-key and/or pull messages from a queue
+          (via <code>basic_get</code>).</p>
+        <h3>Request body</h3>
+        <table class="dev-table">
+          <tbody>
+            <tr><td><code>host</code></td><td>required</td><td>RabbitMQ hostname.</td></tr>
+            <tr><td><code>port</code></td><td>optional</td><td>Defaults to 5672 (or 5671 for TLS).</td></tr>
+            <tr><td><code>action</code></td><td>required</td><td><code>publish</code>, <code>get</code>, or <code>publish_get</code>.</td></tr>
+            <tr><td><code>exchange</code>, <code>routing_key</code></td><td>optional</td><td>Publish target.</td></tr>
+            <tr><td><code>queue</code></td><td>required for get</td><td>Queue to pull from.</td></tr>
+            <tr><td><code>message</code></td><td>optional</td><td>Body to publish.</td></tr>
+          </tbody>
+        </table>
+        <h3>Example</h3>
+        <CodeBlock :code="amqpExample" />
+      </section>
+
       <!-- Limits -->
       <section id="limits" class="dev-section">
         <h2>Rate limits</h2>
@@ -160,6 +224,37 @@ const a2aExample = computed(() => `curl -X POST ${origin}/api/v1/a2a/test \\
     "url": "https://agents.example.com/a2a",
     "method": "message/send",
     "params": { "message": { "role": "user", "parts": [{ "text": "Hi" }] } }
+  }'`);
+
+const grpcExample = computed(() => `curl -X POST ${origin}/api/v1/grpc/test \\
+  -H "Authorization: Bearer spi_your_key_here" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "host": "grpc.example.com",
+    "port": 443,
+    "tls": true,
+    "service_method": "helloworld.Greeter/SayHello",
+    "request": [{ "field": 1, "type": "string", "value": "world" }]
+  }'`);
+
+const mqttExample = computed(() => `curl -X POST ${origin}/api/v1/mqtt/test \\
+  -H "Authorization: Bearer spi_your_key_here" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "host": "broker.example.com",
+    "action": "publish",
+    "topic": "sensors/temperature",
+    "message": "21.5"
+  }'`);
+
+const amqpExample = computed(() => `curl -X POST ${origin}/api/v1/amqp/test \\
+  -H "Authorization: Bearer spi_your_key_here" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "host": "rabbit.example.com",
+    "action": "publish",
+    "routing_key": "jobs",
+    "message": "{\\"id\\":1}"
   }'`);
 
 // Small inline copy-to-clipboard code block.
