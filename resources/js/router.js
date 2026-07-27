@@ -10,6 +10,7 @@ import Profile from './views/Profile.vue';
 import Chat from './views/Chat.vue';
 import CatalogSection from './views/CatalogSection.vue';
 import CompleteRegistration from './views/CompleteRegistration.vue';
+import Developers from './views/Developers.vue';
 
 const routes = [
     {
@@ -53,6 +54,11 @@ const routes = [
         name: 'complete-registration',
         component: CompleteRegistration,
         meta: { guestOnly: true }
+    },
+    {
+        path: '/developers',
+        name: 'developers',
+        component: Developers
     },
     {
         path: '/admin',

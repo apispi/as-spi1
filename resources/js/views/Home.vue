@@ -372,7 +372,7 @@
         </div>
         <div class="footer-links">
           <a href="#">About</a>
-          <a href="#">Documentation</a>
+          <router-link to="/developers">API Docs</router-link>
           <a href="#">Pricing</a>
           <a href="#">Blog</a>
           <a href="#">Contact</a>

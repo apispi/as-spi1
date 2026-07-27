@@ -188,7 +188,7 @@
   -H "Authorization: Bearer YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{"url":"https://api.example.com","method":"GET"}'</pre>
-            <p class="up-hint">Also available: <code class="up-inline-code">/api/v1/mcp/test</code> and <code class="up-inline-code">/api/v1/a2a/test</code></p>
+            <p class="up-hint">Also available: <code class="up-inline-code">/api/v1/mcp/test</code> and <code class="up-inline-code">/api/v1/a2a/test</code>. See the <router-link to="/developers" class="up-inline-link">API docs</router-link> for full reference.</p>
           </div>
         </template>
 
@@ -683,6 +683,8 @@ const deleteAccount = async () => {
   font-family: monospace; font-size: 0.85em; color: #60A5FA;
   background: rgba(0,0,0,0.3); padding: 0.1rem 0.35rem; border-radius: 0.25rem;
 }
+.up-inline-link { color: #60A5FA; text-decoration: none; }
+.up-inline-link:hover { text-decoration: underline; }
 .up-code-block {
   font-family: 'Courier New', monospace; font-size: 0.78rem; color: #e5e7eb;
   background: rgba(10,8,5,0.9); border: 1px solid rgba(59,130,246,0.2);
