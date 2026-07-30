@@ -117,6 +117,26 @@ class McpClient
     }
 
     /**
+     * Send a JSON-RPC request and return the full response message, including
+     * an 'error' member if the server reported one, without throwing. Used by
+     * the conformance grader, which needs to inspect error codes rather than
+     * treat them as failures.
+     */
+    public function rawRequest(string $method, array $params = []): array
+    {
+        $id = $this->nextId++;
+
+        $response = $this->send([
+            'jsonrpc' => '2.0',
+            'id' => $id,
+            'method' => $method,
+            'params' => (object) $params,
+        ]);
+
+        return $this->extractMessage($response, $id);
+    }
+
+    /**
      * Send a JSON-RPC notification (no response expected).
      */
     public function notify(string $method, array $params = []): void

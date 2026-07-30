@@ -11,6 +11,7 @@ import Chat from './views/Chat.vue';
 import CatalogSection from './views/CatalogSection.vue';
 import CompleteRegistration from './views/CompleteRegistration.vue';
 import Developers from './views/Developers.vue';
+import AiLab from './views/AiLab.vue';
 
 const routes = [
     {
@@ -35,6 +36,12 @@ const routes = [
         path: '/chat',
         name: 'chat',
         component: Chat,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/ai-lab',
+        name: 'ai-lab',
+        component: AiLab,
         meta: { requiresAuth: true }
     },
     {

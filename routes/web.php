@@ -21,6 +21,10 @@ use App\Http\Controllers\PromptController;
 use App\Http\Controllers\ResourceController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\RegistrationController;
+use App\Http\Controllers\AiAssistController;
+use App\Http\Controllers\McpSecurityController;
+use App\Http\Controllers\McpConformanceController;
+use App\Http\Controllers\AgentLoopController;
 
 // Google OAuth (full-page redirect flow). Registered before the SPA
 // catch-all, which also excludes the auth/ prefix.
@@ -69,6 +73,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/grpc/test', [GrpcTestController::class, 'test'])->middleware('throttle:outbound-test');
     Route::post('/api/mqtt/test', [MqttTestController::class, 'test'])->middleware('throttle:outbound-test');
     Route::post('/api/amqp/test', [AmqpTestController::class, 'test'])->middleware('throttle:outbound-test');
+
+    // AI-assisted request authoring (#4). Powered by the caller's SCX key.
+    Route::post('/api/ai/author', [AiAssistController::class, 'author'])->middleware('throttle:outbound-test');
+    Route::post('/api/ai/explain', [AiAssistController::class, 'explain'])->middleware('throttle:outbound-test');
+    Route::post('/api/ai/assert', [AiAssistController::class, 'assert'])->middleware('throttle:outbound-test');
+    Route::post('/api/ai/fix', [AiAssistController::class, 'fix'])->middleware('throttle:outbound-test');
+
+    // MCP security scanner (#3) on caller-supplied tool/prompt descriptors.
+    Route::post('/api/mcp/security/scan', [McpSecurityController::class, 'scan'])->middleware('throttle:outbound-test');
 });
 
 Route::middleware(['auth', 'admin'])->group(function () {
@@ -83,6 +96,11 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/api/admin/catalog/{catalogItem}/toggle-active', [CatalogItemController::class, 'toggleActive']);
     Route::post('/api/admin/catalog/{catalogItem}/sync', [ConnectorSyncController::class, 'sync']);
     Route::post('/api/admin/catalog/{catalogItem}/check', [ConnectorSyncController::class, 'check']);
+    // Connector deep-inspection: conformance grade (#2), live security scan
+    // (#3), and an agent-in-the-loop run (#1).
+    Route::post('/api/admin/catalog/{catalogItem}/conformance', [McpConformanceController::class, 'grade']);
+    Route::post('/api/admin/catalog/{catalogItem}/security-scan', [McpSecurityController::class, 'scanConnector']);
+    Route::post('/api/admin/catalog/{catalogItem}/agent-loop', [AgentLoopController::class, 'run']);
     Route::post('/api/admin/users/{id}/toggle-admin', [AdminController::class, 'toggleAdmin']);
     Route::delete('/api/admin/users/{id}', [AdminController::class, 'deleteUser']);
 });

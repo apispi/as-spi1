@@ -60,6 +60,12 @@
                   ● {{ connectorStatus(item).label }}
                 </span>
                 <span v-if="item.metadata?.last_synced_at" class="cat-muted"> · synced {{ ago(item.metadata.last_synced_at) }}</span>
+                <span v-if="item.metadata?.conformance_grade" class="cat-grade" :class="gradeClass(item.metadata.conformance_grade)" title="MCP conformance grade">
+                  {{ item.metadata.conformance_grade }} ({{ item.metadata.conformance_score }})
+                </span>
+                <span v-if="item.metadata?.security_risk" class="cat-risk" :class="'risk-' + item.metadata.security_risk" title="Security scan risk">
+                  🛡 {{ item.metadata.security_risk }}
+                </span>
               </div>
             </td>
             <td class="cat-muted">{{ item.provider || '—' }}</td>
@@ -81,6 +87,17 @@
                   Sync + Activate
                 </button>
                 <button class="cat-btn" @click="edit(item)">Edit</button>
+                <template v-if="(item.metadata?.protocol || 'mcp') === 'mcp'">
+                  <button class="cat-btn cat-btn-ai" :disabled="busyId === item.id" @click="grade(item)" title="Grade MCP spec conformance">
+                    {{ busyAction === 'grade' && busyId === item.id ? 'Grading...' : 'Grade' }}
+                  </button>
+                  <button class="cat-btn cat-btn-ai" :disabled="busyId === item.id" @click="securityScan(item)" title="Scan tools/prompts for poisoning">
+                    {{ busyAction === 'scan' && busyId === item.id ? 'Scanning...' : 'Scan' }}
+                  </button>
+                  <button class="cat-btn cat-btn-ai" :disabled="busyId === item.id" @click="agentRun(item)" title="Run an agent-in-the-loop session">
+                    {{ busyAction === 'agent' && busyId === item.id ? 'Running...' : 'Agent' }}
+                  </button>
+                </template>
               </template>
               <button class="cat-btn" @click="toggleActive(item)">
                 {{ item.is_active ? 'Deactivate' : 'Activate' }}
@@ -147,6 +164,76 @@
         <p v-if="formError" class="cat-error">{{ formError }}</p>
       </form>
     </div>
+
+    <!-- Deep-inspection results (conformance / security / agent trace) -->
+    <div v-if="inspect" class="cat-modal-overlay" @click.self="inspect = null">
+      <div class="cat-modal">
+        <div class="cat-modal-head">
+          <h2>{{ inspect.title }}</h2>
+          <button class="cat-btn" @click="inspect = null">Close</button>
+        </div>
+
+        <!-- Conformance -->
+        <template v-if="inspect.kind === 'grade'">
+          <div class="cat-inspect-hero">
+            <span class="cat-grade-big" :class="gradeClass(inspect.data.grade)">{{ inspect.data.grade }}</span>
+            <div>
+              <div class="cat-inspect-score">{{ inspect.data.score }}/100</div>
+              <div class="cat-muted">{{ inspect.data.server || 'MCP server' }} · protocol {{ inspect.data.protocol_version || '—' }}</div>
+            </div>
+          </div>
+          <div v-for="(c, i) in inspect.data.checks" :key="i" class="cat-check" :class="'st-' + c.status">
+            <span class="cat-check-badge">{{ c.status }}</span>
+            <div><strong>{{ c.label }}</strong><div class="cat-muted">{{ c.detail }}</div></div>
+          </div>
+        </template>
+
+        <!-- Security scan -->
+        <template v-else-if="inspect.kind === 'scan'">
+          <div class="cat-risk-big" :class="'risk-' + inspect.data.risk">
+            Risk: {{ inspect.data.risk.toUpperCase() }} · score {{ inspect.data.score }}/100 · {{ inspect.data.scanned }} item(s)
+          </div>
+          <p v-if="!inspect.data.findings.length" class="cat-clean">No heuristic findings. ✅</p>
+          <div v-for="(f, i) in inspect.data.findings" :key="i" class="cat-check" :class="'sev-' + f.severity">
+            <span class="cat-check-badge">{{ f.severity }}</span>
+            <div><strong>{{ f.title }}</strong> <span class="cat-muted">in {{ f.item }}</span>
+              <div class="cat-muted cat-mono">{{ f.match }}</div></div>
+          </div>
+          <template v-if="inspect.data.ai?.findings?.length">
+            <h3 class="cat-inspect-sub">AI review</h3>
+            <div v-for="(f, i) in inspect.data.ai.findings" :key="'ai'+i" class="cat-check" :class="'sev-' + f.severity">
+              <span class="cat-check-badge">{{ f.severity }}</span>
+              <div><strong>{{ f.title }}</strong> <span class="cat-muted">in {{ f.item }}</span>
+                <div class="cat-muted">{{ f.detail }}</div></div>
+            </div>
+          </template>
+        </template>
+
+        <!-- Agent trace -->
+        <template v-else-if="inspect.kind === 'agent'">
+          <div class="cat-inspect-hero">
+            <span class="cat-grade-big" :class="inspect.data.completed ? 'g-a' : 'g-f'">
+              {{ inspect.data.completed ? '✓' : '⏱' }}
+            </span>
+            <div>
+              <div class="cat-inspect-score">{{ inspect.data.stop_reason }}</div>
+              <div class="cat-muted">{{ inspect.data.tool_call_count }} tool call(s) · {{ inspect.data.tools_available }} tool(s) available</div>
+            </div>
+          </div>
+          <div v-for="(s, i) in inspect.data.steps" :key="i" class="cat-step">
+            <div class="cat-step-head">Step {{ s.step }}</div>
+            <p v-if="s.assistant_text" class="cat-step-text">{{ s.assistant_text }}</p>
+            <div v-for="(t, j) in s.tool_calls" :key="j" class="cat-toolcall" :class="{ 'tc-err': t.is_error }">
+              <code>{{ t.name }}({{ JSON.stringify(t.arguments) }})</code>
+              <div class="cat-muted cat-mono">{{ (t.result_text || t.error || '').slice(0, 400) }}</div>
+            </div>
+          </div>
+          <div v-if="inspect.data.final_answer" class="cat-final">
+            <strong>Final answer:</strong> {{ inspect.data.final_answer }}
+          </div>
+        </template>
+      </div>
+    </div>
   </main>
 </template>
 
@@ -181,6 +268,9 @@ const saving = ref(false);
 const syncingId = ref(null);
 const checkingId = ref(null);
 const checkResults = ref({}); // id -> { reachable, latency_ms, info }
+const busyId = ref(null);        // connector id currently under deep inspection
+const busyAction = ref(null);    // 'grade' | 'scan' | 'agent'
+const inspect = ref(null);       // { kind, title, data } for the results modal
 const formError = ref('');
 const form = ref({ name: '', provider: '', version: '', description: '', endpoint: '', protocol: 'mcp', authHeader: '' });
 
@@ -323,6 +413,36 @@ const check = async (connector) => {
   } finally {
     checkingId.value = null;
   }
+};
+
+// Deep-inspection actions. Each hits a connector endpoint and opens the
+// results modal; the grade/scan variants also persist a badge onto the item.
+const deepInspect = async (connector, action, url, kind, title, payload = {}) => {
+  busyId.value = connector.id;
+  busyAction.value = action;
+  try {
+    const res = await axios.post(url, payload);
+    inspect.value = { kind, title: `${title} — ${connector.name}`, data: res.data };
+    if (action !== 'agent') await fetchAll();
+  } catch (error) {
+    showFlash(error.response?.data?.message || error.response?.data?.error || `${title} failed.`);
+  } finally {
+    busyId.value = null;
+    busyAction.value = null;
+  }
+};
+
+const grade = (c) => deepInspect(c, 'grade', `/api/admin/catalog/${c.id}/conformance`, 'grade', 'Conformance');
+const securityScan = (c) => deepInspect(c, 'scan', `/api/admin/catalog/${c.id}/security-scan`, 'scan', 'Security scan');
+const agentRun = (c) => {
+  const goal = prompt(`Agent goal for "${c.name}":`, 'List the available tools and describe what this server can do.');
+  if (!goal) return;
+  deepInspect(c, 'agent', `/api/admin/catalog/${c.id}/agent-loop`, 'agent', 'Agent run', { goal });
+};
+
+const gradeClass = (g) => {
+  const l = (g || '')[0];
+  return { A: 'g-a', B: 'g-b', C: 'g-c', D: 'g-d', F: 'g-f' }[l] || 'g-c';
 };
 
 // Prefer a fresh in-session check result; fall back to the stored last check.
@@ -472,4 +592,48 @@ onMounted(fetchAll);
   .cat-content { padding: 1rem; }
   .cat-form-row { grid-template-columns: 1fr; }
 }
+
+/* Deep-inspection badges */
+.cat-btn-ai:hover:not(:disabled) { border-color: var(--accent-color); color: var(--accent-color); }
+.cat-grade, .cat-risk { font-size: 0.72rem; font-weight: 700; padding: 1px 7px; border-radius: 5px; margin-left: 6px; }
+.cat-risk { text-transform: capitalize; }
+.g-a { background: rgba(63,185,80,.16); color: #3fb950; }
+.g-b { background: rgba(88,166,255,.16); color: #58a6ff; }
+.g-c { background: rgba(210,153,34,.16); color: #d29922; }
+.g-d { background: rgba(219,109,40,.18); color: #db6d28; }
+.g-f { background: rgba(248,81,73,.16); color: #f85149; }
+.risk-none { background: rgba(63,185,80,.14); color: #3fb950; }
+.risk-low { background: var(--border-color); color: var(--text-secondary); }
+.risk-medium { background: rgba(210,153,34,.18); color: #d29922; }
+.risk-high, .risk-critical { background: rgba(248,81,73,.16); color: #f85149; }
+
+/* Results modal */
+.cat-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; z-index: 50; overflow-y: auto; }
+.cat-modal { background: var(--bg-primary, #0d1117); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; width: 100%; max-width: 720px; }
+.cat-modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.cat-modal-head h2 { font-size: 1.05rem; margin: 0; color: var(--text-primary); }
+.cat-inspect-hero { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; }
+.cat-grade-big { font-size: 2rem; font-weight: 800; padding: 6px 16px; border-radius: 10px; }
+.cat-inspect-score { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); }
+.cat-inspect-sub { font-size: 0.9rem; color: var(--accent-color); margin: 14px 0 6px; }
+.cat-risk-big { font-weight: 700; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; }
+.cat-clean { color: #3fb950; }
+.cat-check { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--border-color); border-radius: 8px; padding: 9px 11px; margin-bottom: 7px; }
+.cat-check strong { color: var(--text-primary); }
+.cat-check-badge { font-size: 0.66rem; text-transform: uppercase; font-weight: 700; padding: 2px 7px; border-radius: 5px; flex-shrink: 0; }
+.st-pass .cat-check-badge { background: rgba(63,185,80,.16); color: #3fb950; }
+.st-warn .cat-check-badge { background: rgba(210,153,34,.18); color: #d29922; }
+.st-fail .cat-check-badge { background: rgba(248,81,73,.16); color: #f85149; }
+.st-skip .cat-check-badge { background: var(--border-color); color: var(--text-secondary); }
+.sev-high .cat-check-badge, .sev-critical .cat-check-badge { background: rgba(248,81,73,.16); color: #f85149; }
+.sev-medium .cat-check-badge { background: rgba(210,153,34,.18); color: #d29922; }
+.sev-low .cat-check-badge { background: var(--border-color); color: var(--text-secondary); }
+.cat-mono { font-family: ui-monospace, Menlo, monospace; font-size: 0.78rem; word-break: break-word; }
+.cat-step { border-left: 2px solid var(--border-color); padding: 4px 0 4px 12px; margin-bottom: 10px; }
+.cat-step-head { font-weight: 700; color: var(--text-secondary); font-size: 0.8rem; }
+.cat-step-text { color: var(--text-primary); font-size: 0.88rem; margin: 4px 0; }
+.cat-toolcall { background: var(--bg-secondary, #161b22); border-radius: 6px; padding: 7px 9px; margin-top: 5px; }
+.cat-toolcall code { color: var(--accent-color); font-size: 0.8rem; }
+.cat-toolcall.tc-err code { color: #f85149; }
+.cat-final { margin-top: 12px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); }
 </style>

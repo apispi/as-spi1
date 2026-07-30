@@ -28,6 +28,9 @@
         <router-link to="/chat" class="db-nav-link" @click="closeOnMobile">
           <span class="db-nav-icon">◇</span> Chat
         </router-link>
+        <router-link to="/ai-lab" class="db-nav-link" @click="closeOnMobile">
+          <span class="db-nav-icon">✦</span> AI Lab
+        </router-link>
         <router-link to="/profile" class="db-nav-link" @click="closeOnMobile">
           <span class="db-nav-icon">◈</span> Profile
         </router-link>
