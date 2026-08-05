@@ -12,6 +12,8 @@ import CatalogSection from './views/CatalogSection.vue';
 import CompleteRegistration from './views/CompleteRegistration.vue';
 import Developers from './views/Developers.vue';
 import AiLab from './views/AiLab.vue';
+import Reports from './views/Reports.vue';
+import SharedReport from './views/SharedReport.vue';
 
 const routes = [
     {
@@ -43,6 +45,17 @@ const routes = [
         name: 'ai-lab',
         component: AiLab,
         meta: { requiresAuth: true }
+    },
+    {
+        path: '/reports',
+        name: 'reports',
+        component: Reports,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/r/:token',
+        name: 'shared-report',
+        component: SharedReport
     },
     {
         path: '/login',

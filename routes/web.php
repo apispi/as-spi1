@@ -25,6 +25,7 @@ use App\Http\Controllers\AiAssistController;
 use App\Http\Controllers\McpSecurityController;
 use App\Http\Controllers\McpConformanceController;
 use App\Http\Controllers\AgentLoopController;
+use App\Http\Controllers\ReportController;
 
 // Google OAuth (full-page redirect flow). Registered before the SPA
 // catch-all, which also excludes the auth/ prefix.
@@ -38,6 +39,10 @@ Route::get('/{any}', function () {
 })->where('any', '^(?!api\/|auth\/).*$');
 
 Route::post('/api/proxy', [ProxyController::class, 'handle'])->middleware('throttle:proxy');
+
+// Public, read-only view of a shared inspection report (token-gated, no auth).
+Route::get('/api/reports/shared/{token}', [ReportController::class, 'showShared'])
+    ->middleware('throttle:proxy');
 
 Route::post('/api/register', [AuthController::class, 'register'])->middleware('throttle:auth-attempts');
 Route::post('/api/register/start', [RegistrationController::class, 'start'])->middleware('throttle:auth-attempts');
@@ -82,6 +87,15 @@ Route::middleware('auth')->group(function () {
 
     // MCP security scanner (#3) on caller-supplied tool/prompt descriptors.
     Route::post('/api/mcp/security/scan', [McpSecurityController::class, 'scan'])->middleware('throttle:outbound-test');
+
+    // Saved inspection reports. `compare` is declared before the {report}
+    // wildcard so it isn't captured as a report id.
+    Route::get('/api/reports', [ReportController::class, 'index']);
+    Route::get('/api/reports/compare', [ReportController::class, 'compare']);
+    Route::get('/api/reports/{report}', [ReportController::class, 'show']);
+    Route::delete('/api/reports/{report}', [ReportController::class, 'destroy']);
+    Route::post('/api/reports/{report}/share', [ReportController::class, 'share']);
+    Route::delete('/api/reports/{report}/share', [ReportController::class, 'revokeShare']);
 });
 
 Route::middleware(['auth', 'admin'])->group(function () {

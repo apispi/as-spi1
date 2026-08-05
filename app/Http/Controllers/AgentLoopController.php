@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CatalogItem;
+use App\Models\InspectionReport;
 use App\Services\Agent\AgentLoopRunner;
 use App\Services\Catalog\ConnectorResolver;
 use App\Services\Catalog\ConnectorUnavailableException;
@@ -46,6 +47,8 @@ class AgentLoopController extends Controller
             return response()->json(['message' => 'Agent run failed: '.$e->getMessage()], 502);
         }
 
-        return response()->json($trace);
+        $report = InspectionReport::record($request->user()->id, $catalogItem, 'agent_loop', $trace);
+
+        return response()->json($trace + ['report_id' => $report->id]);
     }
 }

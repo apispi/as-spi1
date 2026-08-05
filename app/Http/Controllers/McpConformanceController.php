@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CatalogItem;
+use App\Models\InspectionReport;
 use App\Services\Catalog\ConnectorResolver;
 use App\Services\Catalog\ConnectorUnavailableException;
 use App\Services\Mcp\McpConformanceGrader;
@@ -37,6 +38,8 @@ class McpConformanceController extends Controller
         ]);
         $catalogItem->save();
 
-        return response()->json($report);
+        $saved = InspectionReport::record(request()->user()->id, $catalogItem, 'conformance', $report);
+
+        return response()->json($report + ['report_id' => $saved->id]);
     }
 }
