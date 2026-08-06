@@ -7,9 +7,11 @@ namespace App\Rules\Concerns;
  * host out of a URL) and the bare-host rule (used by the MQTT/AMQP/gRPC testers,
  * where the target is a host:port rather than an http(s) URL).
  *
- * See App\Rules\PubliclyRoutableUrl for the DNS-rebinding caveat: resolving here
- * closes the "public name → private IP" case but not a name that resolves
- * differently at connection time.
+ * Resolving here closes the "public name → private IP" case. The residual
+ * DNS-rebinding gap (a name that resolves differently at connection time) is
+ * closed for http(s) traffic by App\Services\Security\SsrfGuard, which pins the
+ * validated IP into the connection. The bare-host socket testers (gRPC, MQTT,
+ * AMQP) validate here but do not yet pin, so remain subject to rebinding.
  *
  * A `$resolver` property (nullable callable) on the using class enables
  * deterministic testing and forces DNS resolution on.

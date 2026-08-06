@@ -13,11 +13,12 @@ use Illuminate\Contracts\Validation\ValidationRule;
  *
  * For hostnames, this resolves DNS and rejects the URL if ANY resolved
  * address is non-public. That closes the case of a public hostname that
- * resolves to an internal IP, but it is still not a full defence against
- * DNS rebinding, where the name resolves to a public IP here and a private
- * one at connection time. Fully closing that requires pinning the validated
- * IP into the HTTP client's connection, which the outbound clients here do
- * not yet do.
+ * resolves to an internal IP. It does not, on its own, defend against DNS
+ * rebinding (a name that resolves to a public IP here and a private one at
+ * connection time) — that TOCTOU gap is closed separately at connection time
+ * by App\Services\Security\SsrfGuard, which pins the validated IP into the
+ * HTTP client so it cannot re-resolve. The HTTP-based outbound clients
+ * (proxy, MCP, A2A) apply that pin.
  *
  * DNS resolution is gated by config('security.ssrf_resolve_dns') so it can
  * be disabled in the test environment, where hosts are faked and would not

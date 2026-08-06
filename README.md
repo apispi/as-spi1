@@ -89,8 +89,14 @@ cookie).
 - **SSRF:** `App\Rules\PubliclyRoutableUrl` blocks loopback/private/reserved
   hosts on all outbound endpoints, resolving DNS to catch hostnames pointing
   inward. Outbound clients do **not** follow redirects, to prevent a validated
-  URL from bouncing to an internal address. Not yet covered: DNS rebinding
-  (would need connection-time IP pinning).
+  URL from bouncing to an internal address. DNS rebinding (a host that resolves
+  public at validation and private at connection time) is closed for http(s)
+  traffic by `App\Services\Security\SsrfGuard`, which resolves the host, checks
+  every address, and pins the validated IP into the connection via
+  `CURLOPT_RESOLVE` so cURL cannot re-resolve — applied by the proxy, MCP, and
+  A2A clients. The socket-based testers (gRPC/MQTT/AMQP) validate the host but
+  do not yet pin, so remain subject to rebinding; pinning requires the curl
+  HTTP handler (present on the server).
 - **Rate limiting:** guest proxy 20/min per IP (120 authed), MCP/A2A 60/min per
   user, login/register 10/min per IP.
 - **Data exposure:** the user's password hash and SCX API key are hidden from

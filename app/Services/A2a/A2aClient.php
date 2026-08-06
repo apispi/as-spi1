@@ -2,6 +2,7 @@
 
 namespace App\Services\A2a;
 
+use App\Services\Security\SsrfGuard;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -16,6 +17,9 @@ use RuntimeException;
 class A2aClient
 {
     protected int $nextId = 1;
+
+    /** Cached connection-time SSRF pin for $endpoint (resolved once). */
+    protected ?array $pinnedOptions = null;
 
     public function __construct(
         protected string $endpoint,
@@ -121,7 +125,7 @@ class A2aClient
     protected function client()
     {
         $client = Http::acceptJson()
-            ->withOptions(['allow_redirects' => false])
+            ->withOptions(['allow_redirects' => false] + $this->pinnedOptions())
             ->withHeaders(array_merge([
                 'Content-Type' => 'application/json',
             ], $this->extraHeaders));
@@ -131,5 +135,15 @@ class A2aClient
         }
 
         return $client;
+    }
+
+    /**
+     * Pin the endpoint host to its validated IP at connection time (closes DNS
+     * rebinding). Cached so every call in a session uses the same checked
+     * address. See App\Services\Security\SsrfGuard.
+     */
+    protected function pinnedOptions(): array
+    {
+        return $this->pinnedOptions ??= (new SsrfGuard)->pinnedOptions($this->endpoint);
     }
 }

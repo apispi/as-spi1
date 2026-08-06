@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\RequestHistory;
 use App\Rules\PubliclyRoutableUrl;
+use App\Services\Security\SsrfException;
+use App\Services\Security\SsrfGuard;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Exception;
@@ -38,6 +40,14 @@ class ProxyController extends Controller
             $body = (string) $body;
         }
 
+        // Pin the host to the IP we validate now, so it cannot re-resolve to an
+        // internal address between validation and connection (DNS rebinding).
+        try {
+            $pinned = (new SsrfGuard)->pinnedOptions($url);
+        } catch (SsrfException $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+
         $startTime = microtime(true);
 
         try {
@@ -45,7 +55,7 @@ class ProxyController extends Controller
             // would bypass the SSRF validation done on the original URL.
             $pendingRequest = Http::withHeaders($headers)
                 ->withoutVerifying()
-                ->withOptions(['allow_redirects' => false]);
+                ->withOptions(['allow_redirects' => false] + $pinned);
             
             $response = null;
             if (in_array($method, ['POST', 'PUT', 'PATCH']) && !empty($body)) {

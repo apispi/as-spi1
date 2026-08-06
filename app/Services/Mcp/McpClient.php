@@ -2,6 +2,7 @@
 
 namespace App\Services\Mcp;
 
+use App\Services\Security\SsrfGuard;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -20,6 +21,9 @@ class McpClient
     protected ?string $sessionId = null;
 
     protected ?string $protocolVersion = null;
+
+    /** Cached connection-time SSRF pin for $endpoint (resolved once). */
+    protected ?array $pinnedOptions = null;
 
     public function __construct(
         protected string $endpoint,
@@ -170,7 +174,7 @@ class McpClient
     protected function client(): PendingRequest
     {
         $client = Http::acceptJson()
-            ->withOptions(['allow_redirects' => false])
+            ->withOptions(['allow_redirects' => false] + $this->pinnedOptions())
             ->withHeaders(array_merge([
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json, text/event-stream',
@@ -185,6 +189,16 @@ class McpClient
         }
 
         return $client;
+    }
+
+    /**
+     * Resolve and validate the endpoint host once, returning cURL options that
+     * pin the connection to the validated IP (closing DNS rebinding). Cached so
+     * every JSON-RPC call in a session connects to the same checked address.
+     */
+    protected function pinnedOptions(): array
+    {
+        return $this->pinnedOptions ??= (new SsrfGuard)->pinnedOptions($this->endpoint);
     }
 
     /**
