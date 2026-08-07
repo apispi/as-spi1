@@ -1,103 +1,82 @@
 <template>
-  <!-- Authenticated: left sidebar shell (mirrors as-website1-laravel dashboard nav) -->
-  <div v-if="authStore.isAuthenticated" class="db-shell" :class="{ 'sidebar-open': sidebarOpen }">
+  <!-- Authenticated: top navbar + collapsible sidebar -->
+  <div v-if="authStore.isAuthenticated" class="shell" :class="{ collapsed: !sidebarOpen }">
 
-    <!-- Overlay (mobile) -->
-    <div class="db-overlay" @click="sidebarOpen = false"></div>
-
-    <!-- Floating hamburger (shown when sidebar collapsed) -->
-    <button class="db-open-btn" @click="sidebarOpen = true" aria-label="Open menu">
-      <span></span><span></span><span></span>
-    </button>
-
-    <!-- Sidebar -->
-    <aside class="db-sidebar">
-      <div class="db-sidebar-header">
-        <router-link to="/dashboard" class="db-logo" @click="closeOnMobile">
-          <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="db-logo-icon"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-          <span>Spi</span>
+    <!-- Full-width top navbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="icon-btn" @click="sidebarOpen = !sidebarOpen" aria-label="Toggle menu">
+          <Icon name="menu" :size="20" />
+        </button>
+        <router-link to="/dashboard" class="brand">
+          <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="brand-mark"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          <span class="brand-name">Spi</span>
+          <span class="brand-sub">apispi.com</span>
         </router-link>
-        <button class="db-sidebar-close" @click="sidebarOpen = false" aria-label="Collapse menu">✕</button>
       </div>
 
-      <nav class="db-nav">
-        <span class="db-nav-label">Workspace</span>
-        <router-link to="/dashboard" class="db-nav-link" @click="closeOnMobile">
-          <span class="db-nav-icon">⬡</span> Dashboard
-        </router-link>
-        <router-link to="/chat" class="db-nav-link" @click="closeOnMobile">
-          <span class="db-nav-icon">◇</span> Chat
-        </router-link>
-        <router-link to="/ai-lab" class="db-nav-link" @click="closeOnMobile">
-          <span class="db-nav-icon">✦</span> AI Lab
-        </router-link>
-        <router-link to="/reports" class="db-nav-link" @click="closeOnMobile">
-          <span class="db-nav-icon">▤</span> Reports
-        </router-link>
-        <router-link to="/profile" class="db-nav-link" @click="closeOnMobile">
-          <span class="db-nav-icon">◈</span> Profile
-        </router-link>
+      <!-- Profile dropdown (top right) -->
+      <div ref="acctRoot" class="acct">
+        <button type="button" class="acct-trigger" :class="{ open: acctOpen }" @click="acctOpen = !acctOpen" aria-haspopup="true" :aria-expanded="acctOpen">
+          <span class="avatar">{{ initial }}</span>
+          <span class="acct-name">{{ authStore.user.name }}</span>
+          <Icon name="chevronDown" :size="16" class="acct-caret" />
+        </button>
 
-        <template v-if="authStore.user && authStore.user.is_admin">
-          <span class="db-nav-label">Admin</span>
-          <router-link to="/admin" class="db-nav-link" @click="closeOnMobile">
-            <span class="db-nav-icon">⚙</span> Admin Panel
-          </router-link>
-          <router-link to="/catalog" class="db-nav-link" @click="closeOnMobile">
-            <span class="db-nav-icon">▣</span> Catalog
-          </router-link>
-          <router-link to="/active" class="db-nav-link" @click="closeOnMobile">
-            <span class="db-nav-icon">◉</span> Active
-          </router-link>
-        </template>
-      </nav>
-
-      <div class="db-sidebar-footer">
-        <div ref="acctRoot" class="db-acct">
-          <button type="button" class="db-user-row" :class="{ open: acctOpen }" @click="acctOpen = !acctOpen" aria-haspopup="true" :aria-expanded="acctOpen">
-            <div class="db-avatar">{{ initial }}</div>
-            <div class="db-user-text">
-              <div class="db-user-name">{{ authStore.user.name }}</div>
-              <div class="db-user-email">{{ authStore.user.email }}</div>
+        <transition name="fade-pop">
+          <div v-if="acctOpen" class="acct-menu" @click.stop>
+            <div class="acct-head">
+              <div class="acct-label">Signed in as</div>
+              <div class="acct-fullname">{{ authStore.user.name }}</div>
+              <div class="acct-email">{{ authStore.user.email }}</div>
             </div>
-            <span class="db-acct-caret">⌄</span>
-          </button>
-
-          <div v-if="acctOpen" class="db-acct-menu" @click.stop>
-            <div class="db-acct-current">
-              <div class="db-acct-label">Signed in as</div>
-              <div class="db-acct-name">{{ authStore.user.name }}</div>
-              <div class="db-acct-email">{{ authStore.user.email }}</div>
-            </div>
-            <div class="db-acct-divider"></div>
-            <router-link to="/profile" class="db-acct-action" @click="onAcctNav">Manage profile</router-link>
-            <router-link v-if="authStore.user.is_admin" to="/admin" class="db-acct-action db-acct-admin" @click="onAcctNav">Admin Panel</router-link>
-            <div class="db-acct-divider"></div>
-            <button type="button" class="db-acct-action db-acct-signout" @click="handleLogout">Sign out</button>
+            <div class="acct-divider"></div>
+            <router-link to="/profile" class="acct-item" @click="onAcctNav">
+              <Icon name="user" :size="16" /> Manage profile
+            </router-link>
+            <router-link v-if="authStore.user.is_admin" to="/admin" class="acct-item" @click="onAcctNav">
+              <Icon name="shield" :size="16" /> Admin panel
+            </router-link>
+            <div class="acct-divider"></div>
+            <button type="button" class="acct-item acct-signout" @click="handleLogout">
+              <Icon name="logout" :size="16" /> Sign out
+            </button>
           </div>
-        </div>
+        </transition>
       </div>
-    </aside>
+    </header>
 
-    <!-- Main -->
-    <div class="db-main">
-      <!-- Top bar (mobile) -->
-      <header class="db-topbar">
-        <div class="db-topbar-left">
-          <button class="db-menu-btn" @click="sidebarOpen = true" aria-label="Open menu">
-            <span></span><span></span><span></span>
-          </button>
-          <router-link to="/dashboard" class="db-topbar-logo">
-            <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="db-logo-icon"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-            <span>Spi</span>
+    <div class="shell-body">
+      <!-- Mobile scrim -->
+      <div class="scrim" @click="sidebarOpen = false"></div>
+
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <nav class="nav">
+          <span class="nav-label">Workspace</span>
+          <router-link v-for="item in workspaceNav" :key="item.to" :to="item.to" class="nav-link" @click="closeOnMobile">
+            <Icon :name="item.icon" :size="18" />
+            <span>{{ item.label }}</span>
           </router-link>
-        </div>
-        <div class="db-topbar-right">
-          <router-link to="/profile" class="db-avatar db-avatar-sm" aria-label="My profile">{{ initial }}</router-link>
-        </div>
-      </header>
 
-      <router-view class="db-content-area"></router-view>
+          <template v-if="authStore.user && authStore.user.is_admin">
+            <span class="nav-label">Admin</span>
+            <router-link v-for="item in adminNav" :key="item.to" :to="item.to" class="nav-link" @click="closeOnMobile">
+              <Icon :name="item.icon" :size="18" />
+              <span>{{ item.label }}</span>
+            </router-link>
+          </template>
+        </nav>
+
+        <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener" class="nav-foot">
+          <Icon name="plug" :size="16" /> MCP reference
+        </a>
+      </aside>
+
+      <!-- Main -->
+      <main class="main">
+        <router-view />
+      </main>
     </div>
   </div>
 
@@ -124,20 +103,31 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from './store/auth';
 import { useRouter } from 'vue-router';
+import Icon from './components/Icon.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
 
-// Open by default on desktop, collapsed on mobile.
-const sidebarOpen = ref(typeof window !== 'undefined' ? window.innerWidth > 768 : true);
+const workspaceNav = [
+  { to: '/dashboard', label: 'Home', icon: 'home' },
+  { to: '/ai-lab', label: 'AI Lab', icon: 'sparkles' },
+  { to: '/reports', label: 'Reports', icon: 'report' },
+  { to: '/chat', label: 'Chat', icon: 'chat' },
+];
+const adminNav = [
+  { to: '/admin', label: 'Admin panel', icon: 'sliders' },
+  { to: '/catalog', label: 'Catalog', icon: 'layers' },
+  { to: '/active', label: 'Active', icon: 'activity' },
+];
 
-// Auto-collapse the overlay sidebar after navigating on mobile only;
-// on desktop the sidebar stays put until the user toggles it.
+// Open by default on desktop, collapsed on mobile.
+const sidebarOpen = ref(typeof window !== 'undefined' ? window.innerWidth > 900 : true);
+
 const closeOnMobile = () => {
-  if (typeof window !== 'undefined' && window.innerWidth <= 768) sidebarOpen.value = false;
+  if (typeof window !== 'undefined' && window.innerWidth <= 900) sidebarOpen.value = false;
 };
 
-// Account popup menu (mirrors as-website1-laravel AccountSwitcher).
+// Profile dropdown.
 const acctRoot = ref(null);
 const acctOpen = ref(false);
 
@@ -149,9 +139,16 @@ const onAcctNav = () => {
 const onDocMousedown = (e) => {
   if (acctRoot.value && !acctRoot.value.contains(e.target)) acctOpen.value = false;
 };
+const onKeydown = (e) => { if (e.key === 'Escape') acctOpen.value = false; };
 
-onMounted(() => document.addEventListener('mousedown', onDocMousedown));
-onUnmounted(() => document.removeEventListener('mousedown', onDocMousedown));
+onMounted(() => {
+  document.addEventListener('mousedown', onDocMousedown);
+  document.addEventListener('keydown', onKeydown);
+});
+onUnmounted(() => {
+  document.removeEventListener('mousedown', onDocMousedown);
+  document.removeEventListener('keydown', onKeydown);
+});
 
 const initial = computed(() => ((authStore.user && authStore.user.name) || 'U').charAt(0).toUpperCase());
 
@@ -164,243 +161,134 @@ const handleLogout = async () => {
 </script>
 
 <style scoped>
-/* ---------- Authenticated shell ---------- */
-.db-shell {
-  display: flex;
-  height: 100vh;
-  overflow: hidden;
-  background-color: var(--bg-color);
-  color: var(--text-primary);
-}
+/* ---------------- Authenticated shell ---------------- */
+.shell { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 
-/* Overlay (mobile) */
-.db-overlay {
-  display: none;
-  position: fixed; inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 90;
-}
-.sidebar-open .db-overlay { display: block; }
-
-/* Sidebar */
-.db-sidebar {
-  width: 240px;
-  background-color: var(--panel-bg);
-  border-right: 1px solid var(--border-color);
-  position: fixed; top: 0; left: 0;
-  height: 100vh;
-  display: flex; flex-direction: column;
-  z-index: 100;
-  overflow-y: auto;
-  transform: translateX(0);
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-}
-/* Collapsed: slide the sidebar out of view */
-.db-shell:not(.sidebar-open) .db-sidebar { transform: translateX(-100%); }
-
-/* Floating hamburger to reopen the collapsed sidebar (desktop) */
-.db-open-btn {
-  display: none;
-  position: fixed; top: 14px; left: 14px; z-index: 110;
-  flex-direction: column; justify-content: space-between;
-  width: 42px; height: 36px; padding: 10px;
-  background: var(--panel-bg); border: 1px solid var(--border-color);
-  border-radius: 8px; cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-}
-.db-shell:not(.sidebar-open) .db-open-btn { display: flex; }
-.db-open-btn span { display: block; width: 100%; height: 2px; background: var(--accent-color); border-radius: 2px; }
-.db-sidebar-header {
+/* Top navbar */
+.topbar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 16px;
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
+  height: 56px; flex-shrink: 0; padding: 0 14px;
+  background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);
+  position: relative; z-index: var(--z-topbar);
 }
-.db-logo {
-  display: flex; align-items: center; gap: 10px;
-  text-decoration: none; color: var(--text-primary);
-  font-size: 18px; font-weight: 600; letter-spacing: -0.5px;
+.topbar-left { display: flex; align-items: center; gap: 10px; }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; border-radius: 8px; border: none;
+  background: transparent; color: var(--text-secondary); cursor: pointer;
+  transition: background 0.18s, color 0.18s;
 }
-.db-logo-icon { color: var(--accent-color); }
-.db-sidebar-close {
-  display: block;
-  background: none; border: none; cursor: pointer;
-  color: var(--text-secondary); font-size: 18px; padding: 4px;
-  line-height: 1; border-radius: 6px;
-}
-.db-sidebar-close:hover { background: var(--border-color); color: var(--text-primary); }
+.icon-btn:hover { background: var(--border-color); color: var(--text-primary); }
 
-.db-nav { flex: 1; padding: 16px 12px; display: flex; flex-direction: column; gap: 3px; }
-.db-nav-label {
-  font-size: 11px; font-weight: 600; text-transform: uppercase;
-  letter-spacing: 0.1em; color: var(--text-secondary);
-  padding: 12px 8px 4px;
-}
-.db-nav-link {
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  text-decoration: none;
-  color: var(--text-secondary); font-size: 14px; font-weight: 500;
-  transition: all 0.18s;
-}
-.db-nav-link:hover { background: var(--border-color); color: var(--text-primary); }
-.db-nav-link.router-link-active { background: rgba(88, 166, 255, 0.12); color: var(--accent-color); font-weight: 600; }
-.db-nav-icon { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
-.db-nav-admin { color: #d29922; }
-.db-nav-admin:hover { background: rgba(210, 153, 34, 0.12); color: #d29922; }
-.db-nav-admin.router-link-active { background: rgba(210, 153, 34, 0.15); color: #d29922; }
+.brand { display: flex; align-items: baseline; gap: 8px; text-decoration: none; color: var(--text-primary); }
+.brand-mark { color: var(--accent-color); align-self: center; }
+.brand-name { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.brand-sub { font-size: 12px; color: var(--text-secondary); }
+@media (max-width: 560px) { .brand-sub { display: none; } }
 
-.db-sidebar-footer {
-  padding: 12px;
-  border-top: 1px solid var(--border-color);
-  flex-shrink: 0;
+/* Profile dropdown */
+.acct { position: relative; }
+.acct-trigger {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  background: transparent; border: 1px solid transparent; border-radius: 999px;
+  padding: 4px 8px 4px 4px; color: var(--text-primary);
+  transition: background 0.18s, border-color 0.18s;
 }
-.db-acct { position: relative; }
-.db-user-row {
+.acct-trigger:hover, .acct-trigger.open { background: var(--bg-elevated); border-color: var(--border-color); }
+.avatar {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+  color: #fff; font-size: 13px; font-weight: 700;
+}
+.acct-name { font-size: 14px; font-weight: 600; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 480px) { .acct-name { display: none; } }
+.acct-caret { color: var(--text-secondary); }
+
+.acct-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; width: 240px;
+  background: var(--bg-elevated); border: 1px solid var(--border-color);
+  border-radius: 12px; padding: 6px; z-index: var(--z-dropdown);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+.acct-head { padding: 8px 10px 6px; }
+.acct-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); }
+.acct-fullname { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-top: 2px; }
+.acct-email { font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-divider { height: 1px; background: var(--border-color); margin: 6px 4px; }
+.acct-item {
   display: flex; align-items: center; gap: 10px; width: 100%;
-  text-decoration: none; color: inherit;
-  padding: 6px 8px; border-radius: 8px; transition: background 0.15s;
-  background: none; border: none; cursor: pointer; font-family: inherit; text-align: left;
+  padding: 9px 10px; border-radius: 8px; border: none; background: transparent;
+  color: var(--text-primary); font-size: 14px; text-align: left; cursor: pointer;
+  text-decoration: none; transition: background 0.18s;
 }
-.db-user-row:hover, .db-user-row.open { background: var(--border-color); }
-.db-acct-caret { margin-left: auto; color: var(--text-secondary); font-size: 14px; flex-shrink: 0; }
-.db-avatar {
-  width: 36px; height: 36px; border-radius: 50%;
-  background: var(--accent-color);
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 14px; color: #fff;
-  flex-shrink: 0; text-decoration: none;
-}
-.db-avatar-sm { width: 32px; height: 32px; font-size: 13px; }
-.db-user-text { min-width: 0; }
-.db-user-name { font-size: 14px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.db-user-email { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acct-item:hover { background: var(--accent-soft); color: var(--accent-color); }
+.acct-signout { color: var(--error-color); }
+.acct-signout:hover { background: rgba(248, 81, 73, 0.12); color: var(--error-color); }
 
-/* Account popup menu (opens above the trigger) */
-.db-acct-menu {
-  position: absolute; bottom: 100%; left: 0; right: 0; margin-bottom: 8px;
-  background: var(--panel-bg); border: 1px solid var(--border-color);
-  border-radius: 10px; padding: 6px; z-index: 200;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  display: flex; flex-direction: column;
-}
-.db-acct-current { padding: 8px 10px 10px; }
-.db-acct-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); margin-bottom: 3px; }
-.db-acct-name { font-size: 14px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.db-acct-email { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.db-acct-divider { height: 1px; background: var(--border-color); margin: 6px 4px; }
-.db-acct-action {
-  display: block; width: 100%; text-align: left;
-  background: none; border: none; cursor: pointer;
-  padding: 8px 10px; border-radius: 6px; box-sizing: border-box;
-  font-family: inherit; font-size: 14px; font-weight: 500;
-  color: var(--text-primary); text-decoration: none;
-}
-.db-acct-action:hover { background: rgba(88, 166, 255, 0.12); color: var(--accent-color); }
-.db-acct-admin { color: #d29922; }
-.db-acct-admin:hover { background: rgba(210, 153, 34, 0.12); color: #d29922; }
-.db-acct-signout { color: #ff7b72; }
-.db-acct-signout:hover { background: rgba(248, 81, 73, 0.1); color: #ff7b72; }
+.fade-pop-enter-active, .fade-pop-leave-active { transition: opacity 0.16s ease, transform 0.16s ease; }
+.fade-pop-enter-from, .fade-pop-leave-to { opacity: 0; transform: translateY(-6px) scale(0.98); }
 
-/* Main */
-.db-main {
-  margin-left: 240px;
-  flex: 1;
-  height: 100vh;
-  display: flex; flex-direction: column;
-  min-width: 0;
-  transition: margin-left 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-}
-/* Collapsed: main content reclaims the full width */
-.db-shell:not(.sidebar-open) .db-main { margin-left: 0; }
-.db-content-area { flex: 1; overflow-y: auto; min-height: 0; }
+/* Body: sidebar + content */
+.shell-body { display: flex; flex: 1; min-height: 0; position: relative; }
 
-/* Topbar (mobile only) */
-.db-topbar {
-  display: none;
-  background-color: var(--panel-bg);
-  border-bottom: 1px solid var(--border-color);
-  padding: 0 16px;
-  height: 56px;
-  align-items: center; justify-content: space-between;
-  flex-shrink: 0;
+.sidebar {
+  width: 236px; flex-shrink: 0; display: flex; flex-direction: column;
+  background: var(--bg-secondary); border-right: 1px solid var(--border-color);
+  transition: margin-left 0.22s ease; overflow-y: auto;
 }
-.db-topbar-left { display: flex; align-items: center; gap: 14px; }
-.db-topbar-logo {
-  display: flex; align-items: center; gap: 8px;
-  text-decoration: none; color: var(--text-primary);
-  font-size: 16px; font-weight: 600;
-}
-.db-menu-btn {
-  display: flex; flex-direction: column; justify-content: space-between;
-  width: 24px; height: 18px;
-  background: none; border: none; cursor: pointer; padding: 0;
-}
-.db-menu-btn span {
-  display: block; width: 100%; height: 2px;
-  background: var(--accent-color); border-radius: 2px;
-}
-.db-topbar-right { display: flex; align-items: center; }
+.shell.collapsed .sidebar { margin-left: -236px; }
 
-/* ---------- Guest header ---------- */
-.app-container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
-  background-color: var(--bg-color);
+.nav { flex: 1; padding: 14px 12px; display: flex; flex-direction: column; gap: 2px; }
+.nav-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--text-secondary); padding: 12px 10px 6px;
 }
+.nav-link {
+  display: flex; align-items: center; gap: 11px; padding: 9px 10px;
+  border-radius: 8px; color: var(--text-secondary); text-decoration: none;
+  font-size: 14px; font-weight: 500; transition: background 0.18s, color 0.18s;
+}
+.nav-link:hover { background: var(--border-color); color: var(--text-primary); }
+.nav-link.router-link-active { background: var(--accent-soft); color: var(--accent-color); font-weight: 600; }
+.nav-foot {
+  display: flex; align-items: center; gap: 9px; margin: 8px 12px 14px;
+  padding: 9px 10px; border-radius: 8px; font-size: 13px;
+  color: var(--text-secondary); text-decoration: none; border: 1px solid var(--border-color);
+  transition: border-color 0.18s, color 0.18s;
+}
+.nav-foot:hover { color: var(--accent-color); border-color: var(--accent-color); }
+
+.main { flex: 1; min-width: 0; overflow-y: auto; background: var(--bg-color); }
+
+.scrim { display: none; }
+
+/* Mobile: sidebar becomes an overlay drawer */
+@media (max-width: 900px) {
+  .sidebar {
+    position: fixed; top: 56px; bottom: 0; left: 0; z-index: var(--z-sidebar);
+    margin-left: 0; transform: translateX(0); transition: transform 0.22s ease;
+  }
+  .shell.collapsed .sidebar { margin-left: 0; transform: translateX(-100%); }
+  .shell:not(.collapsed) .scrim {
+    display: block; position: fixed; top: 56px; inset: 56px 0 0 0;
+    background: rgba(0, 0, 0, 0.5); z-index: var(--z-overlay);
+  }
+}
+
+/* ---------------- Guest header (unchanged) ---------------- */
+.app-container { min-height: 100vh; }
 .app-header {
-  height: 60px;
-  background-color: var(--panel-bg);
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
-  flex-shrink: 0;
-  z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 24px; border-bottom: 1px solid var(--border-color);
 }
-.header-left { display: flex; align-items: center; }
-.header-right { display: flex; align-items: center; gap: 12px; }
-.logo { display: flex; align-items: center; gap: 12px; color: var(--accent-color); }
-.logo h1 {
-  font-size: 18px; font-weight: 600; margin: 0;
-  color: var(--text-primary); letter-spacing: -0.5px;
-}
-.router-content { flex: 1; overflow-y: auto; }
-
-.btn-login {
-  background: none;
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  text-decoration: none;
-  transition: all 0.2s;
-}
-.btn-login:hover { background: var(--border-color); }
-.btn-register {
-  background: var(--accent-color);
-  border: 1px solid var(--accent-color);
-  color: #fff;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: all 0.2s;
-}
-.btn-register:hover { background: #4a9eff; border-color: #4a9eff; }
-
-/* ---------- Mobile ---------- */
-@media (max-width: 768px) {
-  /* On mobile the topbar hamburger handles opening; sidebar overlays content */
-  .db-main { margin-left: 0 !important; }
-  .db-topbar { display: flex; }
-  .db-open-btn { display: none !important; }
-}
+.header-left .logo { display: flex; align-items: center; gap: 10px; }
+.header-left .logo .icon { color: var(--accent-color); }
+.header-left h1 { font-size: 20px; font-weight: 700; color: var(--text-primary); }
+.header-right { display: flex; gap: 10px; }
+.btn { padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; transition: background 0.18s, border-color 0.18s; }
+.btn-login { color: var(--text-primary); border: 1px solid var(--border-color); }
+.btn-login:hover { border-color: var(--text-secondary); }
+.btn-register { background: var(--accent-color); color: #fff; }
+.btn-register:hover { background: var(--accent-hover); }
 </style>

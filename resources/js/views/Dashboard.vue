@@ -1,437 +1,173 @@
 <template>
-  <div class="dashboard-layout">
-    <aside class="sidebar">
-      <div class="sidebar-header sidebar-tabs">
-        <button :class="['sidebar-tab', sidebarTab === 'saved' ? 'active' : '']" @click="sidebarTab = 'saved'">Saved</button>
-        <button :class="['sidebar-tab', sidebarTab === 'history' ? 'active' : '']" @click="switchToHistory">History</button>
+  <div class="hub">
+    <header class="hub-head">
+      <h1 class="hub-title">Welcome back, {{ firstName }}</h1>
+      <p class="hub-sub">Test, inspect, and harden MCP servers, agents, and APIs — with AI in the loop.</p>
+    </header>
+
+    <!-- Feature bento -->
+    <section class="bento">
+      <router-link
+        v-for="(card, i) in cards"
+        :key="card.to"
+        :to="card.to"
+        class="card"
+        :class="{ 'card-hero': i === 0 }"
+      >
+        <span class="card-icon" :style="{ color: card.color }">
+          <Icon :name="card.icon" :size="i === 0 ? 26 : 22" />
+        </span>
+        <div class="card-body">
+          <h3 class="card-title">{{ card.title }}</h3>
+          <p class="card-desc">{{ card.desc }}</p>
+        </div>
+        <span class="card-go"><Icon name="arrowRight" :size="18" /></span>
+      </router-link>
+    </section>
+
+    <!-- Recent reports -->
+    <section class="recent">
+      <div class="recent-head">
+        <h2 class="recent-title">Recent reports</h2>
+        <router-link to="/reports" class="recent-all">View all <Icon name="chevronRight" :size="14" /></router-link>
       </div>
-      <div class="sidebar-content" v-if="sidebarTab === 'saved'">
-        <div v-if="requestsStore.isLoading" class="p-4 text-secondary text-sm">Loading...</div>
-        <div v-else-if="requestsStore.savedRequests.length === 0" class="p-4 text-secondary text-sm">No saved requests</div>
-        <ul v-else class="saved-list">
-          <li v-for="req in requestsStore.savedRequests" :key="req.id" class="saved-item flex justify-between items-center group">
-            <div class="flex-1 cursor-pointer truncate mr-2" @click="loadRequest(req)">
-              <span class="method-badge" :class="req.protocol && req.protocol !== 'rest' ? req.protocol : req.method.toLowerCase()">{{ req.protocol === 'mcp' || req.protocol === 'a2a' ? req.protocol.toUpperCase() : req.method }}</span>
-              <span class="req-name">{{ req.name }}</span>
-            </div>
-            <button class="delete-icon" @click="deleteRequest(req.id)" title="Delete request">
-              <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
-          </li>
-        </ul>
+
+      <p v-if="loadingReports" class="muted">Loading…</p>
+      <div v-else-if="!reports.length" class="empty">
+        <Icon name="report" :size="26" />
+        <p>No reports yet. Run a conformance grade, security scan, or agent session on a connector to see it here.</p>
+        <router-link v-if="isAdmin" to="/catalog" class="empty-btn">Go to Catalog</router-link>
+        <router-link v-else to="/ai-lab" class="empty-btn">Open AI Lab</router-link>
       </div>
-      <div class="sidebar-content" v-else>
-        <div v-if="historyLoading" class="p-4 text-secondary text-sm">Loading...</div>
-        <div v-else-if="history.length === 0" class="p-4 text-secondary text-sm">No requests yet</div>
-        <template v-else>
-          <ul class="saved-list">
-            <li v-for="entry in history" :key="entry.id" class="saved-item history-item" @click="loadHistoryEntry(entry)">
-              <div class="flex justify-between items-center">
-                <span class="method-badge" :class="entry.protocol !== 'rest' ? entry.protocol : entry.method.toLowerCase()">{{ entry.protocol === 'rest' ? entry.method : entry.protocol.toUpperCase() }}</span>
-                <span class="history-status" :class="entry.status && entry.status < 400 ? 'ok' : 'fail'">{{ entry.status || 'ERR' }}</span>
-              </div>
-              <div class="history-url truncate" :title="entry.url">{{ entry.url }}</div>
-              <div class="history-meta">{{ entry.protocol !== 'rest' ? entry.method + ' · ' : '' }}{{ entry.time_ms }}ms · {{ timeAgo(entry.created_at) }}</div>
-            </li>
-          </ul>
-          <div class="p-4">
-            <button class="clear-history-btn" @click="clearHistory">Clear history</button>
-          </div>
-        </template>
-      </div>
-    </aside>
-    <main class="app-main">
-      <div class="panel-container">
-        <RequestPanel
-          @send-request="handleRequest"
-          @save-request="handleSaveRequest"
-          :isLoading="isLoading"
-          :loadedRequest="currentLoadedRequest"
-          :defaults="preferences"
-          :activeTools="activeTools"
-          :activePrompts="activePrompts"
-          :activeResources="activeResources"
-        />
-      </div>
-      <div class="panel-container">
-        <ResponsePanel 
-          :response="responseData" 
-          :isLoading="isLoading" 
-        />
-      </div>
-    </main>
+
+      <ul v-else class="rlist">
+        <li v-for="r in reports" :key="r.id">
+          <router-link to="/reports" class="rrow">
+            <span class="rtype" :class="'t-' + r.type">{{ typeName(r.type) }}</span>
+            <span class="rname">{{ r.connector_name || r.connector_slug || '—' }}</span>
+            <span class="rsummary">{{ r.summary }}</span>
+            <span class="rago">{{ ago(r.created_at) }}</span>
+          </router-link>
+        </li>
+      </ul>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
-import RequestPanel from '../components/RequestPanel.vue';
-import ResponsePanel from '../components/ResponsePanel.vue';
-import { useRequestsStore } from '../store/requests';
 import { useAuthStore } from '../store/auth';
+import Icon from '../components/Icon.vue';
 
-const requestsStore = useRequestsStore();
 const authStore = useAuthStore();
+const isAdmin = computed(() => !!authStore.user?.is_admin);
+const firstName = computed(() => (authStore.user?.name || 'there').split(' ')[0]);
 
-const isLoading = ref(false);
-const responseData = ref(null);
-const currentLoadedRequest = ref(null);
-const sidebarTab = ref('saved');
-const history = ref([]);
-const historyLoading = ref(false);
-const preferences = ref(null);
-const activeTools = ref([]);
-const activePrompts = ref([]);
-const activeResources = ref([]);
+const reports = ref([]);
+const loadingReports = ref(true);
+
+const cards = computed(() => {
+  const base = [
+    { to: '/ai-lab', title: 'AI Lab', icon: 'sparkles', color: '#a371f7',
+      desc: 'Author requests from plain English, explain responses, generate assertions, and scan MCP tools for prompt-injection.' },
+    { to: '/reports', title: 'Reports', icon: 'report', color: '#58a6ff',
+      desc: 'Saved conformance grades, security scans, and agent runs — shareable and diffable over time.' },
+    { to: '/chat', title: 'SCX Chat', icon: 'chat', color: '#3fb950',
+      desc: 'Talk to SCX AI for help building requests and debugging API and protocol issues.' },
+  ];
+  if (isAdmin.value) {
+    base.push(
+      { to: '/catalog', title: 'Catalog', icon: 'layers', color: '#d29922',
+        desc: 'Register MCP/A2A connectors, sync their tools, and run conformance, security, and agent-in-the-loop checks.' },
+      { to: '/active', title: 'Active', icon: 'activity', color: '#f778ba',
+        desc: 'The tools, prompts, and resources currently activated for use across the workspace.' },
+      { to: '/admin', title: 'Admin', icon: 'sliders', color: '#8b949e',
+        desc: 'Manage users, review activity, and oversee the catalog.' },
+    );
+  }
+  return base;
+});
 
 onMounted(async () => {
-  if (authStore.isAuthenticated) {
-    await requestsStore.fetchSavedRequests();
-    try {
-      const res = await axios.get('/api/user/preferences');
-      preferences.value = res.data;
-    } catch (error) {
-      preferences.value = null;
-    }
-    try {
-      const [toolsRes, promptsRes, resourcesRes] = await Promise.all([
-        axios.get('/api/tools/active'),
-        axios.get('/api/prompts/active'),
-        axios.get('/api/resources/active'),
-      ]);
-      activeTools.value = toolsRes.data;
-      activePrompts.value = promptsRes.data;
-      activeResources.value = resourcesRes.data;
-    } catch (error) {
-      activeTools.value = [];
-      activePrompts.value = [];
-      activeResources.value = [];
-    }
+  try {
+    const res = await axios.get('/api/reports');
+    reports.value = (res.data.reports || []).slice(0, 5);
+  } catch {
+    reports.value = [];
+  } finally {
+    loadingReports.value = false;
   }
 });
 
-const loadRequest = (req) => {
-  currentLoadedRequest.value = { ...req };
-};
-
-const fetchHistory = async () => {
-  historyLoading.value = true;
-  try {
-    const res = await axios.get('/api/history');
-    history.value = res.data;
-  } catch (error) {
-    console.error('Failed to fetch history', error);
-  } finally {
-    historyLoading.value = false;
-  }
-};
-
-const switchToHistory = () => {
-  sidebarTab.value = 'history';
-  fetchHistory();
-};
-
-const loadHistoryEntry = (entry) => {
-  currentLoadedRequest.value = {
-    protocol: entry.protocol,
-    method: entry.method,
-    url: entry.url,
-    body: entry.body || '',
-    params: entry.params || null,
-    headers: null
-  };
-};
-
-const clearHistory = async () => {
-  if (!confirm('Clear your entire request history?')) return;
-  try {
-    await axios.delete('/api/history');
-    history.value = [];
-  } catch (error) {
-    console.error('Failed to clear history', error);
-  }
-};
-
-const timeAgo = (dateStr) => {
-  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (seconds < 60) return 'just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-};
-
-const deleteRequest = async (id) => {
-  if (confirm("Are you sure you want to delete this saved request?")) {
-    await requestsStore.deleteRequest(id);
-  }
-};
-
-const handleSaveRequest = async (requestData) => {
-  try {
-    await requestsStore.saveRequest(requestData);
-  } catch (error) {
-    alert(error.response?.data?.message || "Failed to save request. Ensure you are logged in.");
-  }
-};
-
-// gRPC/MQTT/AMQP endpoints return protocol-specific JSON; reshape it into the
-// {status, headers, body, ...} form ResponsePanel renders.
-const normalizeBrokerResponse = (requestConfig, data, status) => ({
-  status,
-  headers: data.metadata || {},
-  body: JSON.stringify(data, null, 2),
-  time_ms: data.time_ms ?? 0,
-  request_payload: JSON.stringify(requestConfig.payload, null, 2),
-  request_headers: requestConfig.payload?.metadata || {},
-});
-
-const handleRequest = async (requestConfig) => {
-  isLoading.value = true;
-  responseData.value = null;
-
-  try {
-    let res;
-
-    if (requestConfig.protocol === 'mcp') {
-      res = await axios.post('/api/mcp/test', {
-        url: requestConfig.url,
-        method: requestConfig.protocolMethod,
-        params: requestConfig.params,
-        headers: requestConfig.headers
-      });
-    } else if (requestConfig.protocol === 'a2a') {
-      res = await axios.post('/api/a2a/test', {
-        url: requestConfig.url,
-        method: requestConfig.protocolMethod,
-        params: requestConfig.params,
-        headers: requestConfig.headers
-      });
-    } else if (['grpc', 'mqtt', 'amqp'].includes(requestConfig.protocol)) {
-      try {
-        res = await axios.post(`/api/${requestConfig.protocol}/test`, requestConfig.payload);
-        responseData.value = normalizeBrokerResponse(requestConfig, res.data, 200);
-      } catch (err) {
-        const status = err.response?.status || 0;
-        const data = err.response?.data || { error: 'Network error or endpoint unreachable' };
-        responseData.value = normalizeBrokerResponse(requestConfig, data, status);
-      }
-      return;
-    } else {
-      res = await axios.post('/api/proxy', {
-        url: requestConfig.url,
-        method: requestConfig.method,
-        headers: requestConfig.headers,
-        body: requestConfig.body
-      });
-    }
-
-    responseData.value = res.data;
-  } catch (error) {
-    if (error.response && error.response.data) {
-      responseData.value = error.response.data;
-    } else {
-      responseData.value = {
-        status: 0,
-        headers: {},
-        body: 'Network error or proxy unreachable',
-        time_ms: 0
-      };
-    }
-  } finally {
-    isLoading.value = false;
-    if (sidebarTab.value === 'history') {
-      fetchHistory();
-    }
-  }
+const typeName = (t) => ({ conformance: 'Conformance', security: 'Security', agent_loop: 'Agent run' }[t] || t);
+const ago = (iso) => {
+  if (!iso) return '';
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
 };
 </script>
 
 <style scoped>
-.dashboard-layout {
-  display: flex;
-  height: 100%;
-}
+.hub { max-width: 1040px; margin: 0 auto; padding: 32px 24px 64px; }
+.hub-head { margin-bottom: 24px; }
+.hub-title { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary); margin: 0; }
+.hub-sub { color: var(--text-secondary); margin: 8px 0 0; font-size: 15px; }
 
-.sidebar {
-  width: 260px;
-  background-color: var(--bg-color);
-  border-right: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
+/* Bento grid */
+.bento { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-bottom: 40px; }
+.card {
+  position: relative; display: flex; flex-direction: column; gap: 14px;
+  padding: 18px; border-radius: 14px; text-decoration: none;
+  background: var(--bg-secondary); border: 1px solid var(--border-color);
+  transition: border-color 0.18s, background 0.18s, transform 0.18s;
+  min-height: 150px;
 }
+.card:hover { border-color: var(--accent-color); background: var(--bg-elevated); }
+.card-hero { grid-column: span 2; }
+@media (max-width: 560px) { .card-hero { grid-column: span 1; } }
+.card-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: 11px;
+  background: var(--bg-color); border: 1px solid var(--border-color);
+}
+.card-body { flex: 1; }
+.card-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0 0 5px; }
+.card-desc { font-size: 13.5px; line-height: 1.55; color: var(--text-secondary); margin: 0; }
+.card-go { position: absolute; top: 18px; right: 18px; color: var(--text-secondary); opacity: 0; transform: translateX(-4px); transition: opacity 0.18s, transform 0.18s; }
+.card:hover .card-go { opacity: 1; transform: translateX(0); color: var(--accent-color); }
 
-.sidebar-header {
-  padding: 16px;
-  border-bottom: 1px solid var(--border-color);
-  background-color: var(--panel-bg);
-}
+/* Recent reports */
+.recent-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.recent-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0; }
+.recent-all { display: inline-flex; align-items: center; gap: 3px; color: var(--accent-color); text-decoration: none; font-size: 13px; font-weight: 500; }
+.recent-all:hover { text-decoration: underline; }
+.muted { color: var(--text-secondary); }
 
-.sidebar-tabs {
-  display: flex;
-  gap: 4px;
-  padding: 8px;
+.empty {
+  display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center;
+  padding: 40px 20px; border: 1px dashed var(--border-color); border-radius: 14px; color: var(--text-secondary);
 }
+.empty p { max-width: 440px; margin: 0; font-size: 14px; line-height: 1.6; }
+.empty-btn { padding: 8px 16px; border-radius: 8px; background: var(--accent-color); color: #fff; text-decoration: none; font-size: 13px; font-weight: 600; }
+.empty-btn:hover { background: var(--accent-hover); }
 
-.sidebar-tab {
-  flex: 1;
-  background: none;
-  border: none;
-  padding: 8px;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.2s;
-}
-.sidebar-tab:hover {
-  color: var(--text-primary);
-}
-.sidebar-tab.active {
-  color: var(--text-primary);
-  background: var(--bg-color);
-  font-weight: 600;
-}
-
-.sidebar-content {
-  flex: 1;
-  overflow-y: auto;
-}
-
-.saved-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.saved-item {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-color);
-  transition: background-color 0.2s;
-}
-.saved-item:hover {
-  background-color: var(--panel-bg);
-}
-
-.method-badge {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-right: 8px;
-  display: inline-block;
-  vertical-align: middle;
-}
-.method-badge.get { color: #3fb950; background: rgba(63, 185, 80, 0.15); }
-.method-badge.post { color: #58a6ff; background: rgba(88, 166, 255, 0.15); }
-.method-badge.put { color: #d29922; background: rgba(210, 153, 34, 0.15); }
-.method-badge.patch { color: #d29922; background: rgba(210, 153, 34, 0.15); }
-.method-badge.delete { color: #f85149; background: rgba(248, 81, 73, 0.15); }
-.method-badge.mcp { color: #a371f7; background: rgba(163, 113, 247, 0.15); }
-.method-badge.a2a { color: #f85149; background: rgba(248, 81, 73, 0.15); }
-
-.history-item {
-  display: block;
-  cursor: pointer;
-}
-
-.history-status {
-  font-size: 11px;
-  font-weight: 700;
-}
-.history-status.ok { color: #3fb950; }
-.history-status.fail { color: #f85149; }
-
-.history-url {
-  font-size: 12px;
-  color: var(--text-primary);
-  margin-top: 6px;
-}
-
-.history-meta {
-  font-size: 11px;
-  color: var(--text-secondary);
-  margin-top: 2px;
-}
-
-.clear-history-btn {
-  width: 100%;
-  padding: 8px;
-  background: none;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  color: var(--text-secondary);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.clear-history-btn:hover {
-  border-color: #f85149;
-  color: #f85149;
-}
-
-.req-name {
-  font-size: 13px;
-  color: var(--text-primary);
-  vertical-align: middle;
-}
-
-.delete-icon {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 4px;
-  opacity: 0;
-  transition: opacity 0.2s, color 0.2s;
-}
-.saved-item:hover .delete-icon {
-  opacity: 1;
-}
-.delete-icon:hover {
-  color: #f85149;
-}
-
-.p-4 { padding: 16px; }
-.text-sm { font-size: 13px; }
-.text-secondary { color: var(--text-secondary); }
-.flex { display: flex; }
-.justify-between { justify-content: space-between; }
-.items-center { align-items: center; }
-.flex-1 { flex: 1; }
-.cursor-pointer { cursor: pointer; }
-.truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mr-2 { margin-right: 8px; }
-
-.app-main {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-.panel-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--border-color);
-  min-width: 0; /* Prevent flex overflow */
-}
-
-.panel-container:last-child {
-  border-right: none;
-}
-
-@media (max-width: 768px) {
-  .app-main {
-    flex-direction: column;
-  }
-  .panel-container {
-    border-right: none;
-    border-bottom: 1px solid var(--border-color);
-  }
+.rlist { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; }
+.rlist li + li { border-top: 1px solid var(--border-color); }
+.rrow { display: grid; grid-template-columns: 108px 1fr 1.4fr auto; align-items: center; gap: 12px; padding: 12px 16px; text-decoration: none; transition: background 0.18s; }
+.rrow:hover { background: var(--bg-secondary); }
+.rtype { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 5px; text-align: center; }
+.t-conformance { background: rgba(88,166,255,.16); color: #58a6ff; }
+.t-security { background: rgba(248,81,73,.14); color: #f85149; }
+.t-agent_loop { background: rgba(63,185,80,.16); color: #3fb950; }
+.rname { color: var(--text-primary); font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rsummary { color: var(--text-secondary); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rago { color: var(--text-secondary); font-size: 12px; white-space: nowrap; }
+@media (max-width: 640px) {
+  .rrow { grid-template-columns: 90px 1fr auto; }
+  .rsummary { display: none; }
 }
 </style>
