@@ -14,6 +14,17 @@
 
         <!-- Vite Assets -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+        @if ($gaId = config('services.google_analytics.id'))
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id={{ $gaId }}"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', @json($gaId));
+        </script>
+        @endif
     </head>
     <body class="antialiased">
         <div id="app"></div>
