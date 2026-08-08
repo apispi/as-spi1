@@ -37,7 +37,7 @@ return [
     // Google Analytics 4 measurement ID (e.g. G-XXXXXXXXXX). When unset, the
     // gtag.js snippet is not rendered — so analytics stays off in local/dev.
     'google_analytics' => [
-        'id' => env('GA_MEASUREMENT_ID'),
+        'id' => env('GOOGLE_ANALYTICS_ID'),
     ],
 
     'slack' => [
