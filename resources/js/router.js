@@ -14,6 +14,8 @@ import Developers from './views/Developers.vue';
 import AiLab from './views/AiLab.vue';
 import Reports from './views/Reports.vue';
 import SharedReport from './views/SharedReport.vue';
+import Terms from './views/Terms.vue';
+import Privacy from './views/Privacy.vue';
 
 const routes = [
     {
@@ -79,6 +81,16 @@ const routes = [
         path: '/developers',
         name: 'developers',
         component: Developers
+    },
+    {
+        path: '/terms',
+        name: 'terms',
+        component: Terms
+    },
+    {
+        path: '/privacy',
+        name: 'privacy',
+        component: Privacy
     },
     {
         path: '/admin',

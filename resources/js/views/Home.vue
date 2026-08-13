@@ -465,6 +465,8 @@
           <a href="#">Pricing</a>
           <a href="#">Blog</a>
           <a href="#">Contact</a>
+          <router-link to="/terms">Terms</router-link>
+          <router-link to="/privacy">Privacy</router-link>
         </div>
         <div class="footer-social">
           <a href="#" aria-label="GitHub">

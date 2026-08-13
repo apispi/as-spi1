@@ -24,6 +24,13 @@
 
       <GoogleButton v-if="!sent" />
 
+      <p v-if="!sent" class="legal-consent">
+        By creating an account you agree to our
+        <router-link to="/terms" class="link">Terms &amp; Conditions</router-link>
+        and
+        <router-link to="/privacy" class="link">Privacy Notice</router-link>.
+      </p>
+
       <div class="auth-links mt-4 text-center text-sm text-secondary">
         Already have an account? <router-link to="/login" class="link">Login here</router-link>
       </div>
@@ -125,6 +132,8 @@ const handleRegister = async () => {
 .text-secondary { color: var(--text-secondary); }
 .link { color: var(--accent-color); text-decoration: none; }
 .link:hover { text-decoration: underline; }
+
+.legal-consent { margin-top: 16px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); text-align: center; }
 .register-lead { color: var(--text-secondary); font-size: 14px; margin: 0 0 16px; text-align: center; }
 .check-inbox { text-align: center; padding: 8px 0 4px; }
 .check-icon { font-size: 40px; margin-bottom: 8px; }
