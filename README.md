@@ -68,6 +68,31 @@ endpoints (a logged-out homepage visitor is prompted to sign in).
 A CLI client is also available: `php artisan mcp:test <url>` (interactive REPL
 or `--method=` for one-shot calls).
 
+## Environments and variables
+
+Environments hold reusable values so one saved request can run against staging
+and production. Reference them as `{{name}}` anywhere in a request — URL,
+headers, body, MQTT topics, gRPC metadata:
+
+```json
+{ "environment": "Staging", "url": "https://{{base_url}}/users" }
+```
+
+`App\Http\Middleware\ResolveEnvironmentVariables` substitutes them **before**
+validation, so every URL rule — including the SSRF guard — sees the resolved
+target and a variable cannot smuggle an internal host past those checks.
+Unknown placeholders are left in place and reported back under `environment.
+unresolved`. Variables marked **secret** are masked (`••••••`) in request
+history and in the echoed request, and their values are never returned to the
+browser.
+
+## Spi (AI assistant)
+
+`Spi` is the in-app assistant at `/chat`, backed by
+`App\Http\Controllers\ScxChatController`. It runs on the user's own SCX API key
+(added in Profile) and carries a product-aware system prompt so it can point
+users at real features and pages rather than inventing them.
+
 ## Key API endpoints
 
 All under `/api`, session-authenticated unless noted. State-changing routes
@@ -78,6 +103,7 @@ cookie).
 - `POST /mcp/test`, `POST /a2a/test` — MCP/A2A testers (auth)
 - `POST /grpc/test`, `POST /mqtt/test`, `POST /amqp/test` — gRPC/MQTT/AMQP
   testers (auth; also under `/api/v1` with a personal API key)
+- `GET/POST/PUT/DELETE /environments` — environments and their variables (auth)
 - `GET/POST/DELETE /saved-requests` — saved requests (free plan capped at 10)
 - `GET/DELETE /history` — request history (200/user retention)
 - `PUT /user/profile`, `/user/password`, `GET /user/stats`, `/user/activity`,

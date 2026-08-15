@@ -257,6 +257,15 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
+import { useEnvironmentsStore } from '../store/environments';
+
+const envStore = useEnvironmentsStore();
+
+// Discovery calls hit the testers directly rather than going through the
+// parent, so they carry the selected environment themselves — otherwise a URL
+// like {{mcp_url}} could not be discovered.
+const withEnv = (payload) =>
+  envStore.selectedId ? { ...payload, environment_id: envStore.selectedId } : payload;
 
 const props = defineProps({
   isLoading: Boolean,
@@ -535,12 +544,12 @@ const discoverTools = async () => {
   discoveredTools.value = [];
 
   try {
-    const res = await axios.post('/api/mcp/test', {
+    const res = await axios.post('/api/mcp/test', withEnv({
       url: url.value,
       method: 'tools/list',
       params: {},
       headers: collectHeaders()
-    });
+    }));
 
     if (res.data.status !== 200) {
       discoverError.value = res.data.body || 'Failed to discover tools';
@@ -624,12 +633,12 @@ const fetchAgentCard = async () => {
   agentCard.value = null;
 
   try {
-    const res = await axios.post('/api/a2a/test', {
+    const res = await axios.post('/api/a2a/test', withEnv({
       url: url.value,
       method: 'agent-card',
       params: {},
       headers: collectHeaders()
-    });
+    }));
 
     if (res.data.status !== 200) {
       cardError.value = res.data.body || 'Failed to fetch agent card';

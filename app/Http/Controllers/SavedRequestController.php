@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\SavedRequest;
+use App\Rules\TemplatedUrl;
 
 class SavedRequestController extends Controller
 {
@@ -30,9 +31,12 @@ class SavedRequestController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'protocol' => 'nullable|string|in:rest,mcp,a2a',
+            'protocol' => 'nullable|string|in:rest,mcp,a2a,grpc,mqtt,amqp',
             'method' => 'required|string',
-            'url' => 'required|url',
+            // A saved request stores the template, not the resolved target, so
+            // "https://{{host}}/users" must survive validation. The real URL is
+            // validated (and SSRF-checked) when the request is sent.
+            'url' => ['required', 'string', 'max:2048', new TemplatedUrl],
             'headers' => 'nullable|array',
             'body' => 'nullable|string',
             'params' => 'nullable|array',

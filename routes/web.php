@@ -26,6 +26,7 @@ use App\Http\Controllers\McpSecurityController;
 use App\Http\Controllers\McpConformanceController;
 use App\Http\Controllers\AgentLoopController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\EnvironmentController;
 
 // Google OAuth (full-page redirect flow). Registered before the SPA
 // catch-all, which also excludes the auth/ prefix.
@@ -38,7 +39,7 @@ Route::get('/{any}', function () {
     return view('welcome');
 })->where('any', '^(?!api\/|auth\/).*$');
 
-Route::post('/api/proxy', [ProxyController::class, 'handle'])->middleware('throttle:proxy');
+Route::post('/api/proxy', [ProxyController::class, 'handle'])->middleware(['throttle:proxy', 'resolve.vars']);
 
 // Public, read-only view of a shared inspection report (token-gated, no auth).
 Route::get('/api/reports/shared/{token}', [ReportController::class, 'showShared'])
@@ -73,11 +74,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/user/preferences', [UserController::class, 'preferences']);
     Route::put('/api/user/preferences', [UserController::class, 'updatePreferences']);
     Route::delete('/api/user/account', [UserController::class, 'deleteAccount']);
-    Route::post('/api/mcp/test', [McpTestController::class, 'test'])->middleware('throttle:outbound-test');
-    Route::post('/api/a2a/test', [A2aTestController::class, 'test'])->middleware('throttle:outbound-test');
-    Route::post('/api/grpc/test', [GrpcTestController::class, 'test'])->middleware('throttle:outbound-test');
-    Route::post('/api/mqtt/test', [MqttTestController::class, 'test'])->middleware('throttle:outbound-test');
-    Route::post('/api/amqp/test', [AmqpTestController::class, 'test'])->middleware('throttle:outbound-test');
+    Route::get('/api/environments', [EnvironmentController::class, 'index']);
+    Route::post('/api/environments', [EnvironmentController::class, 'store']);
+    Route::put('/api/environments/{id}', [EnvironmentController::class, 'update']);
+    Route::delete('/api/environments/{id}', [EnvironmentController::class, 'destroy']);
+
+    Route::middleware(['throttle:outbound-test', 'resolve.vars'])->group(function () {
+        Route::post('/api/mcp/test', [McpTestController::class, 'test']);
+        Route::post('/api/a2a/test', [A2aTestController::class, 'test']);
+        Route::post('/api/grpc/test', [GrpcTestController::class, 'test']);
+        Route::post('/api/mqtt/test', [MqttTestController::class, 'test']);
+        Route::post('/api/amqp/test', [AmqpTestController::class, 'test']);
+    });
 
     // AI-assisted request authoring (#4). Powered by the caller's SCX key.
     Route::post('/api/ai/author', [AiAssistController::class, 'author'])->middleware('throttle:outbound-test');

@@ -110,9 +110,10 @@ const router = useRouter();
 
 const workspaceNav = [
   { to: '/dashboard', label: 'Home', icon: 'home' },
+  { to: '/tester', label: 'Tester', icon: 'send' },
   { to: '/ai-lab', label: 'AI Lab', icon: 'sparkles' },
   { to: '/reports', label: 'Reports', icon: 'report' },
-  { to: '/chat', label: 'Chat', icon: 'chat' },
+  { to: '/chat', label: 'Spi', icon: 'chat' },
 ];
 const adminNav = [
   { to: '/admin', label: 'Admin panel', icon: 'sliders' },

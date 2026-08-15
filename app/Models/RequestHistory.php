@@ -36,6 +36,19 @@ class RequestHistory extends Model
      */
     public static function record(int $userId, array $attributes): void
     {
+        // Requests resolved from an environment may carry secret values in the
+        // URL, body, or params. History is long-lived and reloadable, so store
+        // the masked form rather than the credential.
+        $masker = app(\App\Services\Variables\SecretMasker::class);
+
+        if ($masker->hasSecrets()) {
+            foreach (['url', 'body', 'params'] as $key) {
+                if (isset($attributes[$key])) {
+                    $attributes[$key] = $masker->mask($attributes[$key]);
+                }
+            }
+        }
+
         static::create($attributes + ['user_id' => $userId]);
 
         $cutoff = static::where('user_id', $userId)

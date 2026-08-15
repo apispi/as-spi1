@@ -17,6 +17,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\IsAdmin::class,
             'auth.apitoken' => \App\Http\Middleware\AuthenticateApiToken::class,
+            'resolve.vars' => \App\Http\Middleware\ResolveEnvironmentVariables::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

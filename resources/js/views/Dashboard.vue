@@ -69,12 +69,14 @@ const loadingReports = ref(true);
 
 const cards = computed(() => {
   const base = [
+    { to: '/tester', title: 'Tester', icon: 'send', color: '#58a6ff',
+      desc: 'Send REST, MCP, A2A, gRPC, MQTT, and AMQP requests, with environments for reusable {{variables}} across staging and production.' },
     { to: '/ai-lab', title: 'AI Lab', icon: 'sparkles', color: '#a371f7',
       desc: 'Author requests from plain English, explain responses, generate assertions, and scan MCP tools for prompt-injection.' },
     { to: '/reports', title: 'Reports', icon: 'report', color: '#58a6ff',
       desc: 'Saved conformance grades, security scans, and agent runs — shareable and diffable over time.' },
-    { to: '/chat', title: 'SCX Chat', icon: 'chat', color: '#3fb950',
-      desc: 'Talk to SCX AI for help building requests and debugging API and protocol issues.' },
+    { to: '/chat', title: 'Spi', icon: 'chat', color: '#3fb950',
+      desc: 'Ask Spi, the built-in assistant, for help building requests, understanding protocols, and debugging failures.' },
   ];
   if (isAdmin.value) {
     base.push(

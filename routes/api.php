@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware(['auth.apitoken', 'throttle:outbound-test'])->group(function () {
+Route::middleware(['auth.apitoken', 'throttle:outbound-test', 'resolve.vars'])->group(function () {
     Route::post('/proxy', [ProxyController::class, 'handle']);
     Route::post('/mcp/test', [McpTestController::class, 'test']);
     Route::post('/a2a/test', [A2aTestController::class, 'test']);

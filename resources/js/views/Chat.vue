@@ -2,26 +2,29 @@
   <main class="chat-content">
     <div class="chat-container">
       <div class="chat-header">
-        <h1 class="chat-title">SCX AI Chat</h1>
-        <p class="chat-subtitle">Chat with SCX AI using your API key</p>
+        <h1 class="chat-title">Spi</h1>
+        <p class="chat-subtitle">Your API testing assistant — ask about protocols, requests, or the app itself</p>
       </div>
 
       <div v-if="!hasScxKey" class="chat-setup-card">
         <div class="chat-setup-icon">🔑</div>
         <h2>SCX API Key Required</h2>
-        <p>To use the SCX AI Chat, please add your SCX API key in your <router-link to="/profile">Profile Settings</router-link>.</p>
+        <p>Spi runs on your own SCX account. Add your SCX API key in your <router-link to="/profile">Profile Settings</router-link> to start chatting.</p>
       </div>
 
       <div v-else class="chat-interface">
         <div class="chat-messages" ref="messagesContainer">
           <div v-if="messages.length === 0" class="chat-empty">
             <div class="chat-empty-icon">💬</div>
-            <p>Start a conversation with SCX AI</p>
-            <p class="chat-empty-hint">Ask questions, get help with API requests, or debug your code</p>
+            <p>Start a conversation with Spi</p>
+            <p class="chat-empty-hint">Ask how to test an MCP server, set up environment variables, or debug a failing request</p>
+            <div class="chat-suggestions">
+              <button v-for="s in suggestions" :key="s" class="chat-suggestion" @click="askSuggestion(s)">{{ s }}</button>
+            </div>
           </div>
           <div v-for="(msg, i) in messages" :key="i" :class="['chat-message', msg.role]">
             <div class="chat-message-avatar">
-              {{ msg.role === 'user' ? userInitial : 'SCX' }}
+              {{ msg.role === 'user' ? userInitial : 'Spi' }}
             </div>
             <div class="chat-message-content">
               <div class="chat-message-text">{{ msg.content }}</div>
@@ -29,7 +32,7 @@
             </div>
           </div>
           <div v-if="isLoading" class="chat-message assistant loading">
-            <div class="chat-message-avatar">SCX</div>
+            <div class="chat-message-avatar">Spi</div>
             <div class="chat-message-content">
               <div class="chat-message-text typing">
                 <span></span><span></span><span></span>
@@ -76,6 +79,15 @@ const userInitial = computed(() => {
 
 const hasScxKey = ref(false);
 const messages = ref([]);
+
+// Opening prompts on the empty state — each one exercises something apispi
+// actually does, so a first-time user lands on a useful answer.
+const suggestions = [
+  'How do I test an MCP server?',
+  'Set up environment variables for staging and prod',
+  'Why is my request returning 401?',
+  'Show me a gRPC request example',
+];
 const inputMessage = ref('');
 const isLoading = ref(false);
 const messagesContainer = ref(null);
@@ -87,6 +99,11 @@ const loadScxKeyStatus = async () => {
   } catch (error) {
     hasScxKey.value = false;
   }
+};
+
+const askSuggestion = (text) => {
+  inputMessage.value = text;
+  sendMessage();
 };
 
 const sendMessage = async () => {
@@ -184,6 +201,13 @@ const formatTime = (date) => {
 .chat-empty-icon { font-size: 3rem; margin-bottom: 1rem; }
 .chat-empty p { font-size: 1rem; margin-bottom: 0.25rem; }
 .chat-empty-hint { font-size: 0.85rem; color: var(--text-secondary); }
+.chat-suggestions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 20px; max-width: 560px; }
+.chat-suggestion {
+  padding: 8px 14px; border-radius: 999px; cursor: pointer; font-size: 0.8rem;
+  background: none; border: 1px solid var(--border-color); color: var(--text-secondary);
+  transition: border-color 0.18s, color 0.18s;
+}
+.chat-suggestion:hover { border-color: var(--accent-color); color: var(--accent-color); }
 
 .chat-message { display: flex; gap: 0.875rem; }
 .chat-message.user { flex-direction: row-reverse; }

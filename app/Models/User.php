@@ -92,4 +92,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(RequestHistory::class);
     }
+
+    public function environments()
+    {
+        return $this->hasMany(Environment::class);
+    }
 }

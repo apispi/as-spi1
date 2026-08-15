@@ -21,6 +21,7 @@
         <a href="#grpc">gRPC</a>
         <a href="#mqtt">MQTT</a>
         <a href="#amqp">AMQP</a>
+        <a href="#environments">Environments</a>
         <a href="#limits">Rate limits</a>
         <a href="#errors">Errors</a>
       </nav>
@@ -159,6 +160,33 @@
       </section>
 
       <!-- Limits -->
+      <section id="environments" class="dev-section">
+        <h2>Environments</h2>
+        <p>
+          Any endpoint above accepts an <code>environment</code> (name) or
+          <code>environment_id</code>. Placeholders written as
+          <code v-pre>{{variable}}</code> anywhere in the payload — URL, headers,
+          body, topics — are substituted from that environment before the
+          request is sent. Manage environments in
+          <router-link to="/tester" class="dev-link">Tester → Manage</router-link>.
+        </p>
+        <CodeBlock :code="envExample" />
+        <p>
+          Substitution runs before validation, so the <em>resolved</em> URL is
+          what the SSRF guard checks. Unknown placeholders are left untouched
+          and listed back to you:
+        </p>
+        <CodeBlock :code="envResponse" />
+        <p class="dev-note">
+          Variables marked <strong>secret</strong> are masked as
+          <code>••••••</code> in request history and in the echoed
+          <code>request_payload</code> — the real value still reaches the target
+          server, but is never stored or returned. If no environment is named,
+          your default environment applies whenever the payload contains a
+          placeholder.
+        </p>
+      </section>
+
       <section id="limits" class="dev-section">
         <h2>Rate limits</h2>
         <p>The <code>/api/v1</code> endpoints are limited to <strong>60 requests
@@ -200,6 +228,25 @@ const proxyExample = computed(() => `curl -X POST ${origin}/api/v1/proxy \\
     "url": "https://api.example.com/users",
     "method": "GET"
   }'`);
+
+const envExample = computed(() => `curl -X POST ${origin}/api/v1/proxy \\
+  -H "Authorization: Bearer spi_your_key_here" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "environment": "Staging",
+    "url": "https://{{base_url}}/users",
+    "method": "GET",
+    "headers": { "Authorization": "Bearer {{token}}" }
+  }'`);
+
+const envResponse = `{
+  "status": 200,
+  "environment": {
+    "name": "Staging",
+    "resolved": ["base_url", "token"],
+    "unresolved": ["missing_var"]
+  }
+}`;
 
 const proxyResponse = `{
   "status": 200,

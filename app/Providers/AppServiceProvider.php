@@ -14,7 +14,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // One masker per HTTP request: it accumulates the secret values that
+        // were substituted into this request so they can be redacted from what
+        // we store and echo back.
+        $this->app->singleton(\App\Services\Variables\SecretMasker::class);
     }
 
     /**
