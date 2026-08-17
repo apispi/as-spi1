@@ -37,5 +37,9 @@ class DatabaseSeeder extends Seeder
                 'is_admin' => true,
             ]
         );
+
+        // Connectors, agents, skills, tools, prompts, and resources. Idempotent
+        // and activation-preserving, so it is safe on every deploy.
+        $this->call(CatalogSeeder::class);
     }
 }

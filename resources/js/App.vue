@@ -31,6 +31,9 @@
               <div class="acct-email">{{ authStore.user.email }}</div>
             </div>
             <div class="acct-divider"></div>
+            <router-link to="/dashboard" class="acct-item" @click="onAcctNav">
+              <Icon name="home" :size="16" /> Dashboard
+            </router-link>
             <router-link to="/profile" class="acct-item" @click="onAcctNav">
               <Icon name="user" :size="16" /> Manage profile
             </router-link>
