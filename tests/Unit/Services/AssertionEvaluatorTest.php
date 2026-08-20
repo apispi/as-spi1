@@ -66,6 +66,18 @@ class AssertionEvaluatorTest extends TestCase
         $this->assertTrue($result['passed'], json_encode($result['results']));
     }
 
+    public function test_the_root_path_addresses_the_whole_body(): void
+    {
+        $response = $this->response(['body' => json_encode([['id' => 1], ['id' => 2]])]);
+
+        $result = $this->check([
+            ['path' => '$', 'operator' => 'is_type', 'expected' => 'array'],
+            ['path' => '$', 'operator' => 'has_length', 'expected' => 2],
+        ], $response);
+
+        $this->assertTrue($result['passed'], json_encode($result['results']));
+    }
+
     public function test_it_asserts_on_headers_case_insensitively(): void
     {
         $result = $this->check([

@@ -57,6 +57,7 @@
         </span>
         <button class="env-manage" @click="showManager = true">Manage</button>
         <button class="env-manage" @click="showCollections = true">Collections</button>
+        <button class="env-manage" @click="showImport = true">Import</button>
 
         <span v-if="unresolved.length" class="env-warn" :title="'No value in this environment for: ' + unresolved.join(', ')">
           Unresolved: <code v-for="u in unresolved" :key="u">{{ placeholder(u) }}</code>
@@ -90,6 +91,7 @@
 
     <EnvironmentManager v-if="showManager" @close="showManager = false" />
     <CollectionManager v-if="showCollections" @close="showCollections = false" />
+    <ImportDialog v-if="showImport" @close="showImport = false" @loaded="onImported" />
   </div>
 </template>
 
@@ -101,6 +103,7 @@ import ResponsePanel from '../components/ResponsePanel.vue';
 import EnvironmentManager from '../components/EnvironmentManager.vue';
 import AssertionsPanel from '../components/AssertionsPanel.vue';
 import CollectionManager from '../components/CollectionManager.vue';
+import ImportDialog from '../components/ImportDialog.vue';
 import RunResults from '../components/RunResults.vue';
 import Icon from '../components/Icon.vue';
 import { useRequestsStore } from '../store/requests';
@@ -125,6 +128,7 @@ const activePrompts = ref([]);
 const activeResources = ref([]);
 const showManager = ref(false);
 const showCollections = ref(false);
+const showImport = ref(false);
 const unresolved = ref([]);
 
 onMounted(async () => {
@@ -153,6 +157,13 @@ onMounted(async () => {
     activeResources.value = [];
   }
 });
+
+// A curl import fills the tester without saving; loading it through the same
+// path as a saved request keeps RequestPanel's field-restoring logic in one
+// place.
+const onImported = (request) => {
+  currentLoadedRequest.value = { ...request, id: null, assertions: [] };
+};
 
 const onEnvChange = (e) => {
   const value = e.target.value;

@@ -4,6 +4,13 @@
       <div class="flex items-center gap-4">
         <h2>Request</h2>
         <button class="secondary text-sm" @click="openSave" :disabled="isLoading || !url">Save Request</button>
+        <ExportMenu
+          v-if="protocol === 'rest'"
+          :method="method"
+          :url="url"
+          :headers="exportHeaders"
+          :body="body"
+        />
       </div>
       <button class="primary flex items-center gap-2" @click="send" :disabled="isLoading" title="Send (⌘/Ctrl + Enter)">
         <svg v-if="!isLoading" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="icon"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -258,6 +265,7 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 import { useEnvironmentsStore } from '../store/environments';
+import ExportMenu from './ExportMenu.vue';
 
 const envStore = useEnvironmentsStore();
 
@@ -439,6 +447,16 @@ const addHeader = () => {
 const removeHeader = (index) => {
   headers.value.splice(index, 1);
 };
+
+// Snippets show exactly what would be sent, so they are built from the same
+// header rows rather than a separate copy.
+const exportHeaders = computed(() => {
+  const out = {};
+  headers.value.forEach((h) => {
+    if (h.key && h.key.trim()) out[h.key.trim()] = h.value;
+  });
+  return out;
+});
 
 const collectHeaders = () => {
   const headerObj = {};

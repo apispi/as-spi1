@@ -13,8 +13,14 @@ class SavedRequestController extends Controller
     /**
      * Saved-request cap for the free plan, matching the pricing page.
      * Admins are exempt; paid plans will lift this when billing exists.
+     *
+     * Raised from 10 when collections shipped: a collection is built out of
+     * saved requests, so one realistic smoke suite (login, list, create,
+     * fetch, update, delete) used most of the old quota and a second was
+     * impossible. The cap now sits above the collection cap (25) times a
+     * couple of suites, so it bounds abuse without blocking normal use.
      */
-    public const FREE_PLAN_LIMIT = 10;
+    public const FREE_PLAN_LIMIT = 60;
 
     public function index(Request $request)
     {

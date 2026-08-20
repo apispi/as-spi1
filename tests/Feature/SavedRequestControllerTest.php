@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\SavedRequestController;
 use App\Models\SavedRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -83,11 +84,13 @@ class SavedRequestControllerTest extends TestCase
         $response->assertStatus(422)->assertJsonValidationErrors(['protocol']);
     }
 
-    public function test_free_plan_users_are_capped_at_ten_saved_requests(): void
+    public function test_free_plan_users_are_capped_at_the_saved_request_limit(): void
     {
         $user = User::factory()->create(['is_admin' => false]);
 
-        for ($i = 0; $i < 10; $i++) {
+        // Read from the constant: hard-coding the number meant this test broke
+        // when the cap was raised, rather than verifying the cap holds.
+        for ($i = 0; $i < SavedRequestController::FREE_PLAN_LIMIT; $i++) {
             SavedRequest::create([
                 'user_id' => $user->id,
                 'name' => "Request {$i}",
@@ -104,14 +107,14 @@ class SavedRequestControllerTest extends TestCase
         ]);
 
         $response->assertStatus(422);
-        $this->assertSame(10, $user->savedRequests()->count());
+        $this->assertSame(SavedRequestController::FREE_PLAN_LIMIT, $user->savedRequests()->count());
     }
 
     public function test_admins_are_exempt_from_the_saved_request_cap(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
 
-        for ($i = 0; $i < 10; $i++) {
+        for ($i = 0; $i < SavedRequestController::FREE_PLAN_LIMIT; $i++) {
             SavedRequest::create([
                 'user_id' => $admin->id,
                 'name' => "Request {$i}",

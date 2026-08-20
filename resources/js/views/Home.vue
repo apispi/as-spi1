@@ -414,7 +414,7 @@
           <ul class="pricing-features">
             <li>✓ REST & GraphQL</li>
             <li>✓ WebSocket testing</li>
-            <li>✓ Save up to 10 requests</li>
+            <li>✓ Save up to 60 requests</li>
             <li>✓ Basic headers & body support</li>
           </ul>
           <router-link to="/register" class="btn btn-secondary btn-block">Get Started</router-link>

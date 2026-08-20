@@ -138,6 +138,36 @@ Runs stop at the first failure unless the collection sets
 persisted as an `InspectionReport` of type `collection_run`, so it is
 shareable and diffable like any other report.
 
+## Import and export
+
+Paste a `curl` command — including "Copy as cURL" from browser devtools — and
+it fills the tester without saving anything. `App\Services\Import\CurlImporter`
+tokenises the command by hand rather than per-flag regexes, because quoting is
+the actual problem: JSON bodies arrive single-quoted and full of double quotes,
+with line continuations throughout. It follows curl's own semantics (a body
+without `-X` implies POST, `-u` becomes an `Authorization` header, repeated
+`-d` flags join with `&`).
+
+`App\Services\Import\OpenApiImporter` turns an OpenAPI 3 document (YAML or
+JSON) into saved requests, optionally a collection and an environment. Server
+URLs become `{{base_url}}` and path/required-query parameters become
+`{{placeholders}}` rather than being baked in — so an imported collection can
+be pointed at staging or production, which is the reason to import into Spi
+rather than just read the spec. Assertions are derived only from what the spec
+actually promises (documented status code, documented top-level type);
+inventing field-level checks from a schema produces assertions that fail
+against a healthy API.
+
+Any saved request exports as a runnable snippet — cURL, JS `fetch`, Python
+`requests`, or raw HTTP. `{{variables}}` are left in place: the snippet is for
+a human to paste, and substituting a secret into copyable text is the opposite
+of what the secret flag is for.
+
+- `POST /api/import/curl` — parse a curl command (preview only)
+- `POST /api/import/openapi` — create saved requests from a spec
+- `GET /api/saved-requests/{id}/export?format=` — snippet for a saved request
+- `POST /api/export` — snippet for an unsaved draft
+
 ## Monitors
 
 A monitor runs a collection on a schedule and alerts on status changes:

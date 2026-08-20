@@ -150,7 +150,15 @@ class AssertionEvaluator
             return $path === 'body' ? ($response['body'] ?? self::MISSING) : self::MISSING;
         }
 
-        return Arr::get($decoded, $this->normalisePath($path), self::MISSING);
+        $normalised = $this->normalisePath($path);
+
+        // "$" addresses the decoded body itself, which is how you assert on
+        // the shape of a top-level array or object.
+        if ($normalised === '') {
+            return $decoded;
+        }
+
+        return Arr::get($decoded, $normalised, self::MISSING);
     }
 
     /**

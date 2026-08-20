@@ -30,6 +30,7 @@ use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\AssertionController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\MonitorController;
+use App\Http\Controllers\ImportController;
 
 // Google OAuth (full-page redirect flow). Registered before the SPA
 // catch-all, which also excludes the auth/ prefix.
@@ -79,6 +80,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/api/user/account', [UserController::class, 'deleteAccount']);
     Route::post('/api/assertions/evaluate', [AssertionController::class, 'evaluate']);
     Route::put('/api/saved-requests/{id}/assertions', [AssertionController::class, 'update']);
+
+    Route::post('/api/import/curl', [ImportController::class, 'curl']);
+    Route::post('/api/import/openapi', [ImportController::class, 'openapi']);
+    Route::post('/api/export', [ImportController::class, 'exportDraft']);
+    Route::get('/api/saved-requests/{id}/export', [ImportController::class, 'export']);
 
     Route::get('/api/collections', [CollectionController::class, 'index']);
     Route::post('/api/collections', [CollectionController::class, 'store']);
