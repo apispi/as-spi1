@@ -22,6 +22,7 @@
         <a href="#mqtt">MQTT</a>
         <a href="#amqp">AMQP</a>
         <a href="#environments">Environments</a>
+        <a href="#collections">Collections</a>
         <a href="#limits">Rate limits</a>
         <a href="#errors">Errors</a>
       </nav>
@@ -187,6 +188,31 @@
         </p>
       </section>
 
+      <section id="collections" class="dev-section">
+        <h2><span class="dev-verb">POST</span> /collections/{id}/run</h2>
+        <p>
+          Run a collection — an ordered group of saved requests — against an
+          environment, checking each step's assertions. Build collections in
+          <router-link to="/tester" class="dev-link">Tester → Collections</router-link>.
+        </p>
+        <CodeBlock :code="runExample" />
+        <p>
+          The status code is the verdict: <strong>200</strong> when every step
+          passed, <strong>422</strong> when any failed — so CI can gate on it
+          without parsing the body.
+        </p>
+        <CodeBlock :code="runResponse" />
+        <p class="dev-note">
+          Values named in a step's <code>extract</code> become
+          <code v-pre>{{variables}}</code> for later steps, so a login step can
+          hand a token to everything after it. Steps run top to bottom and stop
+          at the first failure unless the collection sets
+          <code>continue_on_failure</code>. gRPC, MQTT, and AMQP steps are
+          reported as unsupported in runs — they need per-connection
+          credentials a collection cannot supply yet.
+        </p>
+      </section>
+
       <section id="limits" class="dev-section">
         <h2>Rate limits</h2>
         <p>The <code>/api/v1</code> endpoints are limited to <strong>60 requests
@@ -246,6 +272,24 @@ const envResponse = `{
     "resolved": ["base_url", "token"],
     "unresolved": ["missing_var"]
   }
+}`;
+
+const runExample = computed(() => `curl -X POST ${origin}/api/v1/collections/12/run \\
+  -H "Authorization: Bearer spi_your_key_here" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "environment": "Staging" }'`);
+
+const runResponse = `{
+  "passed": false,
+  "total": 3,
+  "passed_count": 2,
+  "failed_count": 1,
+  "skipped_count": 0,
+  "time_ms": 812,
+  "steps": [
+    { "name": "Login", "status": 200, "passed": true, "extracted": ["token"] },
+    { "name": "List users", "status": 500, "passed": false }
+  ]
 }`;
 
 const proxyResponse = `{

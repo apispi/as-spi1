@@ -108,6 +108,36 @@ does not take down the suite.
 - `POST /api/assertions/evaluate` — evaluate assertions against a response
 - `PUT /api/saved-requests/{id}/assertions` — attach assertions to a request
 
+## Collections
+
+A collection is an ordered group of saved requests, run start to finish
+against one environment with each step's assertions checked:
+
+```bash
+curl -X POST https://spi.apispi.com/api/v1/collections/12/run \
+  -H "Authorization: Bearer spi_your_key" \
+  -d '{"environment":"Staging"}'
+```
+
+The status code is the verdict — **200** when every step passed, **422** when
+any failed — so CI can gate on it without parsing the body.
+
+`App\Services\Collections\CollectionRunner` threads variables between steps:
+the pool starts as the environment's variables, and each step can `extract`
+values from its response (`{"name":"token","path":"data.token"}`) that later
+steps reference as `{{token}}`. Resolution happens per step, immediately
+before sending, which is what makes that threading work.
+
+`App\Services\Collections\RequestExecutor` applies the same SSRF validation
+and IP pinning as the interactive testers. Socket protocols (gRPC, MQTT, AMQP)
+are reported as unsupported in runs rather than half-run — they need
+per-connection credentials a collection cannot supply yet.
+
+Runs stop at the first failure unless the collection sets
+`continue_on_failure`; remaining steps are reported as skipped. Every run is
+persisted as an `InspectionReport` of type `collection_run`, so it is
+shareable and diffable like any other report.
+
 ## Spi (AI assistant)
 
 `Spi` is the in-app assistant at `/chat`, backed by
@@ -129,6 +159,8 @@ cookie).
 - `GET/POST/DELETE /saved-requests` — saved requests (free plan capped at 10)
 - `POST /assertions/evaluate`, `PUT /saved-requests/{id}/assertions` — response
   assertions (auth)
+- `GET/POST/PUT/DELETE /collections`, `POST /collections/{id}/run` — collections
+  and runs (auth; run also under `/api/v1` with a personal API key)
 - `GET/DELETE /history` — request history (200/user retention)
 - `PUT /user/profile`, `/user/password`, `GET /user/stats`, `/user/activity`,
   `DELETE /user/account` — profile management

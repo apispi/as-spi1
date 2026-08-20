@@ -56,6 +56,7 @@
           <span v-if="envStore.selectedKeys.length > 4" class="env-more">+{{ envStore.selectedKeys.length - 4 }} more</span>
         </span>
         <button class="env-manage" @click="showManager = true">Manage</button>
+        <button class="env-manage" @click="showCollections = true">Collections</button>
 
         <span v-if="unresolved.length" class="env-warn" :title="'No value in this environment for: ' + unresolved.join(', ')">
           Unresolved: <code v-for="u in unresolved" :key="u">{{ placeholder(u) }}</code>
@@ -77,6 +78,7 @@
         </div>
         <div class="panel-container">
           <ResponsePanel :response="responseData" :isLoading="isLoading" />
+          <RunResults v-if="collectionsStore.lastRun" :run="collectionsStore.lastRun" @close="collectionsStore.lastRun = null" />
           <AssertionsPanel
             :response="responseData"
             :savedRequestId="currentLoadedRequest?.id || null"
@@ -87,6 +89,7 @@
     </div>
 
     <EnvironmentManager v-if="showManager" @close="showManager = false" />
+    <CollectionManager v-if="showCollections" @close="showCollections = false" />
   </div>
 </template>
 
@@ -97,14 +100,18 @@ import RequestPanel from '../components/RequestPanel.vue';
 import ResponsePanel from '../components/ResponsePanel.vue';
 import EnvironmentManager from '../components/EnvironmentManager.vue';
 import AssertionsPanel from '../components/AssertionsPanel.vue';
+import CollectionManager from '../components/CollectionManager.vue';
+import RunResults from '../components/RunResults.vue';
 import Icon from '../components/Icon.vue';
 import { useRequestsStore } from '../store/requests';
 import { useAuthStore } from '../store/auth';
 import { useEnvironmentsStore } from '../store/environments';
+import { useCollectionsStore } from '../store/collections';
 
 const requestsStore = useRequestsStore();
 const authStore = useAuthStore();
 const envStore = useEnvironmentsStore();
+const collectionsStore = useCollectionsStore();
 
 const isLoading = ref(false);
 const responseData = ref(null);
@@ -117,6 +124,7 @@ const activeTools = ref([]);
 const activePrompts = ref([]);
 const activeResources = ref([]);
 const showManager = ref(false);
+const showCollections = ref(false);
 const unresolved = ref([]);
 
 onMounted(async () => {

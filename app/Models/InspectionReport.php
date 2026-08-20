@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
  */
 class InspectionReport extends Model
 {
-    public const TYPES = ['agent_loop', 'conformance', 'security'];
+    public const TYPES = ['agent_loop', 'conformance', 'security', 'collection_run'];
 
     protected $fillable = [
         'user_id',

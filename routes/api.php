@@ -5,6 +5,7 @@ use App\Http\Controllers\AmqpTestController;
 use App\Http\Controllers\GrpcTestController;
 use App\Http\Controllers\McpTestController;
 use App\Http\Controllers\MqttTestController;
+use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\ProxyController;
 use Illuminate\Support\Facades\Route;
 
@@ -29,4 +30,8 @@ Route::middleware(['auth.apitoken', 'throttle:outbound-test', 'resolve.vars'])->
     Route::post('/grpc/test', [GrpcTestController::class, 'test']);
     Route::post('/mqtt/test', [MqttTestController::class, 'test']);
     Route::post('/amqp/test', [AmqpTestController::class, 'test']);
+
+    // Run a collection from CI. Returns 200 when every step passed, 422 when
+    // any failed, so a caller can gate on the status code alone.
+    Route::post('/collections/{id}/run', [CollectionController::class, 'run']);
 });
