@@ -32,7 +32,7 @@ Public marketing homepage + an authenticated single-page app (SPA).
 
 ## 2. Tech stack
 
-- **Backend:** Laravel 11 (PHP 8.2+). Session-cookie auth for the SPA; a
+- **Backend:** Laravel 12 (PHP 8.2+). Session-cookie auth for the SPA; a
   separate token-authenticated `/api/v1` group for programmatic use.
 - **Frontend:** Vue 3 (`<script setup>`) + Vue Router + Pinia, built with Vite.
   Axios for HTTP (its automatic `X-XSRF-TOKEN` from the `XSRF-TOKEN` cookie is
@@ -74,7 +74,7 @@ Base Laravel columns plus:
 **User model rules (critical):**
 - Use plain `protected $fillable` / `protected $hidden` **arrays** — NOT PHP
   attributes like `#[Fillable]`/`#[Hidden]` (those silently do nothing in
-  Laravel 11 and were a real bug).
+  Laravel 12 and were a real bug).
 - `$fillable`: name, email, password, is_admin, scx_api_key, google_id, avatar.
 - `$hidden`: password, remember_token, **scx_api_key**, **api_token**,
   **registration_token** (all secrets must never serialize).
