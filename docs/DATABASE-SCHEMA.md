@@ -128,6 +128,6 @@ Unique `(type, slug)`; index `(type, is_active)`.
 - `name` and `password` on `users` are made nullable by later migrations
   (`add_registration_flow` and `add_google_oauth` respectively). If building
   fresh, they can be nullable from the start.
-- Column modifications use native Laravel 11 `->change()` (no `doctrine/dbal`).
+- Column modifications use native Laravel 12 `->change()` (no `doctrine/dbal`).
 - Use `unsignedSmallInteger` for `status` (HTTP codes ≤ 599) and
   `unsignedInteger` for `time_ms`.

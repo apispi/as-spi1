@@ -11,7 +11,7 @@ specification and the other companion docs for detail.
 
 ## 1. Shape
 
-Spi is a **Laravel 11 backend** serving a **Vue 3 single-page app**, plus a
+Spi is a **Laravel 12 backend** serving a **Vue 3 single-page app**, plus a
 public marketing homepage. One Laravel app serves both:
 
 - **Public homepage** (`/`) — marketing + a live API tester that posts to
@@ -31,7 +31,7 @@ Browser ── HTTPS ──> SiteGround (Apache, public_html/) ──> index.php
 
 ## 2. Tech stack
 
-- Backend: **Laravel 11**, PHP **8.2+** (platform pinned to 8.2.0 in composer).
+- Backend: **Laravel 12**, PHP **8.2+** (platform pinned to 8.2.0 in composer).
 - Frontend: **Vue 3** (`<script setup>`), **Vue Router**, **Pinia**, **Axios**,
   built by **Vite** (`laravel-vite-plugin`, `publicDirectory: 'public_html'`).
 - Auth extras: **laravel/socialite** (Google).

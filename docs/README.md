@@ -1,7 +1,7 @@
 # Documentation
 
 Specification and reference for **apispi.com (Spi)** — a multi-protocol API
-testing tool (Laravel 11 + Vue 3). These docs are written to let an engineer or
+testing tool (Laravel 12 + Vue 3). These docs are written to let an engineer or
 AI understand, extend, or rebuild the project. Project overview and setup live
 in the [root README](../README.md).
 

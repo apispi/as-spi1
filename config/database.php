@@ -1,7 +1,14 @@
 <?php
 
 use Illuminate\Support\Str;
-use PDO;
+
+// PHP 8.5 deprecated the PDO::MYSQL_ATTR_* constants in favour of
+// Pdo\Mysql::ATTR_*. Referencing the old name emits a deprecation on every
+// request, which — with display_errors on — prints into the response body
+// ahead of the JSON. Resolve the right constant once, here.
+$mysqlSslCa = class_exists('Pdo\\Mysql')
+    ? \Pdo\Mysql::ATTR_SSL_CA
+    : \PDO::MYSQL_ATTR_SSL_CA;
 
 return [
 
@@ -60,7 +67,7 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                $mysqlSslCa => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
         ],
 
@@ -80,7 +87,7 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                $mysqlSslCa => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
         ],
 
