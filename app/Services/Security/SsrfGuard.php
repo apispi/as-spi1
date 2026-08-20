@@ -55,9 +55,20 @@ class SsrfGuard
             throw new SsrfException('Outbound URL has no host to validate.');
         }
 
-        $host = strtolower(trim($parts['host'], '[]'));
+        // Two forms of the host: the one cURL will use verbatim from the URL,
+        // and a canonical one for checking. They differ for noncanonical hosts
+        // such as "127.0.0.1." — checking the canonical form closes the
+        // trailing-dot bypass, while pinning must key off what cURL sees or the
+        // CURLOPT_RESOLVE entry silently fails to match and the name is
+        // resolved again.
+        $wireHost = strtolower(trim($parts['host'], '[]'));
+        $host = $this->canonicalHost($parts['host']);
         $scheme = strtolower($parts['scheme'] ?? 'https');
         $port = $parts['port'] ?? ($scheme === 'http' ? 80 : 443);
+
+        if ($host === '') {
+            throw new SsrfException('Outbound URL has no host to validate.');
+        }
 
         if (in_array($host, $this->blockedHostnames(), true) || str_ends_with($host, '.local')) {
             throw new SsrfException('Refusing to connect to a blocked internal host.');
@@ -86,7 +97,7 @@ class SsrfGuard
 
         // Pin every validated address for this host:port. cURL will connect to
         // one of these and never re-resolve the name.
-        $entry = $host.':'.$port.':'.implode(',', $addresses);
+        $entry = $wireHost.':'.$port.':'.implode(',', $addresses);
 
         return ['curl' => [CURLOPT_RESOLVE => [$entry]]];
     }

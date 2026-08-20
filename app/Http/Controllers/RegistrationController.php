@@ -24,7 +24,7 @@ class RegistrationController extends Controller
     public function start(Request $request)
     {
         $validated = $request->validate([
-            'email' => 'required|email|max:255',
+            'email' => 'required|email:filter|max:255',
         ]);
 
         $email = strtolower($validated['email']);
@@ -60,7 +60,7 @@ class RegistrationController extends Controller
     public function complete(Request $request)
     {
         $validated = $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|email:filter',
             'token' => 'required|string',
             'name' => 'required|string|max:255',
             'password' => 'required|string|min:8|confirmed',

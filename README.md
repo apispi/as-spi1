@@ -244,10 +244,28 @@ cookie).
   A2A clients. The socket-based testers (gRPC/MQTT/AMQP) validate the host but
   do not yet pin, so remain subject to rebinding; pinning requires the curl
   HTTP handler (present on the server).
+- **Noncanonical hosts:** host checks canonicalise before comparing
+  (`ChecksHostRoutability::canonicalHost`) — lowercase, strip brackets, drop
+  the trailing DNS root dot. Without that, `http://127.0.0.1./` matched
+  neither the blocklist nor `FILTER_VALIDATE_IP` and was allowed whenever
+  `SSRF_RESOLVE_DNS=false`. `SsrfGuard` still pins `CURLOPT_RESOLVE` using the
+  host **as cURL reads it** from the URL, since a canonicalised key would
+  silently fail to match and let cURL resolve the name again.
+- **Email validation:** endpoints that store or mail an address validate with
+  `email:filter`, not the default `email` rule, which accepts a quoted local
+  part containing CRLF (`"a\r\nb"@example.com`) — GHSA-5vg9-5847-vvmq.
 - **Rate limiting:** guest proxy 20/min per IP (120 authed), MCP/A2A 60/min per
   user, login/register 10/min per IP.
 - **Data exposure:** the user's password hash and SCX API key are hidden from
   serialization; request history never stores request headers (credentials).
+
+### Outstanding: framework upgrade
+
+`composer audit` reports three `laravel/framework` advisories whose fix lands
+in **12.60+**; this app is on **11.55**, so clearing them needs a major
+upgrade, not a patch. The high-severity one (CRLF in the default email rule)
+is mitigated in application code above, but the mitigation lives in our
+validation rules and would be undone by anyone reverting to plain `email`.
 
 ### Operational TODO
 

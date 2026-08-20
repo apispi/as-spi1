@@ -35,7 +35,7 @@ trait ChecksHostRoutability
      */
     protected function hostRoutabilityError(string $host): ?string
     {
-        $host = strtolower(trim($host, '[]'));
+        $host = $this->canonicalHost($host);
 
         if ($host === '') {
             return 'must include a valid host.';
@@ -71,6 +71,27 @@ trait ChecksHostRoutability
         }
 
         return null;
+    }
+
+    /**
+     * Canonical form of a host for checking purposes.
+     *
+     * The trailing dot matters: "127.0.0.1." is the same address as
+     * "127.0.0.1" and "localhost." is the same name as "localhost", but
+     * neither matches a blocklist entry and the dotted form is not recognised
+     * by FILTER_VALIDATE_IP. Without this, one extra character walked past
+     * both checks whenever DNS resolution was disabled.
+     *
+     * Only used for checks — never for the CURLOPT_RESOLVE pin key, which must
+     * match the host cURL actually uses from the URL.
+     */
+    protected function canonicalHost(string $host): string
+    {
+        $host = strtolower(trim($host, '[]'));
+
+        // A single trailing dot is the DNS root label; more than one is not a
+        // valid name at all, so collapse them all and let the checks decide.
+        return rtrim($host, '.');
     }
 
     protected function shouldResolve(): bool
