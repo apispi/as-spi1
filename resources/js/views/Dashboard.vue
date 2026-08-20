@@ -73,6 +73,8 @@ const cards = computed(() => {
       desc: 'Send REST, MCP, A2A, gRPC, MQTT, and AMQP requests, with environments for reusable {{variables}} across staging and production.' },
     { to: '/ai-lab', title: 'AI Lab', icon: 'sparkles', color: '#a371f7',
       desc: 'Author requests from plain English, explain responses, generate assertions, and scan MCP tools for prompt-injection.' },
+    { to: '/monitors', title: 'Monitors', icon: 'activity', color: '#f778ba',
+      desc: 'Run a collection on a schedule, track uptime and latency, and get alerted when it starts failing.' },
     { to: '/reports', title: 'Reports', icon: 'report', color: '#58a6ff',
       desc: 'Saved conformance grades, security scans, and agent runs — shareable and diffable over time.' },
     { to: '/chat', title: 'Spi', icon: 'chat', color: '#3fb950',
@@ -102,7 +104,7 @@ onMounted(async () => {
   }
 });
 
-const typeName = (t) => ({ conformance: 'Conformance', security: 'Security', agent_loop: 'Agent run' }[t] || t);
+const typeName = (t) => ({ conformance: 'Conformance', security: 'Security', agent_loop: 'Agent run', collection_run: 'Collection run' }[t] || t);
 const ago = (iso) => {
   if (!iso) return '';
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -165,6 +167,7 @@ const ago = (iso) => {
 .t-conformance { background: rgba(88,166,255,.16); color: #58a6ff; }
 .t-security { background: rgba(248,81,73,.14); color: #f85149; }
 .t-agent_loop { background: rgba(63,185,80,.16); color: #3fb950; }
+.t-collection_run { background: rgba(247,120,186,.16); color: #f778ba; }
 .rname { color: var(--text-primary); font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rsummary { color: var(--text-secondary); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rago { color: var(--text-secondary); font-size: 12px; white-space: nowrap; }

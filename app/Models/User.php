@@ -102,4 +102,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Collection::class);
     }
+
+    public function monitors()
+    {
+        return $this->hasMany(Monitor::class);
+    }
 }

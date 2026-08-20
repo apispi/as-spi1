@@ -94,6 +94,7 @@ const filters = [
   { value: 'conformance', label: 'Conformance' },
   { value: 'security', label: 'Security' },
   { value: 'agent_loop', label: 'Agent runs' },
+  { value: 'collection_run', label: 'Collection runs' },
 ];
 
 const rows = ref([]);
@@ -121,7 +122,7 @@ async function load() {
 }
 
 function setFilter(v) { typeFilter.value = v; cancelCompare(); load(); }
-const typeName = (t) => ({ conformance: 'Conformance', security: 'Security', agent_loop: 'Agent run' }[t] || t);
+const typeName = (t) => ({ conformance: 'Conformance', security: 'Security', agent_loop: 'Agent run', collection_run: 'Collection run' }[t] || t);
 
 function rowClick(r) {
   if (compareMode.value) { toggleSelect(r); return; }
@@ -245,6 +246,7 @@ const ago = (iso) => {
 .t-conformance { background: rgba(88,166,255,.16); color: #58a6ff; }
 .t-security { background: rgba(248,81,73,.14); color: #f85149; }
 .t-agent_loop { background: rgba(63,185,80,.16); color: #3fb950; }
+.t-collection_run { background: rgba(247,120,186,.16); color: #f778ba; }
 .rp-summary { color: var(--text-secondary); }
 .rp-shared { font-size: 14px; }
 .rp-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; z-index: 50; overflow-y: auto; }

@@ -138,6 +138,39 @@ Runs stop at the first failure unless the collection sets
 persisted as an `InspectionReport` of type `collection_run`, so it is
 shareable and diffable like any other report.
 
+## Monitors
+
+A monitor runs a collection on a schedule and alerts on status changes:
+
+```bash
+php artisan monitors:run           # runs every monitor whose interval elapsed
+php artisan monitors:run --id=3    # run one now, ignoring its schedule
+```
+
+`App\Services\Monitors\MonitorRunner` records each run as a compact history
+point (for uptime and latency) plus a full `InspectionReport`, and emails the
+owner **only on a transition** — passing to failing, or back. Alerting on
+every failing run is what gets monitoring muted, and a muted monitor is not a
+monitor. The first run establishes a baseline and never alerts.
+
+A run that throws is still recorded as a failing result: a monitor that goes
+silent is worse than one reporting an error. Intervals are restricted to
+`Monitor::INTERVALS` so a monitor cannot hammer a target.
+
+### Server setup (required)
+
+The scheduler is registered in [`routes/console.php`](routes/console.php), but
+Laravel's scheduler needs one cron entry on the server. In SiteGround's cPanel
+→ Cron Jobs, add:
+
+```
+* * * * * cd ~/www/spi.apispi.com && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Alerts also need real mail credentials in the production `.env`
+(`MAIL_MAILER=smtp` and the rest). With `MAIL_MAILER=log` they are written to
+the log file instead of sent.
+
 ## Spi (AI assistant)
 
 `Spi` is the in-app assistant at `/chat`, backed by
@@ -161,6 +194,8 @@ cookie).
   assertions (auth)
 - `GET/POST/PUT/DELETE /collections`, `POST /collections/{id}/run` — collections
   and runs (auth; run also under `/api/v1` with a personal API key)
+- `GET/POST/PUT/DELETE /monitors`, `GET /monitors/{id}`, `POST /monitors/{id}/run`
+  — scheduled monitors and their history (auth)
 - `GET/DELETE /history` — request history (200/user retention)
 - `PUT /user/profile`, `/user/password`, `GET /user/stats`, `/user/activity`,
   `DELETE /user/account` — profile management

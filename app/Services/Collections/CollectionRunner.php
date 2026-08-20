@@ -64,8 +64,14 @@ class CollectionRunner
             $result['step']['passed'] ? $passed++ : $failed++;
         }
 
+        // A run with nothing in it is not a pass. Reporting green for a
+        // collection whose steps have all been deleted would make a monitor
+        // silently healthy while checking nothing at all.
+        $ranNothing = $steps === [];
+
         return [
-            'passed' => $failed === 0,
+            'passed' => $failed === 0 && ! $ranNothing,
+            'error' => $ranNothing ? 'This collection has no steps to run.' : null,
             'collection' => ['id' => $collection->id, 'name' => $collection->name],
             'environment' => $environment ? ['id' => $environment->id, 'name' => $environment->name] : null,
             'total' => count($steps),

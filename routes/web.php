@@ -29,6 +29,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\AssertionController;
 use App\Http\Controllers\CollectionController;
+use App\Http\Controllers\MonitorController;
 
 // Google OAuth (full-page redirect flow). Registered before the SPA
 // catch-all, which also excludes the auth/ prefix.
@@ -84,6 +85,14 @@ Route::middleware('auth')->group(function () {
     Route::put('/api/collections/{id}', [CollectionController::class, 'update']);
     Route::delete('/api/collections/{id}', [CollectionController::class, 'destroy']);
     Route::post('/api/collections/{id}/run', [CollectionController::class, 'run'])
+        ->middleware('throttle:outbound-test');
+
+    Route::get('/api/monitors', [MonitorController::class, 'index']);
+    Route::get('/api/monitors/{id}', [MonitorController::class, 'show']);
+    Route::post('/api/monitors', [MonitorController::class, 'store']);
+    Route::put('/api/monitors/{id}', [MonitorController::class, 'update']);
+    Route::delete('/api/monitors/{id}', [MonitorController::class, 'destroy']);
+    Route::post('/api/monitors/{id}/run', [MonitorController::class, 'run'])
         ->middleware('throttle:outbound-test');
 
     Route::get('/api/environments', [EnvironmentController::class, 'index']);
