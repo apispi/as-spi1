@@ -15,11 +15,13 @@ class SavedRequest extends Model
         'headers',
         'body',
         'params',
+        'assertions',
     ];
 
     protected $casts = [
         'headers' => 'array',
         'params' => 'array',
+        'assertions' => 'array',
     ];
 
     public function user()

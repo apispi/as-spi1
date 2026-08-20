@@ -86,6 +86,28 @@ unresolved`. Variables marked **secret** are masked (`••••••`) in re
 history and in the echoed request, and their values are never returned to the
 browser.
 
+## Assertions
+
+A saved request can carry assertions that validate its response:
+
+```json
+{ "path": "data.items.0.id", "operator": "is_type", "expected": "number" }
+```
+
+`path` is `status`, `time_ms`, `header.<name>`, or a dot path into the JSON
+body (`$.data.items[0].id` and `data.items.0.id` are equivalent). The operator
+vocabulary is **closed** — see `App\Services\Assertions\Assertion` — so
+anything stored is guaranteed evaluable, and the AI generator
+(`POST /api/ai/assert`) is constrained to the same list. `AssertionsPanel.vue`
+mirrors it, and `AssertionVocabularyTest` fails if the two drift apart.
+
+`App\Services\Assertions\AssertionEvaluator` never throws on bad input: an
+assertion that cannot be evaluated fails with a reason, so one malformed row
+does not take down the suite.
+
+- `POST /api/assertions/evaluate` — evaluate assertions against a response
+- `PUT /api/saved-requests/{id}/assertions` — attach assertions to a request
+
 ## Spi (AI assistant)
 
 `Spi` is the in-app assistant at `/chat`, backed by
@@ -105,6 +127,8 @@ cookie).
   testers (auth; also under `/api/v1` with a personal API key)
 - `GET/POST/PUT/DELETE /environments` — environments and their variables (auth)
 - `GET/POST/DELETE /saved-requests` — saved requests (free plan capped at 10)
+- `POST /assertions/evaluate`, `PUT /saved-requests/{id}/assertions` — response
+  assertions (auth)
 - `GET/DELETE /history` — request history (200/user retention)
 - `PUT /user/profile`, `/user/password`, `GET /user/stats`, `/user/activity`,
   `DELETE /user/account` — profile management

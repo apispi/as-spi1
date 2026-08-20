@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\SavedRequest;
 use App\Rules\TemplatedUrl;
+use App\Services\Assertions\Assertion;
+use Illuminate\Validation\Rule;
 
 class SavedRequestController extends Controller
 {
@@ -40,6 +42,13 @@ class SavedRequestController extends Controller
             'headers' => 'nullable|array',
             'body' => 'nullable|string',
             'params' => 'nullable|array',
+            // Assertions may be attached at save time; the operator list is
+            // closed so anything stored is guaranteed evaluable.
+            'assertions' => 'nullable|array|max:'.AssertionController::MAX_ASSERTIONS,
+            'assertions.*.path' => 'required|string|max:255',
+            'assertions.*.operator' => ['required', 'string', Rule::in(Assertion::operators())],
+            'assertions.*.expected' => 'nullable',
+            'assertions.*.description' => 'nullable|string|max:255',
         ]);
 
         $validated['protocol'] = $validated['protocol'] ?? 'rest';

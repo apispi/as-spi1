@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Assertions\Assertion;
 use App\Services\Scx\ScxClient;
 use App\Services\Scx\ScxKeyMissingException;
 use Illuminate\Http\Request;
@@ -80,9 +81,20 @@ class AiAssistController extends Controller
             'status' => 'nullable',
         ]);
 
+        // The operator list is closed and shared with the evaluator, so every
+        // generated assertion is guaranteed to be runnable. Left open, the
+        // model emits "contains", "includes", and "has" interchangeably.
+        $operators = implode('|', Assertion::operators());
+        $types = implode('|', Assertion::TYPES);
+
         $sys = 'You generate assertions that validate an API response. Prefer stable, meaningful checks '
             .'(status code, presence and type of key fields, invariants) over brittle exact-value matches. '
-            .'Respond ONLY as JSON: {"assertions":[{"path":string,"operator":string,"expected":string,"description":string}]}.';
+            ."The `operator` MUST be one of: {$operators}. "
+            .'The `path` is "status", "time_ms", "header.<name>", or a dot path into the JSON body '
+            .'(e.g. "data.items.0.id"). '
+            ."For is_type, `expected` must be one of: {$types}. "
+            .'For exists and not_exists, set `expected` to null. '
+            .'Respond ONLY as JSON: {"assertions":[{"path":string,"operator":string,"expected":string|null,"description":string}]}.';
 
         $user = "Status: ".($v['status'] ?? 'unknown')."\n\nResponse body:\n".$v['response'];
 

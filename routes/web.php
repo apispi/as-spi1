@@ -27,6 +27,7 @@ use App\Http\Controllers\McpConformanceController;
 use App\Http\Controllers\AgentLoopController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\EnvironmentController;
+use App\Http\Controllers\AssertionController;
 
 // Google OAuth (full-page redirect flow). Registered before the SPA
 // catch-all, which also excludes the auth/ prefix.
@@ -74,6 +75,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/user/preferences', [UserController::class, 'preferences']);
     Route::put('/api/user/preferences', [UserController::class, 'updatePreferences']);
     Route::delete('/api/user/account', [UserController::class, 'deleteAccount']);
+    Route::post('/api/assertions/evaluate', [AssertionController::class, 'evaluate']);
+    Route::put('/api/saved-requests/{id}/assertions', [AssertionController::class, 'update']);
+
     Route::get('/api/environments', [EnvironmentController::class, 'index']);
     Route::post('/api/environments', [EnvironmentController::class, 'store']);
     Route::put('/api/environments/{id}', [EnvironmentController::class, 'update']);

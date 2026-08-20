@@ -77,6 +77,11 @@
         </div>
         <div class="panel-container">
           <ResponsePanel :response="responseData" :isLoading="isLoading" />
+          <AssertionsPanel
+            :response="responseData"
+            :savedRequestId="currentLoadedRequest?.id || null"
+            :initial="currentLoadedRequest?.assertions || []"
+          />
         </div>
       </main>
     </div>
@@ -91,6 +96,7 @@ import axios from 'axios';
 import RequestPanel from '../components/RequestPanel.vue';
 import ResponsePanel from '../components/ResponsePanel.vue';
 import EnvironmentManager from '../components/EnvironmentManager.vue';
+import AssertionsPanel from '../components/AssertionsPanel.vue';
 import Icon from '../components/Icon.vue';
 import { useRequestsStore } from '../store/requests';
 import { useAuthStore } from '../store/auth';
@@ -352,6 +358,9 @@ const noteUnresolved = (data) => {
 .app-main { display: flex; flex: 1; overflow: hidden; }
 .panel-container { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border-color); min-width: 0; }
 .panel-container:last-child { border-right: none; }
+/* ResponsePanel/RequestPanel set height:100% on their root, which would push
+   the stacked assertions panel out of view. Let them flex instead. */
+.panel-container > :deep(.panel) { flex: 1; min-height: 0; height: auto; }
 
 .p-4 { padding: 16px; }
 .text-sm { font-size: 13px; }
