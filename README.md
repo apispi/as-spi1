@@ -1,6 +1,6 @@
 # apispi.com
 
-A multi-protocol API testing tool built with Laravel 11 and Vue 3. Send and
+A multi-protocol API testing tool built with Laravel 12 and Vue 3. Send and
 inspect REST, MCP (Model Context Protocol), and A2A (Agent-to-Agent) requests
 from the browser, save and replay them, and review request history — with an
 admin panel for user management.
@@ -18,7 +18,7 @@ Detailed specs live in [`docs/`](docs/):
 
 ## Stack
 
-- **Backend:** Laravel 11 (PHP 8.2+), session-cookie auth
+- **Backend:** Laravel 12 (PHP 8.2+), session-cookie auth
 - **Frontend:** Vue 3 + Vue Router + Pinia, built with Vite
 - **Public web root:** `public_html/` (SiteGround layout, set in `bootstrap/app.php`)
 
@@ -258,14 +258,6 @@ cookie).
   user, login/register 10/min per IP.
 - **Data exposure:** the user's password hash and SCX API key are hidden from
   serialization; request history never stores request headers (credentials).
-
-### Outstanding: framework upgrade
-
-`composer audit` reports three `laravel/framework` advisories whose fix lands
-in **12.60+**; this app is on **11.55**, so clearing them needs a major
-upgrade, not a patch. The high-severity one (CRLF in the default email rule)
-is mitigated in application code above, but the mitigation lives in our
-validation rules and would be undone by anyone reverting to plain `email`.
 
 ### Operational TODO
 

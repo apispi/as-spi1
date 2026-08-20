@@ -15,7 +15,7 @@ Represents both password accounts and OAuth/email-first accounts, so `name`
 and `password` are **nullable**.
 
 **Critical rule:** configuration uses plain properties, **not** PHP attributes.
-`#[Fillable]` / `#[Hidden]` do nothing in Laravel 11 and previously broke
+`#[Fillable]` / `#[Hidden]` do nothing in Laravel 12 and previously broke
 registration (mass-assignment 500) and leaked the password hash + SCX key. Use:
 
 ```php
