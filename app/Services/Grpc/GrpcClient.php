@@ -2,6 +2,7 @@
 
 namespace App\Services\Grpc;
 
+use App\Services\Security\SsrfGuard;
 use RuntimeException;
 
 /**
@@ -31,7 +32,9 @@ class GrpcClient
     public function __construct(
         protected ProtobufCodec $codec = new ProtobufCodec,
         protected $transport = null,
+        protected ?SsrfGuard $guard = null,
     ) {
+        $this->guard ??= new SsrfGuard;
     }
 
     /**
@@ -66,7 +69,12 @@ class GrpcClient
             }
         }
 
-        $response = $this->send($url, $headers, $frame, $tls, (bool) ($opts['tls_verify'] ?? true), $timeout);
+        // Pin the validated address for this host:port so cURL cannot
+        // re-resolve the name between validation and connection. gRPC rides on
+        // cURL, so this is the same CURLOPT_RESOLVE pin the HTTP testers use.
+        $pin = $this->guard->pinnedOptions($url);
+
+        $response = $this->send($url, $headers, $frame, $tls, (bool) ($opts['tls_verify'] ?? true), $timeout, $pin);
 
         return $this->parseResponse($response, $opts['service_method']);
     }
@@ -131,7 +139,7 @@ class GrpcClient
      * @param  array<int, string>  $headers
      * @return array{status:int, headers:array<string,string>, body:string}
      */
-    protected function send(string $url, array $headers, string $body, bool $tls, bool $verify, int $timeout): array
+    protected function send(string $url, array $headers, string $body, bool $tls, bool $verify, int $timeout, array $pin = []): array
     {
         if ($this->transport !== null) {
             return ($this->transport)($url, $headers, $body, $tls, $verify, $timeout);
@@ -158,6 +166,8 @@ class GrpcClient
             CURLOPT_CONNECTTIMEOUT => $timeout,
             CURLOPT_SSL_VERIFYPEER => $verify,
             CURLOPT_SSL_VERIFYHOST => $verify ? 2 : 0,
+            // Pinned address for this host:port, when the guard supplied one.
+            ...($pin['curl'] ?? []),
             CURLOPT_HEADERFUNCTION => function ($ch, $line) use (&$respHeaders) {
                 $trimmed = trim($line);
                 if ($trimmed !== '' && str_contains($trimmed, ':')) {

@@ -4,6 +4,7 @@ namespace App\Services\Amqp;
 
 use PhpAmqpLib\Connection\AbstractConnection;
 use PhpAmqpLib\Connection\AMQPSSLConnection;
+use App\Services\Security\SsrfGuard;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 
@@ -25,8 +26,11 @@ class AmqpTester
      * @param  (callable(array): AbstractConnection)|null  $connectionFactory
      *   Optional factory (opts) => connection, for testing.
      */
-    public function __construct(protected $connectionFactory = null)
-    {
+    public function __construct(
+        protected $connectionFactory = null,
+        protected ?SsrfGuard $guard = null,
+    ) {
+        $this->guard ??= new SsrfGuard;
     }
 
     /**
@@ -44,7 +48,13 @@ class AmqpTester
         $action = $opts['action'] ?? 'publish';
         $maxMessages = max(1, min(self::MAX_MESSAGES, (int) ($opts['max_messages'] ?? 10)));
 
-        $connection = $this->makeConnection($opts);
+        // Validate before any connection is attempted, and outside
+        // makeConnection() so an injected factory cannot bypass the guard.
+        // Null means pinning does not apply (IP literal, or DNS resolution
+        // disabled) and the host is used as given.
+        $pinnedAddress = $this->guard->validatedAddress($opts['host']);
+
+        $connection = $this->makeConnection($opts, $pinnedAddress);
         $channel = $connection->channel();
 
         $published = false;
@@ -104,7 +114,7 @@ class AmqpTester
         ];
     }
 
-    protected function makeConnection(array $opts): AbstractConnection
+    protected function makeConnection(array $opts, ?string $pinnedAddress = null): AbstractConnection
     {
         if ($this->connectionFactory !== null) {
             return ($this->connectionFactory)($opts);
@@ -113,6 +123,11 @@ class AmqpTester
         $tls = (bool) ($opts['tls'] ?? false);
         $host = $opts['host'];
         $port = (int) ($opts['port'] ?? ($tls ? 5671 : 5672));
+
+        // Connect to the validated address rather than the name, so the
+        // broker's DNS cannot point somewhere internal between validation and
+        // connection.
+        $address = $pinnedAddress ?? $host;
         $user = (string) ($opts['username'] ?? 'guest');
         $password = (string) ($opts['password'] ?? 'guest');
         $vhost = (string) ($opts['vhost'] ?? '/');
@@ -120,17 +135,20 @@ class AmqpTester
 
         if ($tls) {
             $sslOptions = ($opts['tls_verify'] ?? true)
-                ? []
+                // Verify the certificate against the HOSTNAME even though we
+                // connect to the pinned address — otherwise the cert would be
+                // checked against an IP and never match.
+                ? ['peer_name' => $host, 'SNI_enabled' => true]
                 : ['verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true];
 
-            return new AMQPSSLConnection($host, $port, $user, $password, $vhost, $sslOptions, [
+            return new AMQPSSLConnection($address, $port, $user, $password, $vhost, $sslOptions, [
                 'connection_timeout' => $timeout,
                 'read_write_timeout' => $timeout,
             ]);
         }
 
         return new AMQPStreamConnection(
-            $host, $port, $user, $password, $vhost,
+            $address, $port, $user, $password, $vhost,
             false, 'AMQPLAIN', null, 'en_US', $timeout, $timeout,
         );
     }

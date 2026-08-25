@@ -86,4 +86,31 @@ class MqttTestControllerTest extends TestCase
             'action' => 'nonsense',
         ])->assertStatus(422)->assertJsonValidationErrors(['topic', 'action']);
     }
+
+    public function test_client_id_may_be_omitted(): void
+    {
+        // client_id is nullable in the controller, so Laravel drops the key
+        // entirely when it is not sent. Reading it without a default raised
+        // "Undefined array key" and failed the whole request.
+        $captured = null;
+
+        $client = \Mockery::mock(\PhpMqtt\Client\Contracts\MqttClient::class)->shouldIgnoreMissing();
+        $client->shouldReceive('publish')->once();
+
+        $tester = new MqttTester(function (string $host, int $port, string $clientId) use (&$captured, $client) {
+            $captured = $clientId;
+
+            return $client;
+        });
+
+        $result = $tester->run([
+            'host' => 'broker.example.com',
+            'action' => 'publish',
+            'topic' => 'sensors/temp',
+            'message' => 'hi',
+        ]);
+
+        $this->assertTrue($result['published']);
+        $this->assertStringStartsWith('apispi-', $captured, 'A client id should be generated when none is given.');
+    }
 }

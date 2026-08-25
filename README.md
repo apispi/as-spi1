@@ -240,10 +240,15 @@ cookie).
   public at validation and private at connection time) is closed for http(s)
   traffic by `App\Services\Security\SsrfGuard`, which resolves the host, checks
   every address, and pins the validated IP into the connection via
-  `CURLOPT_RESOLVE` so cURL cannot re-resolve — applied by the proxy, MCP, and
-  A2A clients. The socket-based testers (gRPC/MQTT/AMQP) validate the host but
-  do not yet pin, so remain subject to rebinding; pinning requires the curl
-  HTTP handler (present on the server).
+  `CURLOPT_RESOLVE` so cURL cannot re-resolve — applied by the proxy, MCP, A2A,
+  and gRPC clients (gRPC rides on cURL too). The socket testers pin differently
+  because they cannot use `CURLOPT_RESOLVE`: `SsrfGuard::validatedAddress()`
+  returns a checked IP, MQTT and AMQP connect to **that address** while
+  verifying TLS against the original **hostname** via `peer_name`, so the
+  certificate is still checked against the name the user asked for. php-mqtt
+  builds its own stream context with no `peer_name` hook, so
+  `App\Services\Mqtt\PinnedMqttClient` overrides socket creation to supply
+  one.
 - **Noncanonical hosts:** host checks canonicalise before comparing
   (`ChecksHostRoutability::canonicalHost`) — lowercase, strip brackets, drop
   the trailing DNS root dot. Without that, `http://127.0.0.1./` matched

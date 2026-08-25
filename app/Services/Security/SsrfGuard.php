@@ -101,4 +101,61 @@ class SsrfGuard
 
         return ['curl' => [CURLOPT_RESOLVE => [$entry]]];
     }
+
+    /**
+     * A validated IP to connect to instead of $host, for socket-based clients
+     * that cannot use CURLOPT_RESOLVE.
+     *
+     * Returns null when pinning does not apply and the caller should connect
+     * to the host as given: DNS resolution disabled (test environment), or the
+     * host is already an IP literal, which cannot rebind.
+     *
+     * Callers that enable TLS must keep the original hostname for SNI and
+     * certificate verification — connecting to the address while verifying
+     * against the name is the whole point.
+     *
+     * @throws SsrfException when the host is blocked, unresolvable, or points
+     *                       anywhere non-public.
+     */
+    public function validatedAddress(string $host): ?string
+    {
+        $canonical = $this->canonicalHost($host);
+
+        if ($canonical === '') {
+            throw new SsrfException('No host to validate.');
+        }
+
+        if (in_array($canonical, $this->blockedHostnames(), true) || str_ends_with($canonical, '.local')) {
+            throw new SsrfException('Refusing to connect to a blocked internal host.');
+        }
+
+        if (filter_var($canonical, FILTER_VALIDATE_IP)) {
+            if (! $this->isPublicIp($canonical)) {
+                throw new SsrfException('Refusing to connect to a private, loopback, or reserved IP.');
+            }
+
+            // Already an address: there is no name left to re-resolve.
+            return null;
+        }
+
+        if (! $this->shouldResolve()) {
+            return null;
+        }
+
+        $addresses = $this->resolve($canonical);
+
+        if ($addresses === []) {
+            throw new SsrfException('Host could not be resolved.');
+        }
+
+        foreach ($addresses as $address) {
+            if (! $this->isPublicIp($address)) {
+                throw new SsrfException('Host resolves to a private, loopback, or reserved IP address.');
+            }
+        }
+
+        // Every address checked out; connect to the first and never resolve
+        // the name again.
+        return $addresses[0];
+    }
 }

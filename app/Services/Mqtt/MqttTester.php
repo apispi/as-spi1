@@ -4,6 +4,7 @@ namespace App\Services\Mqtt;
 
 use PhpMqtt\Client\ConnectionSettings;
 use PhpMqtt\Client\Contracts\MqttClient as MqttClientContract;
+use App\Services\Security\SsrfGuard;
 use PhpMqtt\Client\MqttClient;
 
 /**
@@ -27,8 +28,11 @@ class MqttTester
      * @param  (callable(string, int, string): MqttClientContract)|null  $clientFactory
      *   Optional factory (host, port, clientId) => client, for testing.
      */
-    public function __construct(protected $clientFactory = null)
-    {
+    public function __construct(
+        protected $clientFactory = null,
+        protected ?SsrfGuard $guard = null,
+    ) {
+        $this->guard ??= new SsrfGuard;
     }
 
     /**
@@ -43,15 +47,28 @@ class MqttTester
     public function run(array $opts): array
     {
         $host = $opts['host'];
+
+        // Validate before anything else: nothing about an unsafe request
+        // should be prepared, let alone connected.
+        //
+        // Connect to the address the guard validated rather than the name, so
+        // the broker's DNS cannot point somewhere internal between validation
+        // and connection. Null means pinning does not apply (IP literal, or
+        // DNS resolution disabled).
+        $address = $this->guard->validatedAddress($host);
+
         $port = (int) ($opts['port'] ?? ($opts['tls'] ?? false ? 8883 : 1883));
         $action = $opts['action'] ?? 'publish';
         $topic = $opts['topic'];
         $qos = max(0, min(2, (int) ($opts['qos'] ?? 0)));
         $timeout = max(1, min(self::MAX_TIMEOUT, (int) ($opts['timeout'] ?? 5)));
         $maxMessages = max(1, min(self::MAX_MESSAGES, (int) ($opts['max_messages'] ?? 10)));
-        $clientId = $opts['client_id'] ?: 'apispi-'.bin2hex(random_bytes(6));
+        $clientId = ($opts['client_id'] ?? null) ?: 'apispi-'.bin2hex(random_bytes(6));
 
-        $client = $this->makeClient($host, $port, $clientId);
+        $client = $this->makeClient($host, $port, $clientId, $address, [
+            'enabled' => (bool) ($opts['tls'] ?? false),
+            'verify' => (bool) ($opts['tls_verify'] ?? true),
+        ], $timeout);
 
         $settings = (new ConnectionSettings)
             ->setConnectTimeout($timeout)
