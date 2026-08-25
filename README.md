@@ -129,9 +129,16 @@ steps reference as `{{token}}`. Resolution happens per step, immediately
 before sending, which is what makes that threading work.
 
 `App\Services\Collections\RequestExecutor` applies the same SSRF validation
-and IP pinning as the interactive testers. Socket protocols (gRPC, MQTT, AMQP)
-are reported as unsupported in runs rather than half-run — they need
-per-connection credentials a collection cannot supply yet.
+and IP pinning as the interactive testers, for every protocol — gRPC, MQTT,
+and AMQP included. Their connection details (host, topic, credentials) live in
+the saved request's `params` and are resolved from the environment before the
+step runs, so a broker password can be a secret `{{variable}}` instead of
+plaintext on the row.
+
+Those protocols have no HTTP status, so the whole tester result becomes the
+assertion body — exactly as the tester UI normalises it, so an assertion means
+the same thing interactively and in a run. Assert on `grpc_status`,
+`published`, `message_count`, or `messages.0.message` rather than `status`.
 
 Runs stop at the first failure unless the collection sets
 `continue_on_failure`; remaining steps are reported as skipped. Every run is

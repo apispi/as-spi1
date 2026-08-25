@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\InspectionReport;
 use App\Models\User;
+use App\Services\Grpc\GrpcClient;
+use App\Services\Mqtt\MqttTester;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -202,16 +204,121 @@ class CollectionRunnerTest extends TestCase
             ->assertJsonPath('steps.0.passed', false);
     }
 
-    public function test_socket_protocols_are_reported_as_unsupported_rather_than_half_run(): void
+    /** Bind a fake MQTT tester and capture the options it is run with. */
+    private function fakeMqtt(?array &$captured = null): void
     {
+        $this->app->instance(MqttTester::class, new class($captured) extends MqttTester
+        {
+            public function __construct(private &$captured)
+            {
+                parent::__construct();
+            }
+
+            public function run(array $opts): array
+            {
+                $this->captured = $opts;
+
+                return [
+                    'broker' => $opts['host'].':'.($opts['port'] ?? 1883),
+                    'action' => $opts['action'],
+                    'topic' => $opts['topic'] ?? '',
+                    'published' => true,
+                    'messages' => [['topic' => $opts['topic'] ?? '', 'message' => 'pong']],
+                    'message_count' => 1,
+                ];
+            }
+        });
+    }
+
+    public function test_a_broker_step_runs_and_its_result_can_be_asserted_on(): void
+    {
+        $this->fakeMqtt();
+
         $user = User::factory()->create();
-        $step = $this->saved($user, ['protocol' => 'mqtt', 'url' => 'broker.example.com']);
+        $step = $this->saved($user, [
+            'name' => 'Publish',
+            'protocol' => 'mqtt',
+            'method' => 'publish',
+            'url' => 'broker.example.com',
+            'params' => ['host' => 'broker.example.com', 'action' => 'publish', 'topic' => 'sensors/temp'],
+            // The whole tester result is the body, so protocol-level outcomes
+            // are asserted on it.
+            'assertions' => [
+                ['path' => 'published', 'operator' => 'equals', 'expected' => 'true'],
+                ['path' => 'message_count', 'operator' => 'equals', 'expected' => 1],
+                ['path' => 'messages.0.message', 'operator' => 'equals', 'expected' => 'pong'],
+            ],
+        ]);
         $collection = $this->collection($user, [['id' => $step->id]]);
 
-        $response = $this->actingAs($user)->postJson("/api/collections/{$collection->id}/run")
-            ->assertStatus(422);
+        $this->actingAs($user)->postJson("/api/collections/{$collection->id}/run")
+            ->assertOk()
+            ->assertJsonPath('passed', true)
+            ->assertJsonPath('steps.0.assertions.passed_count', 3);
+    }
 
-        $this->assertStringContainsString('mqtt', $response->json('steps.0.error'));
+    public function test_broker_credentials_resolve_from_the_environment_and_are_masked(): void
+    {
+        $captured = null;
+        $this->fakeMqtt($captured);
+
+        $user = User::factory()->create();
+        $env = $user->environments()->create([
+            'name' => 'Prod',
+            'variables' => [
+                ['key' => 'broker', 'value' => 'broker.example.com', 'secret' => false],
+                ['key' => 'broker_password', 'value' => 'super-secret-value', 'secret' => true],
+            ],
+        ]);
+
+        $step = $this->saved($user, [
+            'name' => 'Publish',
+            'protocol' => 'mqtt',
+            'method' => 'publish',
+            'url' => '{{broker}}',
+            'params' => [
+                'host' => '{{broker}}',
+                'action' => 'publish',
+                'topic' => 'sensors/temp',
+                'username' => 'sensor',
+                'password' => '{{broker_password}}',
+            ],
+        ]);
+        $collection = $this->collection($user, [['id' => $step->id]]);
+
+        $response = $this->actingAs($user)->postJson("/api/collections/{$collection->id}/run", [
+            'environment_id' => $env->id,
+        ])->assertOk();
+
+        // The broker receives the real credential...
+        $this->assertSame('broker.example.com', $captured['host']);
+        $this->assertSame('super-secret-value', $captured['password']);
+
+        // ...but a run is a shareable report, so it must not appear there.
+        $this->assertStringNotContainsString('super-secret-value', $response->getContent());
+    }
+
+    public function test_an_unsafe_broker_host_is_refused_before_connecting(): void
+    {
+        $this->app->instance(MqttTester::class, new class extends MqttTester
+        {
+            public function run(array $opts): array
+            {
+                throw new \RuntimeException('A connection was attempted for an unsafe host.');
+            }
+        });
+
+        $user = User::factory()->create();
+        $step = $this->saved($user, [
+            'protocol' => 'mqtt',
+            'url' => '127.0.0.1',
+            'params' => ['host' => '127.0.0.1', 'action' => 'publish', 'topic' => 'x'],
+        ]);
+        $collection = $this->collection($user, [['id' => $step->id]]);
+
+        $this->actingAs($user)->postJson("/api/collections/{$collection->id}/run")
+            ->assertStatus(422)
+            ->assertJsonPath('steps.0.passed', false);
     }
 
     public function test_an_empty_collection_is_rejected(): void
@@ -247,5 +354,55 @@ class CollectionRunnerTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->postJson("/api/collections/{$collection->id}/run")
             ->assertStatus(404);
+    }
+
+    public function test_a_grpc_step_runs_and_exposes_its_status_for_assertions(): void
+    {
+        $captured = null;
+        $this->app->instance(GrpcClient::class, new class($captured) extends GrpcClient
+        {
+            public function __construct(private &$captured)
+            {
+                parent::__construct();
+            }
+
+            public function unary(array $opts): array
+            {
+                $this->captured = $opts;
+
+                return [
+                    'ok' => true,
+                    'method' => $opts['service_method'],
+                    'http_status' => 200,
+                    'grpc_status' => 0,
+                    'grpc_status_name' => 'OK',
+                    'response' => ['message' => 'hello'],
+                    'metadata' => ['content-type' => 'application/grpc'],
+                ];
+            }
+        });
+
+        $user = User::factory()->create();
+        $step = $this->saved($user, [
+            'name' => 'Greet',
+            'protocol' => 'grpc',
+            // The saved request keeps the service/method in `method`; params
+            // may omit it, so the executor falls back to that.
+            'method' => 'helloworld.Greeter/SayHello',
+            'url' => 'grpc.example.com',
+            'params' => ['host' => 'grpc.example.com', 'request' => []],
+            'assertions' => [
+                ['path' => 'grpc_status', 'operator' => 'equals', 'expected' => 0],
+                ['path' => 'response.message', 'operator' => 'equals', 'expected' => 'hello'],
+            ],
+        ]);
+        $collection = $this->collection($user, [['id' => $step->id]]);
+
+        $this->actingAs($user)->postJson("/api/collections/{$collection->id}/run")
+            ->assertOk()
+            ->assertJsonPath('passed', true)
+            ->assertJsonPath('steps.0.assertions.passed_count', 2);
+
+        $this->assertSame('helloworld.Greeter/SayHello', $captured['service_method']);
     }
 }

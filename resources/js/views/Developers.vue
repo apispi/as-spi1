@@ -207,9 +207,13 @@
           <code v-pre>{{variables}}</code> for later steps, so a login step can
           hand a token to everything after it. Steps run top to bottom and stop
           at the first failure unless the collection sets
-          <code>continue_on_failure</code>. gRPC, MQTT, and AMQP steps are
-          reported as unsupported in runs — they need per-connection
-          credentials a collection cannot supply yet.
+          <code>continue_on_failure</code>. Every protocol runs, including
+          gRPC, MQTT, and AMQP: their connection details live in the saved
+          request and resolve from the environment, so a broker password can be
+          a secret <code v-pre>{{variable}}</code> rather than a stored
+          plaintext. These have no HTTP status, so assert on the result body
+          instead — <code>grpc_status</code>, <code>published</code>,
+          <code>message_count</code>, <code>messages.0.message</code>.
         </p>
       </section>
 
