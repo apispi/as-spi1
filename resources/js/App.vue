@@ -55,22 +55,28 @@
 
       <!-- Sidebar -->
       <aside class="sidebar">
-        <nav class="nav">
+        <!-- The admin area replaces the workspace nav rather than adding to
+             it: inside admin you see admin sections only, with one link back
+             so you are never stranded. -->
+        <nav class="nav" v-if="inAdminArea">
+          <span class="nav-label">Admin</span>
+          <router-link v-for="item in adminNav" :key="item.to" :to="item.to" class="nav-link" @click="closeOnMobile">
+            <Icon :name="item.icon" :size="18" />
+            <span>{{ item.label }}</span>
+          </router-link>
+
+          <router-link to="/dashboard" class="nav-link nav-leave" @click="closeOnMobile">
+            <Icon name="arrowRight" :size="18" class="nav-leave-icon" />
+            <span>Leave admin</span>
+          </router-link>
+        </nav>
+
+        <nav class="nav" v-else>
           <span class="nav-label">Workspace</span>
           <router-link v-for="item in workspaceNav" :key="item.to" :to="item.to" class="nav-link" @click="closeOnMobile">
             <Icon :name="item.icon" :size="18" />
             <span>{{ item.label }}</span>
           </router-link>
-
-          <!-- The admin area is its own section: its nav appears only while
-               you are inside it, reached from the profile menu. -->
-          <template v-if="inAdminArea">
-            <span class="nav-label">Admin</span>
-            <router-link v-for="item in adminNav" :key="item.to" :to="item.to" class="nav-link" @click="closeOnMobile">
-              <Icon :name="item.icon" :size="18" />
-              <span>{{ item.label }}</span>
-            </router-link>
-          </template>
         </nav>
 
         <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener" class="nav-foot">
@@ -268,6 +274,10 @@ const handleLogout = async () => {
 }
 .nav-link:hover { background: var(--border-color); color: var(--text-primary); }
 .nav-link.router-link-active { background: var(--accent-soft); color: var(--accent-color); font-weight: 600; }
+/* Leaving admin is a way out, not a section — set apart from the list above. */
+.nav-leave { margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 14px; color: var(--text-secondary); }
+.nav-leave.router-link-active { background: none; color: var(--text-secondary); font-weight: 400; }
+.nav-leave-icon { transform: rotate(180deg); }
 .nav-foot {
   display: flex; align-items: center; gap: 9px; margin: 8px 12px 14px;
   padding: 9px 10px; border-radius: 8px; font-size: 13px;

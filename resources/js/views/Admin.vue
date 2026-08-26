@@ -3,7 +3,7 @@
     <div class="admin-header">
       <div class="header-left">
         <h2>Admin Dashboard</h2>
-        <router-link to="/" class="back-link">← Back to Tester</router-link>
+        <router-link to="/dashboard" class="back-link">← Back to workspace</router-link>
       </div>
     </div>
 

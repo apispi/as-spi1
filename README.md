@@ -116,9 +116,9 @@ live: a tab each for saved requests, collections, and request history. Opening
 a saved request hands it to the tester through the requests store, so the
 tester itself stays a single-purpose two-pane view with no sidebar.
 
-The **admin area** is separate: it is reached from the profile menu, and its
-nav appears in the sidebar only while you are inside it, so admin sections
-never sit alongside the workspace ones. It has five sections — **Users**
+The **admin area** is separate: it is reached from the profile menu, and
+inside it the sidebar shows admin sections only — the workspace nav is
+replaced entirely, with a "Leave admin" link back to the dashboard. It has five sections — **Users**
 (`/admin`, with a detail page per user at `/admin/users/{id}`),
 **Organisations**, **Monitoring** (every monitor in the workspace, failing
 first), **Catalog**, and **Active**.
