@@ -110,12 +110,19 @@ class AdminControllerTest extends TestCase
 
         $this->actingAs($admin)->deleteJson("/api/admin/users/{$target->id}")->assertStatus(200);
 
-        $this->assertDatabaseMissing('users', ['id' => $target->id]);
+        // An admin delete is now reversible: the account is deactivated and
+        // its data kept, so it can be restored. Permanent removal is a
+        // separate action (see AdminUserLifecycleTest).
+        $this->assertSoftDeleted('users', ['id' => $target->id]);
 
         $entry = AdminAction::where('action', 'delete_user')->first();
         $this->assertNotNull($entry);
         $this->assertSame($target->email, $entry->target_email);
-        $this->assertSame(1, $entry->details['saved_requests_deleted']);
+        // A soft delete removes nothing, so the entry records the mode rather
+        // than a count of destroyed records — which is what the hard-delete
+        // entry carries.
+        $this->assertSame('soft', $entry->details['mode']);
+        $this->assertDatabaseHas('saved_requests', ['user_id' => $target->id]);
     }
 
     public function test_actions_endpoint_returns_the_audit_log(): void

@@ -6,6 +6,9 @@ use App\Models\AdminAction;
 use App\Models\RequestHistory;
 use App\Models\SavedRequest;
 use App\Models\User;
+use App\Models\InspectionReport;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -20,10 +23,14 @@ class AdminController extends Controller
             'search' => 'nullable|string|max:255',
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:100',
+            // active (default) | trashed | all
+            'filter' => 'nullable|string|in:active,trashed,all',
         ]);
 
         $query = User::with('organisation:id,name')
             ->withCount('savedRequests')
+            ->when(($validated['filter'] ?? 'active') === 'trashed', fn ($q) => $q->onlyTrashed())
+            ->when(($validated['filter'] ?? 'active') === 'all', fn ($q) => $q->withTrashed())
             ->orderBy('created_at', 'desc');
 
         if (! empty($validated['search'])) {
@@ -43,6 +50,7 @@ class AdminController extends Controller
                 'email' => $user->email,
                 'is_admin' => $user->is_admin,
                 'email_verified' => $user->email_verified_at !== null,
+                'deleted_at' => $user->deleted_at?->toDateTimeString(),
                 'saved_requests_count' => $user->saved_requests_count,
                 'organisation' => $user->organisation
                     ? ['id' => $user->organisation->id, 'name' => $user->organisation->name]
@@ -137,7 +145,8 @@ class AdminController extends Controller
      */
     public function user(Request $request, int $id)
     {
-        $user = User::with('organisation:id,name')
+        $user = User::withTrashed()
+            ->with('organisation:id,name')
             ->withCount(['savedRequests', 'requestHistories', 'environments', 'collections', 'monitors'])
             ->findOrFail($id);
 
@@ -157,6 +166,7 @@ class AdminController extends Controller
                     : null,
                 'created_at' => $user->created_at?->toDateTimeString(),
                 'updated_at' => $user->updated_at?->toDateTimeString(),
+                'deleted_at' => $user->deleted_at?->toDateTimeString(),
             ],
             'counts' => [
                 'saved_requests' => $user->saved_requests_count,
@@ -189,6 +199,7 @@ class AdminController extends Controller
 
         AdminAction::create([
             'admin_id' => $request->user()->id,
+            'admin_email' => $request->user()->email,
             'action' => $validated['organisation_id'] ? 'assign_organisation' : 'unassign_organisation',
             'target_user_id' => $user->id,
             'target_email' => $user->email,
@@ -211,6 +222,7 @@ class AdminController extends Controller
 
         AdminAction::create([
             'admin_id' => $request->user()->id,
+            'admin_email' => $request->user()->email,
             'action' => $user->is_admin ? 'promote_admin' : 'demote_admin',
             'target_user_id' => $user->id,
             'target_email' => $user->email,
@@ -229,6 +241,54 @@ class AdminController extends Controller
     /**
      * Delete a user.
      */
+    /**
+     * Create an account directly, for onboarding someone without waiting on
+     * the email-verification flow.
+     */
+    public function storeUser(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            // email:filter, not the default rule, which accepts a quoted local
+            // part containing CRLF (GHSA-5vg9-5847-vvmq).
+            'email' => ['required', 'string', 'email:filter', 'max:255', Rule::unique('users', 'email')->withoutTrashed()],
+            'password' => 'required|string|min:12',
+            'is_admin' => 'nullable|boolean',
+            'organisation_id' => 'nullable|integer|exists:organisations,id',
+        ]);
+
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => strtolower($validated['email']),
+            'password' => Hash::make($validated['password']),
+            'is_admin' => (bool) ($validated['is_admin'] ?? false),
+            'organisation_id' => $validated['organisation_id'] ?? null,
+        ]);
+
+        // Not mass-assignable, so it has to be set explicitly. Created by an
+        // admin, so the address counts as already confirmed.
+        $user->forceFill(['email_verified_at' => now()])->save();
+
+        AdminAction::create([
+            'admin_id' => $request->user()->id,
+            'admin_email' => $request->user()->email,
+            'action' => 'create_user',
+            'target_user_id' => $user->id,
+            'target_email' => $user->email,
+            'details' => ['as_admin' => (bool) $user->is_admin],
+        ]);
+
+        return response()->json([
+            'message' => 'User created.',
+            'user' => ['id' => $user->id, 'name' => $user->name, 'email' => $user->email],
+        ], 201);
+    }
+
+    /**
+     * Soft delete: the account is locked out (soft-deleted users are excluded
+     * from every query, including the auth provider) but everything they own
+     * is kept, so a restore brings the account back intact.
+     */
     public function deleteUser(Request $request, $id)
     {
         $user = User::findOrFail($id);
@@ -237,22 +297,87 @@ class AdminController extends Controller
             return response()->json(['message' => 'You cannot delete yourself.'], 422);
         }
 
-        $savedRequestCount = $user->savedRequests()->count();
-
         AdminAction::create([
             'admin_id' => $request->user()->id,
+            'admin_email' => $request->user()->email,
             'action' => 'delete_user',
             'target_user_id' => $user->id,
             'target_email' => $user->email,
             'details' => [
                 'name' => $user->name,
                 'was_admin' => (bool) $user->is_admin,
-                'saved_requests_deleted' => $savedRequestCount,
+                'mode' => 'soft',
             ],
         ]);
 
         $user->delete();
 
-        return response()->json(['message' => 'User deleted.']);
+        return response()->json(['message' => 'User deactivated. Their data is kept and can be restored.']);
+    }
+
+    public function restoreUser(Request $request, $id)
+    {
+        $user = User::onlyTrashed()->findOrFail($id);
+
+        $user->restore();
+
+        AdminAction::create([
+            'admin_id' => $request->user()->id,
+            'admin_email' => $request->user()->email,
+            'action' => 'restore_user',
+            'target_user_id' => $user->id,
+            'target_email' => $user->email,
+        ]);
+
+        return response()->json(['message' => 'User restored.']);
+    }
+
+    /**
+     * Hard delete: the account and everything it owns, permanently.
+     *
+     * The owned tables all cascade on delete, so the database does the work;
+     * the counts are gathered first purely so the audit entry records what
+     * went. The audit log itself is deliberately NOT owned data — entries
+     * about this user survive, and entries they wrote as an admin keep their
+     * email snapshot.
+     */
+    public function forceDeleteUser(Request $request, $id)
+    {
+        $user = User::withTrashed()->findOrFail($id);
+
+        if ($user->id === $request->user()->id) {
+            return response()->json(['message' => 'You cannot delete yourself.'], 422);
+        }
+
+        $deleted = [
+            'saved_requests' => $user->savedRequests()->count(),
+            'request_histories' => $user->requestHistories()->count(),
+            'environments' => $user->environments()->count(),
+            'collections' => $user->collections()->count(),
+            'monitors' => $user->monitors()->count(),
+            'alert_channels' => $user->alertChannels()->count(),
+            'reports' => InspectionReport::where('user_id', $user->id)->count(),
+        ];
+
+        AdminAction::create([
+            'admin_id' => $request->user()->id,
+            'admin_email' => $request->user()->email,
+            'action' => 'force_delete_user',
+            'target_user_id' => $user->id,
+            'target_email' => $user->email,
+            'details' => [
+                'name' => $user->name,
+                'was_admin' => (bool) $user->is_admin,
+                'mode' => 'hard',
+                'deleted' => $deleted,
+            ],
+        ]);
+
+        $user->forceDelete();
+
+        return response()->json([
+            'message' => 'User and all associated records permanently deleted.',
+            'deleted' => $deleted,
+        ]);
     }
 }

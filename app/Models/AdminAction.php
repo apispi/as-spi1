@@ -8,6 +8,7 @@ class AdminAction extends Model
 {
     protected $fillable = [
         'admin_id',
+        'admin_email',
         'action',
         'target_user_id',
         'target_email',

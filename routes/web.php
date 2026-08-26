@@ -168,5 +168,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/api/admin/catalog/{catalogItem}/security-scan', [McpSecurityController::class, 'scanConnector']);
     Route::post('/api/admin/catalog/{catalogItem}/agent-loop', [AgentLoopController::class, 'run']);
     Route::post('/api/admin/users/{id}/toggle-admin', [AdminController::class, 'toggleAdmin']);
+    Route::post('/api/admin/users', [AdminController::class, 'storeUser']);
     Route::delete('/api/admin/users/{id}', [AdminController::class, 'deleteUser']);
+    Route::delete('/api/admin/users/{id}/force', [AdminController::class, 'forceDeleteUser']);
+    Route::post('/api/admin/users/{id}/restore', [AdminController::class, 'restoreUser']);
 });

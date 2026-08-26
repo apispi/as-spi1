@@ -79,6 +79,12 @@
     <div class="users-section">
       <div class="section-header">
         <h3>All Users</h3>
+        <button class="action-btn create-btn" @click="startCreate">+ New user</button>
+        <select class="search-input filter-select" v-model="filter" @change="fetchUsers">
+          <option value="active">Active</option>
+          <option value="trashed">Deactivated</option>
+          <option value="all">All</option>
+        </select>
         <input
           type="text"
           class="search-input"
@@ -102,7 +108,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="user in users" :key="user.id" class="user-row" @click="openUser(user)">
+            <tr v-for="user in users" :key="user.id" class="user-row" :class="{ trashed: user.deleted_at }" @click="openUser(user)">
               <td class="id-col">{{ user.id }}</td>
               <td><span class="user-name-link">{{ user.name }}</span></td>
               <td class="email-col">{{ user.email }}</td>
@@ -116,6 +122,13 @@
               <td class="count-col">{{ user.saved_requests_count }}</td>
               <td class="date-col">{{ formatDate(user.created_at) }}</td>
               <td class="actions-col">
+                <template v-if="user.deleted_at">
+                  <button class="action-btn toggle-btn" @click.stop="restoreUser(user)">Restore</button>
+                  <button class="action-btn delete-btn" @click.stop="hardDeleteUser(user)" :disabled="isCurrentUser(user)">
+                    Delete forever
+                  </button>
+                </template>
+                <template v-else>
                 <button 
                   class="action-btn toggle-btn" 
                   @click.stop="toggleAdmin(user)"
@@ -130,8 +143,9 @@
                   :disabled="isCurrentUser(user)"
                   title="Delete user"
                 >
-                  Delete
+                  Deactivate
                 </button>
+                </template>
               </td>
             </tr>
           </tbody>
@@ -178,6 +192,45 @@
 
     <div v-if="message" class="toast" :class="messageType">{{ message }}</div>
   </div>
+    <div v-if="creating" class="au-scrim" @click.self="creating = null">
+      <div class="au-modal">
+        <header class="au-modal-head">
+          <h2>New user</h2>
+          <button class="au-x" @click="creating = null" aria-label="Close">✕</button>
+        </header>
+        <div class="au-form">
+          <label class="au-label">Name</label>
+          <input v-model="creating.name" class="search-input au-input" maxlength="255" />
+
+          <label class="au-label">Email</label>
+          <input v-model="creating.email" class="search-input au-input" type="email" autocomplete="off" />
+
+          <label class="au-label">Password</label>
+          <input v-model="creating.password" class="search-input au-input" type="password" autocomplete="new-password" />
+          <p class="au-hint">At least 12 characters. The account is created verified, so they can sign in straight away.</p>
+
+          <label class="au-label">Organisation</label>
+          <select v-model="creating.organisation_id" class="search-input au-input">
+            <option :value="null">Not assigned</option>
+            <option v-for="o in organisations" :key="o.id" :value="o.id">{{ o.name }}</option>
+          </select>
+
+          <label class="au-check">
+            <input type="checkbox" v-model="creating.is_admin" />
+            <span>Grant admin access</span>
+          </label>
+
+          <p v-if="createError" class="au-error">{{ createError }}</p>
+
+          <footer class="au-actions">
+            <button class="action-btn create-btn" @click="createUser" :disabled="savingUser">
+              {{ savingUser ? 'Creating…' : 'Create user' }}
+            </button>
+            <button class="action-btn" @click="creating = null" :disabled="savingUser">Cancel</button>
+          </footer>
+        </div>
+      </div>
+    </div>
 </template>
 
 <script setup>
@@ -195,6 +248,11 @@ const isLoading = ref(true);
 const message = ref('');
 const messageType = ref('success');
 const search = ref('');
+const filter = ref('active');
+const creating = ref(null);
+const savingUser = ref(false);
+const createError = ref('');
+const organisations = ref([]);
 const page = ref(1);
 const lastPage = ref(1);
 const totalUsers = ref(0);
@@ -261,7 +319,7 @@ const fetchData = async () => {
   isLoading.value = true;
   try {
     const [usersRes, statsRes, actionsRes, connectorsRes] = await Promise.all([
-      axios.get('/api/admin/users', { params: { page: page.value, search: search.value || undefined } }),
+      axios.get('/api/admin/users', { params: { page: page.value, search: search.value || undefined, filter: filter.value } }),
       axios.get('/api/admin/stats'),
       axios.get('/api/admin/actions'),
       axios.get('/api/admin/catalog', { params: { type: 'connector' } })
@@ -303,16 +361,83 @@ const toggleAdmin = async (user) => {
   }
 };
 
+// Soft delete: reversible, and the account's data is untouched.
 const deleteUser = async (user) => {
   if (isCurrentUser(user)) return;
-  const extra = user.saved_requests_count > 0 ? ` Their ${user.saved_requests_count} saved request(s) will also be deleted.` : '';
-  if (!confirm(`Are you sure you want to delete "${user.name}" (${user.email})?${extra} This cannot be undone.`)) return;
+  if (!confirm(`Deactivate "${user.name}" (${user.email})?\n\nThey will not be able to sign in. Their data is kept and you can restore them later.`)) return;
   try {
-    await axios.delete(`/api/admin/users/${user.id}`);
-    showMessage('User deleted successfully.');
+    const res = await axios.delete(`/api/admin/users/${user.id}`);
+    showMessage(res.data.message);
+    await fetchData();
+  } catch (error) {
+    showMessage(error.response?.data?.message || 'Failed to deactivate user.', 'error');
+  }
+};
+
+const restoreUser = async (user) => {
+  try {
+    await axios.post(`/api/admin/users/${user.id}/restore`);
+    showMessage('User restored.');
+    await fetchData();
+  } catch (error) {
+    showMessage(error.response?.data?.message || 'Failed to restore user.', 'error');
+  }
+};
+
+// Hard delete: irreversible, and takes everything the user owns with it.
+// Typing the email is deliberate friction for an action with no undo.
+const hardDeleteUser = async (user) => {
+  if (isCurrentUser(user)) return;
+  const typed = prompt(
+    `PERMANENTLY delete "${user.name}" and everything they own — saved requests, collections, environments, monitors, alert channels and reports.\n\nThis cannot be undone.\n\nType their email to confirm:`
+  );
+  if (typed === null) return;
+  if (typed.trim().toLowerCase() !== user.email.toLowerCase()) {
+    showMessage('That did not match the email. Nothing was deleted.', 'error');
+    return;
+  }
+  try {
+    const res = await axios.delete(`/api/admin/users/${user.id}/force`);
+    const counts = Object.entries(res.data.deleted || {})
+      .filter(([, n]) => n > 0)
+      .map(([k, n]) => `${n} ${k.replace(/_/g, ' ')}`)
+      .join(', ');
+    showMessage(counts ? `User deleted, along with ${counts}.` : 'User permanently deleted.');
     await fetchData();
   } catch (error) {
     showMessage(error.response?.data?.message || 'Failed to delete user.', 'error');
+  }
+};
+
+const startCreate = async () => {
+  createError.value = '';
+  creating.value = { name: '', email: '', password: '', is_admin: false, organisation_id: null };
+  try {
+    organisations.value = (await axios.get('/api/admin/organisations')).data.organisations;
+  } catch {
+    organisations.value = [];
+  }
+};
+
+const createUser = async () => {
+  savingUser.value = true;
+  createError.value = '';
+  try {
+    await axios.post('/api/admin/users', {
+      name: creating.value.name.trim(),
+      email: creating.value.email.trim(),
+      password: creating.value.password,
+      is_admin: creating.value.is_admin,
+      organisation_id: creating.value.organisation_id,
+    });
+    creating.value = null;
+    showMessage('User created.');
+    await fetchData();
+  } catch (e) {
+    const data = e.response?.data;
+    createError.value = data?.message || Object.values(data?.errors || {})[0]?.[0] || 'Failed to create user.';
+  } finally {
+    savingUser.value = false;
   }
 };
 
@@ -321,6 +446,24 @@ onMounted(fetchData);
 
 <style scoped>
 .user-row { cursor: pointer; }
+.user-row.trashed { opacity: .55; }
+.user-row.trashed .user-name-link { color: var(--text-secondary); text-decoration: line-through; }
+.filter-select { max-width: 150px; }
+.create-btn { border-color: var(--accent-color); color: var(--accent-color); }
+
+.au-scrim { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: var(--z-modal, 100); }
+.au-modal { width: min(520px, 100%); background: var(--bg-secondary, var(--panel-bg)); border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; }
+.au-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border-color); }
+.au-modal-head h2 { font-size: 16px; font-weight: 700; margin: 0; color: var(--text-primary); }
+.au-x { background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 15px; }
+.au-form { padding: 18px 20px; }
+.au-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin: 12px 0 6px; text-transform: uppercase; letter-spacing: .04em; }
+.au-label:first-child { margin-top: 0; }
+.au-input { width: 100%; }
+.au-hint { font-size: 12px; color: var(--text-secondary); margin: 6px 0 0; }
+.au-check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); margin-top: 14px; cursor: pointer; }
+.au-error { color: #f85149; font-size: 13px; margin: 12px 0 0; }
+.au-actions { display: flex; gap: 8px; margin-top: 18px; }
 .user-row:hover { background: var(--panel-bg); }
 .user-name-link { color: var(--accent-color); font-weight: 600; }
 .org-col { color: var(--text-secondary); font-size: 13px; }

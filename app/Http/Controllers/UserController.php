@@ -142,7 +142,12 @@ class UserController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        $user->delete();
+        // A hard delete, deliberately. Users are now soft-deletable so an
+        // admin can deactivate and restore an account, but someone deleting
+        // their OWN account is asking for erasure, and the Privacy Notice
+        // promises exactly that — leaving a recoverable row would contradict
+        // it. Everything they own cascades.
+        $user->forceDelete();
 
         return response()->json(['message' => 'Account deleted.']);
     }

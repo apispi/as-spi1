@@ -123,6 +123,25 @@ never sit alongside the workspace ones. It has five sections — **Users**
 **Organisations**, **Monitoring** (every monitor in the workspace, failing
 first), **Catalog**, and **Active**.
 
+**User lifecycle.** An admin can create accounts directly (created verified,
+so the person can sign in immediately) and remove them two ways:
+
+- **Deactivate (soft delete)** — reversible. Soft-deleted users are excluded
+  from every query, the auth provider included, so the account is locked out
+  while everything it owns is kept. Restoring brings it back intact.
+- **Delete forever (hard delete)** — permanent, and cascades to saved
+  requests, history, environments, collections, monitors, alert channels, and
+  reports. The UI requires typing the user's email to confirm.
+
+Self-service deletion (`DELETE /api/user/account`) stays a **hard** delete:
+someone deleting their own account is asking for erasure, and the Privacy
+Notice promises it.
+
+The audit log deliberately outlives both: `target_user_id` is a snapshot
+rather than a foreign key, and `admin_id` nulls out while `admin_email` keeps
+the identity — so hard-deleting an admin no longer erases every action they
+took.
+
 Organisations group users for administration and reporting. They are
 deliberately **not** an authorisation boundary — nothing reads
 `organisation_id` to decide who may see what, and deleting an organisation
