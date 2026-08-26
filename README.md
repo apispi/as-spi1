@@ -116,9 +116,17 @@ live: a tab each for saved requests, collections, and request history. Opening
 a saved request hands it to the tester through the requests store, so the
 tester itself stays a single-purpose two-pane view with no sidebar.
 
-The **admin area** (Admin panel, Catalog, Active) is separate: it is reached
-from the profile menu, and its nav appears in the sidebar only while you are
-inside it, so admin sections never sit alongside the workspace ones.
+The **admin area** is separate: it is reached from the profile menu, and its
+nav appears in the sidebar only while you are inside it, so admin sections
+never sit alongside the workspace ones. It has five sections — **Users**
+(`/admin`, with a detail page per user at `/admin/users/{id}`),
+**Organisations**, **Monitoring** (every monitor in the workspace, failing
+first), **Catalog**, and **Active**.
+
+Organisations group users for administration and reporting. They are
+deliberately **not** an authorisation boundary — nothing reads
+`organisation_id` to decide who may see what, and deleting an organisation
+unassigns its members rather than deleting them.
 
 ## Collections
 

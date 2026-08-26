@@ -16,7 +16,16 @@ class User extends Authenticatable
     /**
      * @var list<string>
      */
-    protected $fillable = ['name', 'email', 'password', 'is_admin', 'scx_api_key', 'google_id', 'avatar'];
+    protected $fillable = [
+        'organisation_id',
+        'name',
+        'email',
+        'password',
+        'is_admin',
+        'scx_api_key',
+        'google_id',
+        'avatar',
+    ];
 
     /**
      * @var list<string>
@@ -106,6 +115,11 @@ class User extends Authenticatable
     public function monitors()
     {
         return $this->hasMany(Monitor::class);
+    }
+
+    public function organisation()
+    {
+        return $this->belongsTo(Organisation::class);
     }
 
     public function alertChannels()

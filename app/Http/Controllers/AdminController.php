@@ -22,7 +22,9 @@ class AdminController extends Controller
             'per_page' => 'nullable|integer|min:1|max:100',
         ]);
 
-        $query = User::withCount('savedRequests')->orderBy('created_at', 'desc');
+        $query = User::with('organisation:id,name')
+            ->withCount('savedRequests')
+            ->orderBy('created_at', 'desc');
 
         if (! empty($validated['search'])) {
             $search = $validated['search'];
@@ -42,6 +44,9 @@ class AdminController extends Controller
                 'is_admin' => $user->is_admin,
                 'email_verified' => $user->email_verified_at !== null,
                 'saved_requests_count' => $user->saved_requests_count,
+                'organisation' => $user->organisation
+                    ? ['id' => $user->organisation->id, 'name' => $user->organisation->name]
+                    : null,
                 'created_at' => $user->created_at->toDateTimeString(),
                 'updated_at' => $user->updated_at->toDateTimeString(),
             ];
@@ -89,6 +94,109 @@ class AdminController extends Controller
     /**
      * Toggle admin status for a user.
      */
+    /**
+     * Every monitor in the workspace, whoever owns it, so an admin can see
+     * what is failing without opening each account.
+     */
+    public function monitoring()
+    {
+        $monitors = \App\Models\Monitor::with(['user:id,name,email', 'collection:id,name', 'environment:id,name'])
+            ->orderByRaw("last_status = 'failing' desc")
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($m) => [
+                'id' => $m->id,
+                'name' => $m->name,
+                'owner' => $m->user ? ['id' => $m->user->id, 'name' => $m->user->name, 'email' => $m->user->email] : null,
+                'collection' => $m->collection?->name,
+                'environment' => $m->environment?->name,
+                'interval_minutes' => $m->interval_minutes,
+                'is_enabled' => $m->is_enabled,
+                'last_status' => $m->last_status,
+                'last_run_at' => $m->last_run_at,
+                'consecutive_failures' => $m->consecutive_failures,
+                'uptime' => $m->uptime(),
+            ]);
+
+        return response()->json([
+            'monitors' => $monitors,
+            'summary' => [
+                'total' => $monitors->count(),
+                'failing' => $monitors->where('last_status', 'failing')->count(),
+                'passing' => $monitors->where('last_status', 'passing')->count(),
+                'disabled' => $monitors->where('is_enabled', false)->count(),
+                // Alerting is silent when nothing is configured, so surface it.
+                'alert_channels' => \App\Models\AlertChannel::count(),
+            ],
+        ]);
+    }
+
+    /**
+     * One user in full, for the admin detail view: profile, membership, what
+     * they have built, and their recent activity.
+     */
+    public function user(Request $request, int $id)
+    {
+        $user = User::with('organisation:id,name')
+            ->withCount(['savedRequests', 'requestHistories', 'environments', 'collections', 'monitors'])
+            ->findOrFail($id);
+
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'is_admin' => $user->is_admin,
+                'email_verified' => $user->email_verified_at !== null,
+                'signed_up_with_google' => $user->google_id !== null,
+                // Never the key itself, only whether one is configured.
+                'has_scx_key' => ! empty($user->scx_api_key),
+                'has_api_key' => ! empty($user->api_token),
+                'organisation' => $user->organisation
+                    ? ['id' => $user->organisation->id, 'name' => $user->organisation->name]
+                    : null,
+                'created_at' => $user->created_at?->toDateTimeString(),
+                'updated_at' => $user->updated_at?->toDateTimeString(),
+            ],
+            'counts' => [
+                'saved_requests' => $user->saved_requests_count,
+                'request_histories' => $user->request_histories_count,
+                'environments' => $user->environments_count,
+                'collections' => $user->collections_count,
+                'monitors' => $user->monitors_count,
+            ],
+            'recent_requests' => $user->requestHistories()
+                ->latest('id')->take(10)
+                ->get(['id', 'protocol', 'method', 'url', 'status', 'time_ms', 'created_at']),
+            'monitors' => $user->monitors()
+                ->with('collection:id,name')
+                ->orderBy('name')
+                ->get(['id', 'name', 'collection_id', 'last_status', 'last_run_at', 'is_enabled']),
+        ]);
+    }
+
+    /**
+     * Move a user into an organisation, or out of one with a null id.
+     */
+    public function assignOrganisation(Request $request, int $id)
+    {
+        $validated = $request->validate([
+            'organisation_id' => 'nullable|integer|exists:organisations,id',
+        ]);
+
+        $user = User::findOrFail($id);
+        $user->update(['organisation_id' => $validated['organisation_id'] ?? null]);
+
+        AdminAction::create([
+            'admin_id' => $request->user()->id,
+            'action' => $validated['organisation_id'] ? 'assign_organisation' : 'unassign_organisation',
+            'target_user_id' => $user->id,
+            'target_email' => $user->email,
+        ]);
+
+        return response()->json(['message' => 'Updated']);
+    }
+
     public function toggleAdmin(Request $request, $id)
     {
         $user = User::findOrFail($id);

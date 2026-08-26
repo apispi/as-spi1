@@ -123,9 +123,11 @@ const workspaceNav = [
   { to: '/chat', label: 'Spi', icon: 'chat' },
 ];
 const adminNav = [
-  { to: '/admin', label: 'Admin panel', icon: 'sliders' },
+  { to: '/admin', label: 'Users', icon: 'user' },
+  { to: '/admin/organisations', label: 'Organisations', icon: 'shield' },
+  { to: '/admin/monitoring', label: 'Monitoring', icon: 'activity' },
   { to: '/catalog', label: 'Catalog', icon: 'layers' },
-  { to: '/active', label: 'Active', icon: 'activity' },
+  { to: '/active', label: 'Active', icon: 'sliders' },
 ];
 
 // Admin routes form a separate area with their own nav, rather than sitting

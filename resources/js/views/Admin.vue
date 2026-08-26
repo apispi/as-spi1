@@ -94,6 +94,7 @@
               <th>ID</th>
               <th>Name</th>
               <th>Email</th>
+              <th>Organisation</th>
               <th>Role</th>
               <th>Saved Requests</th>
               <th>Registered</th>
@@ -101,10 +102,11 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="user in users" :key="user.id">
+            <tr v-for="user in users" :key="user.id" class="user-row" @click="openUser(user)">
               <td class="id-col">{{ user.id }}</td>
-              <td>{{ user.name }}</td>
+              <td><span class="user-name-link">{{ user.name }}</span></td>
               <td class="email-col">{{ user.email }}</td>
+              <td class="org-col">{{ user.organisation?.name || '—' }}</td>
               <td>
                 <span class="role-badge" :class="user.is_admin ? 'admin' : 'user'">
                   {{ user.is_admin ? 'Admin' : 'User' }}
@@ -116,7 +118,7 @@
               <td class="actions-col">
                 <button 
                   class="action-btn toggle-btn" 
-                  @click="toggleAdmin(user)"
+                  @click.stop="toggleAdmin(user)"
                   :title="user.is_admin ? 'Remove admin' : 'Make admin'"
                   :disabled="isCurrentUser(user)"
                 >
@@ -124,7 +126,7 @@
                 </button>
                 <button 
                   class="action-btn delete-btn" 
-                  @click="deleteUser(user)"
+                  @click.stop="deleteUser(user)"
                   :disabled="isCurrentUser(user)"
                   title="Delete user"
                 >
@@ -180,9 +182,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
 import { useAuthStore } from '../store/auth';
 
+const router = useRouter();
 const authStore = useAuthStore();
 
 const users = ref([]);
@@ -200,6 +204,10 @@ let searchDebounce = null;
 
 const isCurrentUser = (user) => {
   return authStore.user && user.id === authStore.user.id;
+};
+
+const openUser = (user) => {
+  router.push(`/admin/users/${user.id}`);
 };
 
 const formatDate = (dateStr) => {
@@ -312,6 +320,11 @@ onMounted(fetchData);
 </script>
 
 <style scoped>
+.user-row { cursor: pointer; }
+.user-row:hover { background: var(--panel-bg); }
+.user-name-link { color: var(--accent-color); font-weight: 600; }
+.org-col { color: var(--text-secondary); font-size: 13px; }
+
 .admin-container {
   padding: 32px;
   max-width: 1200px;

@@ -17,6 +17,9 @@ import SharedReport from './views/SharedReport.vue';
 import Tester from './views/Tester.vue';
 import Monitors from './views/Monitors.vue';
 import Collections from './views/Collections.vue';
+import AdminOrganisations from './views/AdminOrganisations.vue';
+import AdminMonitoring from './views/AdminMonitoring.vue';
+import AdminUserDetail from './views/AdminUserDetail.vue';
 import Terms from './views/Terms.vue';
 import Privacy from './views/Privacy.vue';
 
@@ -117,6 +120,24 @@ const routes = [
         path: '/admin',
         name: 'admin',
         component: Admin,
+        meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+        path: '/admin/users/:id',
+        name: 'admin-user',
+        component: AdminUserDetail,
+        meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+        path: '/admin/organisations',
+        name: 'admin-organisations',
+        component: AdminOrganisations,
+        meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+        path: '/admin/monitoring',
+        name: 'admin-monitoring',
+        component: AdminMonitoring,
         meta: { requiresAuth: true, requiresAdmin: true }
     },
     {

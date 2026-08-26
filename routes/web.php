@@ -31,6 +31,7 @@ use App\Http\Controllers\AssertionController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\MonitorController;
 use App\Http\Controllers\AlertChannelController;
+use App\Http\Controllers\OrganisationController;
 use App\Http\Controllers\ImportController;
 
 // Google OAuth (full-page redirect flow). Registered before the SPA
@@ -143,6 +144,14 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/api/admin/users', [AdminController::class, 'users']);
+    Route::get('/api/admin/users/{id}', [AdminController::class, 'user']);
+    Route::put('/api/admin/users/{id}/organisation', [AdminController::class, 'assignOrganisation']);
+    Route::get('/api/admin/monitoring', [AdminController::class, 'monitoring']);
+
+    Route::get('/api/admin/organisations', [OrganisationController::class, 'index']);
+    Route::post('/api/admin/organisations', [OrganisationController::class, 'store']);
+    Route::put('/api/admin/organisations/{organisation}', [OrganisationController::class, 'update']);
+    Route::delete('/api/admin/organisations/{organisation}', [OrganisationController::class, 'destroy']);
     Route::get('/api/admin/stats', [AdminController::class, 'stats']);
     Route::get('/api/admin/actions', [AdminController::class, 'actions']);
     Route::get('/api/admin/catalog', [CatalogItemController::class, 'index']);
