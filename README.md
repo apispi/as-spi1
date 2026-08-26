@@ -311,6 +311,37 @@ If the seeder ever ran in production with the old default, rotate the
 `admin@apispi.com` password — either log in and change it, or re-run
 `php artisan db:seed` with `ADMIN_PASSWORD` set in the production `.env`.
 
+## Housekeeping (`hk.sh`)
+
+A local menu-driven helper for routine tasks, alongside
+[`deploy.sh`](deploy.sh). Run it bare for the menu, or jump straight to an
+option:
+
+```bash
+./hk.sh          # menu
+./hk.sh 05       # preflight: build + test + audit
+./hk.sh 31 "msg" # deploy with a commit message
+```
+
+| | |
+| --- | --- |
+| `00`–`05` | status, test, build, audit, lint, **preflight** |
+| `10`–`13` | migrate, seed, fresh database, reset local admin password |
+| `20`–`22` | serve, run due monitors, clear caches |
+| `30`–`31` | push (gated on build + tests), deploy |
+| `90`–`99` | clean logs, script history, **doctor** |
+
+`05 preflight` is the gate this project asks for before pushing — assets built,
+tests green, no advisories — and exits non-zero when any of them fails, so it
+also works in a hook or CI. `99 doctor` reports tool versions, the current
+database, and calls out the two things that silently do nothing when
+unconfigured: mail going to the log (so monitor email alerts never send) and an
+unset `ADMIN_PASSWORD`.
+
+Destructive options (`12` fresh database, `90` clean) confirm first. The script
+runs only against your local machine; the server side stays with `deploy.sh`.
+Its history is written to `log/housekeeping.log`, which is gitignored.
+
 ## Deployment
 
 `./deploy.sh user@host` builds assets, commits them, pushes, and runs the
