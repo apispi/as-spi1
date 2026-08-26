@@ -5,6 +5,9 @@ export const useRequestsStore = defineStore('requests', {
     state: () => ({
         savedRequests: [],
         isLoading: false,
+        // Handed to the tester when a request is opened from another view.
+        // Consumed once, so returning to the tester later starts clean.
+        pendingLoad: null,
     }),
     actions: {
         async fetchSavedRequests() {
@@ -17,6 +20,14 @@ export const useRequestsStore = defineStore('requests', {
             } finally {
                 this.isLoading = false;
             }
+        },
+        openInTester(request) {
+            this.pendingLoad = { ...request };
+        },
+        takePendingLoad() {
+            const pending = this.pendingLoad;
+            this.pendingLoad = null;
+            return pending;
         },
         async saveRequest(requestData) {
             try {

@@ -1,0 +1,278 @@
+<template>
+  <div class="col">
+    <header class="col-head">
+      <div>
+        <h1 class="col-title">Collections</h1>
+        <p class="col-sub">Your saved requests, the collections that run them in order, and what you've sent recently.</p>
+      </div>
+      <div class="col-head-actions">
+        <button class="col-btn" @click="showManager = true">Manage collections</button>
+        <router-link to="/tester" class="col-primary">New request</router-link>
+      </div>
+    </header>
+
+    <nav class="col-tabs">
+      <button :class="['col-tab', tab === 'saved' ? 'active' : '']" @click="tab = 'saved'">
+        Saved requests <span class="col-count">{{ requestsStore.savedRequests.length }}</span>
+      </button>
+      <button :class="['col-tab', tab === 'collections' ? 'active' : '']" @click="tab = 'collections'">
+        Collections <span class="col-count">{{ collectionsStore.collections.length }}</span>
+      </button>
+      <button :class="['col-tab', tab === 'history' ? 'active' : '']" @click="openHistory">History</button>
+    </nav>
+
+    <!-- Saved requests -->
+    <section v-if="tab === 'saved'">
+      <p v-if="requestsStore.isLoading" class="col-muted">Loading…</p>
+      <div v-else-if="!requestsStore.savedRequests.length" class="col-empty">
+        <Icon name="send" :size="26" />
+        <p>No saved requests yet. Build one in the tester and save it — saved requests are the steps a collection runs.</p>
+        <router-link to="/tester" class="col-empty-btn">Open the tester</router-link>
+      </div>
+
+      <ul v-else class="col-list">
+        <li v-for="req in requestsStore.savedRequests" :key="req.id" class="col-row">
+          <span class="method-badge" :class="badgeClass(req)">{{ badgeLabel(req) }}</span>
+          <div class="col-row-main" @click="open(req)">
+            <span class="col-row-name">{{ req.name }}</span>
+            <span class="col-row-url" :title="req.url">{{ req.url }}</span>
+          </div>
+          <span v-if="req.assertions && req.assertions.length" class="col-tag">
+            {{ req.assertions.length }} assertion{{ req.assertions.length === 1 ? '' : 's' }}
+          </span>
+          <div class="col-row-actions">
+            <button class="col-btn" @click="open(req)">Open</button>
+            <button class="col-del" @click="remove(req)" title="Delete request"><Icon name="close" :size="14" /></button>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Collections -->
+    <section v-else-if="tab === 'collections'">
+      <p v-if="collectionsStore.isLoading" class="col-muted">Loading…</p>
+      <div v-else-if="!collectionsStore.collections.length" class="col-empty">
+        <Icon name="layers" :size="26" />
+        <p>No collections yet. A collection runs saved requests in order against one environment, checking each step's assertions.</p>
+        <button class="col-empty-btn" @click="showManager = true">Create a collection</button>
+      </div>
+
+      <ul v-else class="col-list">
+        <li v-for="c in collectionsStore.collections" :key="c.id" class="col-row">
+          <span class="col-steps">{{ c.steps.length }}</span>
+          <div class="col-row-main">
+            <span class="col-row-name">{{ c.name }}</span>
+            <span class="col-row-url">{{ c.description || stepNames(c) }}</span>
+          </div>
+          <div class="col-row-actions">
+            <button class="col-btn" @click="run(c)" :disabled="running === c.id || !c.steps.length">
+              {{ running === c.id ? 'Running…' : 'Run' }}
+            </button>
+            <button class="col-btn" @click="showManager = true">Edit</button>
+          </div>
+        </li>
+      </ul>
+
+      <RunResults
+        v-if="collectionsStore.lastRun"
+        class="col-run"
+        :run="collectionsStore.lastRun"
+        @close="collectionsStore.lastRun = null"
+      />
+    </section>
+
+    <!-- History -->
+    <section v-else>
+      <p v-if="historyLoading" class="col-muted">Loading…</p>
+      <div v-else-if="!history.length" class="col-empty">
+        <Icon name="activity" :size="26" />
+        <p>Nothing sent yet.</p>
+      </div>
+
+      <template v-else>
+        <ul class="col-list">
+          <li v-for="entry in history" :key="entry.id" class="col-row">
+            <span class="method-badge" :class="entry.protocol !== 'rest' ? entry.protocol : (entry.method || 'get').toLowerCase()">
+              {{ entry.protocol === 'rest' ? entry.method : entry.protocol.toUpperCase() }}
+            </span>
+            <div class="col-row-main" @click="openHistoryEntry(entry)">
+              <span class="col-row-name">{{ entry.url }}</span>
+              <span class="col-row-url">
+                {{ entry.protocol !== 'rest' ? entry.method + ' · ' : '' }}{{ entry.time_ms }}ms · {{ ago(entry.created_at) }}
+              </span>
+            </div>
+            <span class="col-status" :class="entry.status && entry.status < 400 ? 'ok' : 'fail'">{{ entry.status || 'ERR' }}</span>
+            <div class="col-row-actions">
+              <button class="col-btn" @click="openHistoryEntry(entry)">Open</button>
+            </div>
+          </li>
+        </ul>
+        <button class="col-clear" @click="clearHistory">Clear history</button>
+      </template>
+    </section>
+
+    <CollectionManager v-if="showManager" @close="closeManager" @ran="onRan" />
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue';
+import axios from 'axios';
+import { useRouter } from 'vue-router';
+import Icon from '../components/Icon.vue';
+import CollectionManager from '../components/CollectionManager.vue';
+import RunResults from '../components/RunResults.vue';
+import { useRequestsStore } from '../store/requests';
+import { useCollectionsStore } from '../store/collections';
+import { useEnvironmentsStore } from '../store/environments';
+
+const router = useRouter();
+const requestsStore = useRequestsStore();
+const collectionsStore = useCollectionsStore();
+const envStore = useEnvironmentsStore();
+
+const tab = ref('saved');
+const history = ref([]);
+const historyLoading = ref(false);
+const showManager = ref(false);
+const running = ref(null);
+
+onMounted(() => {
+  requestsStore.fetchSavedRequests();
+  collectionsStore.fetch();
+  envStore.fetch();
+});
+
+const badgeLabel = (req) => (req.protocol && req.protocol !== 'rest' ? req.protocol.toUpperCase() : req.method);
+const badgeClass = (req) => (req.protocol && req.protocol !== 'rest' ? req.protocol : (req.method || 'get').toLowerCase());
+const stepNames = (c) => c.steps.map((s) => s.saved_request?.name).filter(Boolean).join(' → ') || 'No steps yet';
+
+// Hand the request to the tester, which picks it up on mount.
+const open = (req) => {
+  requestsStore.openInTester(req);
+  router.push('/tester');
+};
+
+const openHistoryEntry = (entry) => {
+  requestsStore.openInTester({
+    protocol: entry.protocol,
+    method: entry.method,
+    url: entry.url,
+    body: entry.body || '',
+    params: entry.params || null,
+    headers: null,
+  });
+  router.push('/tester');
+};
+
+const remove = async (req) => {
+  if (!confirm(`Delete "${req.name}"?`)) return;
+  await requestsStore.deleteRequest(req.id);
+  // A deleted request takes its collection steps with it.
+  collectionsStore.fetch();
+};
+
+const run = async (c) => {
+  running.value = c.id;
+  try {
+    await collectionsStore.run(c.id, envStore.selectedId);
+  } finally {
+    running.value = null;
+  }
+};
+
+const openHistory = async () => {
+  tab.value = 'history';
+  historyLoading.value = true;
+  try {
+    history.value = (await axios.get('/api/history')).data;
+  } catch {
+    history.value = [];
+  } finally {
+    historyLoading.value = false;
+  }
+};
+
+const clearHistory = async () => {
+  if (!confirm('Clear your entire request history?')) return;
+  await axios.delete('/api/history');
+  history.value = [];
+};
+
+const closeManager = () => {
+  showManager.value = false;
+  collectionsStore.fetch();
+};
+
+const onRan = () => {
+  tab.value = 'collections';
+};
+
+const ago = (iso) => {
+  if (!iso) return '';
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+};
+</script>
+
+<style scoped>
+.col { max-width: 1040px; margin: 0 auto; padding: 32px 24px 64px; }
+.col-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.col-title { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-primary); margin: 0; }
+.col-sub { color: var(--text-secondary); margin: 8px 0 0; font-size: 15px; }
+.col-head-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.col-muted { color: var(--text-secondary); }
+
+.col-primary { padding: 9px 16px; border-radius: 8px; background: var(--accent-color); color: #fff; border: none; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.col-primary:hover { background: var(--accent-hover, var(--accent-color)); }
+.col-btn { padding: 6px 12px; border-radius: 7px; background: none; border: 1px solid var(--border-color); color: var(--text-secondary); font-size: 12.5px; cursor: pointer; }
+.col-btn:hover:not(:disabled) { border-color: var(--accent-color); color: var(--accent-color); }
+.col-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.col-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border-color); margin-bottom: 16px; }
+.col-tab { padding: 9px 14px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-secondary); font-size: 13.5px; cursor: pointer; margin-bottom: -1px; }
+.col-tab:hover { color: var(--text-primary); }
+.col-tab.active { color: var(--accent-color); border-bottom-color: var(--accent-color); font-weight: 600; }
+.col-count { font-size: 11px; background: rgba(255,255,255,.07); padding: 1px 6px; border-radius: 999px; margin-left: 4px; }
+
+.col-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; padding: 40px 20px; border: 1px dashed var(--border-color); border-radius: 14px; color: var(--text-secondary); }
+.col-empty p { max-width: 460px; margin: 0; font-size: 14px; line-height: 1.6; }
+.col-empty-btn { padding: 8px 16px; border-radius: 8px; background: var(--accent-color); color: #fff; text-decoration: none; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+.col-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; }
+.col-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.col-row + .col-row { border-top: 1px solid var(--border-color); }
+.col-row-main { flex: 1; min-width: 0; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.col-row-name { font-size: 14px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-row-url { font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-row-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.col-del { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; }
+.col-del:hover { color: #f85149; }
+.col-tag { font-size: 11px; color: var(--text-secondary); background: rgba(255,255,255,.06); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.col-steps { width: 24px; height: 24px; border-radius: 999px; background: var(--accent-soft, rgba(88,166,255,.12)); color: var(--accent-color); font-size: 11.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.col-status { font-size: 11.5px; font-weight: 700; }
+.col-status.ok { color: #3fb950; }
+.col-status.fail { color: #f85149; }
+.col-clear { margin-top: 12px; padding: 7px 13px; background: none; border: 1px solid var(--border-color); border-radius: 7px; color: var(--text-secondary); font-size: 12.5px; cursor: pointer; }
+.col-clear:hover { border-color: #f85149; color: #f85149; }
+.col-run { margin-top: 16px; border: 1px solid var(--border-color); border-radius: 14px; }
+
+.method-badge { font-size: 10px; font-weight: 700; padding: 3px 7px; border-radius: 4px; flex-shrink: 0; }
+.method-badge.get { color: #3fb950; background: rgba(63,185,80,.15); }
+.method-badge.post { color: #58a6ff; background: rgba(88,166,255,.15); }
+.method-badge.put, .method-badge.patch { color: #d29922; background: rgba(210,153,34,.15); }
+.method-badge.delete { color: #f85149; background: rgba(248,81,73,.15); }
+.method-badge.mcp { color: #a371f7; background: rgba(163,113,247,.15); }
+.method-badge.a2a { color: #f85149; background: rgba(248,81,73,.15); }
+.method-badge.grpc { color: #58a6ff; background: rgba(88,166,255,.15); }
+.method-badge.mqtt { color: #3fb950; background: rgba(63,185,80,.15); }
+.method-badge.amqp { color: #d29922; background: rgba(210,153,34,.15); }
+
+@media (max-width: 720px) {
+  .col-head { flex-direction: column; }
+  .col-tag { display: none; }
+}
+</style>

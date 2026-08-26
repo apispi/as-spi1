@@ -108,6 +108,18 @@ does not take down the suite.
 - `POST /api/assertions/evaluate` — evaluate assertions against a response
 - `PUT /api/saved-requests/{id}/assertions` — attach assertions to a request
 
+## Navigation
+
+The workspace sections are Home, Tester, Collections, AI Lab, Monitors,
+Reports, and Spi. **Collections** (`/collections`) is where saved requests
+live: a tab each for saved requests, collections, and request history. Opening
+a saved request hands it to the tester through the requests store, so the
+tester itself stays a single-purpose two-pane view with no sidebar.
+
+The **admin area** (Admin panel, Catalog, Active) is separate: it is reached
+from the profile menu, and its nav appears in the sidebar only while you are
+inside it, so admin sections never sit alongside the workspace ones.
+
 ## Collections
 
 A collection is an ordered group of saved requests, run start to finish

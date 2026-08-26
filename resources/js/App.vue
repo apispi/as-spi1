@@ -62,7 +62,9 @@
             <span>{{ item.label }}</span>
           </router-link>
 
-          <template v-if="authStore.user && authStore.user.is_admin">
+          <!-- The admin area is its own section: its nav appears only while
+               you are inside it, reached from the profile menu. -->
+          <template v-if="inAdminArea">
             <span class="nav-label">Admin</span>
             <router-link v-for="item in adminNav" :key="item.to" :to="item.to" class="nav-link" @click="closeOnMobile">
               <Icon :name="item.icon" :size="18" />
@@ -105,7 +107,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from './store/auth';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import Icon from './components/Icon.vue';
 
 const authStore = useAuthStore();
@@ -114,6 +116,7 @@ const router = useRouter();
 const workspaceNav = [
   { to: '/dashboard', label: 'Home', icon: 'home' },
   { to: '/tester', label: 'Tester', icon: 'send' },
+  { to: '/collections', label: 'Collections', icon: 'layers' },
   { to: '/ai-lab', label: 'AI Lab', icon: 'sparkles' },
   { to: '/monitors', label: 'Monitors', icon: 'activity' },
   { to: '/reports', label: 'Reports', icon: 'report' },
@@ -124,6 +127,13 @@ const adminNav = [
   { to: '/catalog', label: 'Catalog', icon: 'layers' },
   { to: '/active', label: 'Active', icon: 'activity' },
 ];
+
+// Admin routes form a separate area with their own nav, rather than sitting
+// alongside the workspace sections.
+const ADMIN_ROUTES = ['/admin', '/catalog', '/active'];
+const route = useRoute();
+const inAdminArea = computed(() =>
+  !!authStore.user?.is_admin && ADMIN_ROUTES.some((path) => route.path.startsWith(path)));
 
 // Open by default on desktop, collapsed on mobile.
 const sidebarOpen = ref(typeof window !== 'undefined' ? window.innerWidth > 900 : true);

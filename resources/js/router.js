@@ -16,6 +16,7 @@ import Reports from './views/Reports.vue';
 import SharedReport from './views/SharedReport.vue';
 import Tester from './views/Tester.vue';
 import Monitors from './views/Monitors.vue';
+import Collections from './views/Collections.vue';
 import Terms from './views/Terms.vue';
 import Privacy from './views/Privacy.vue';
 
@@ -36,6 +37,12 @@ const routes = [
         path: '/tester',
         name: 'tester',
         component: Tester,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/collections',
+        name: 'collections',
+        component: Collections,
         meta: { requiresAuth: true }
     },
     {

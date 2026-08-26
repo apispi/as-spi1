@@ -36,8 +36,7 @@
       <div v-else-if="!reports.length" class="empty">
         <Icon name="report" :size="26" />
         <p>No reports yet. Run a conformance grade, security scan, or agent session on a connector to see it here.</p>
-        <router-link v-if="isAdmin" to="/catalog" class="empty-btn">Go to Catalog</router-link>
-        <router-link v-else to="/ai-lab" class="empty-btn">Open AI Lab</router-link>
+        <router-link to="/ai-lab" class="empty-btn">Open AI Lab</router-link>
       </div>
 
       <ul v-else class="rlist">
@@ -61,7 +60,6 @@ import { useAuthStore } from '../store/auth';
 import Icon from '../components/Icon.vue';
 
 const authStore = useAuthStore();
-const isAdmin = computed(() => !!authStore.user?.is_admin);
 const firstName = computed(() => (authStore.user?.name || 'there').split(' ')[0]);
 
 const reports = ref([]);
@@ -69,6 +67,8 @@ const loadingReports = ref(true);
 
 const cards = computed(() => {
   const base = [
+    { to: '/collections', title: 'Collections', icon: 'layers', color: '#d29922',
+      desc: 'Your saved requests and the collections that run them in order against an environment.' },
     { to: '/tester', title: 'Tester', icon: 'send', color: '#58a6ff',
       desc: 'Send REST, MCP, A2A, gRPC, MQTT, and AMQP requests, with environments for reusable {{variables}} across staging and production.' },
     { to: '/ai-lab', title: 'AI Lab', icon: 'sparkles', color: '#a371f7',
@@ -80,16 +80,6 @@ const cards = computed(() => {
     { to: '/chat', title: 'Spi', icon: 'chat', color: '#3fb950',
       desc: 'Ask Spi, the built-in assistant, for help building requests, understanding protocols, and debugging failures.' },
   ];
-  if (isAdmin.value) {
-    base.push(
-      { to: '/catalog', title: 'Catalog', icon: 'layers', color: '#d29922',
-        desc: 'Register MCP/A2A connectors, sync their tools, and run conformance, security, and agent-in-the-loop checks.' },
-      { to: '/active', title: 'Active', icon: 'activity', color: '#f778ba',
-        desc: 'The tools, prompts, and resources currently activated for use across the workspace.' },
-      { to: '/admin', title: 'Admin', icon: 'sliders', color: '#8b949e',
-        desc: 'Manage users, review activity, and oversee the catalog.' },
-    );
-  }
   return base;
 });
 
