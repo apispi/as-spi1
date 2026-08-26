@@ -107,4 +107,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Monitor::class);
     }
+
+    public function alertChannels()
+    {
+        return $this->hasMany(AlertChannel::class);
+    }
 }

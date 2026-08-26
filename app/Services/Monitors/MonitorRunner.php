@@ -6,6 +6,7 @@ use App\Models\InspectionReport;
 use App\Models\Monitor;
 use App\Models\MonitorResult;
 use App\Notifications\MonitorStatusChanged;
+use App\Services\Alerts\AlertDispatcher;
 use App\Services\Collections\CollectionRunner;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -20,8 +21,10 @@ use Throwable;
  */
 class MonitorRunner
 {
-    public function __construct(private readonly CollectionRunner $runner)
-    {
+    public function __construct(
+        private readonly CollectionRunner $runner,
+        private readonly AlertDispatcher $alerts,
+    ) {
     }
 
     public function run(Monitor $monitor): MonitorResult
@@ -102,6 +105,11 @@ class MonitorRunner
             // A mail misconfiguration must not lose the run we just recorded.
             Log::warning('Monitor alert failed', ['monitor' => $monitor->id, 'error' => $e->getMessage()]);
         }
+
+        // Webhook channels are independent of mail: they work with no SMTP
+        // configured at all, and one failing destination must not stop the
+        // others. The dispatcher records its own failures.
+        $this->alerts->dispatch($monitor, $entry, $next);
     }
 
     private function summarise(array $result): string

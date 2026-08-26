@@ -194,6 +194,26 @@ A run that throws is still recorded as a failing result: a monitor that goes
 silent is worse than one reporting an error. Intervals are restricted to
 `Monitor::INTERVALS` so a monitor cannot hammer a target.
 
+### Alert channels
+
+Besides email, a monitor can post to Slack, Discord, or any endpoint. Channels
+belong to a user and are shared across their monitors, so a webhook URL is
+entered once:
+
+- `GET/POST/PUT/DELETE /api/alert-channels`
+- `POST /api/alert-channels/{id}/test` — send a sample alert
+
+Webhook alerts need **no mail server**, so they work with SMTP unconfigured.
+Slack and Discord get a sentence; a generic webhook gets a structured
+`monitor.status_changed` event. Delivery follows the same transition rule as
+email — on change only, never every failing run.
+
+The URL is a credential (anyone holding a Slack webhook URL can post to that
+channel), so it is stored whole but never returned to the browser; the API
+returns a `url_preview` instead. Because Spi POSTs to it server-side, the URL
+is SSRF-validated on write and the address is pinned again at delivery.
+Delivery never throws: a broken channel records its error and the run stands.
+
 ### Server setup (required)
 
 The scheduler is registered in [`routes/console.php`](routes/console.php), but
@@ -233,6 +253,8 @@ cookie).
   and runs (auth; run also under `/api/v1` with a personal API key)
 - `GET/POST/PUT/DELETE /monitors`, `GET /monitors/{id}`, `POST /monitors/{id}/run`
   — scheduled monitors and their history (auth)
+- `GET/POST/PUT/DELETE /alert-channels`, `POST /alert-channels/{id}/test` —
+  Slack/Discord/webhook alert destinations (auth)
 - `GET/DELETE /history` — request history (200/user retention)
 - `PUT /user/profile`, `/user/password`, `GET /user/stats`, `/user/activity`,
   `DELETE /user/account` — profile management

@@ -30,6 +30,7 @@ use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\AssertionController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\MonitorController;
+use App\Http\Controllers\AlertChannelController;
 use App\Http\Controllers\ImportController;
 
 // Google OAuth (full-page redirect flow). Registered before the SPA
@@ -91,6 +92,13 @@ Route::middleware('auth')->group(function () {
     Route::put('/api/collections/{id}', [CollectionController::class, 'update']);
     Route::delete('/api/collections/{id}', [CollectionController::class, 'destroy']);
     Route::post('/api/collections/{id}/run', [CollectionController::class, 'run'])
+        ->middleware('throttle:outbound-test');
+
+    Route::get('/api/alert-channels', [AlertChannelController::class, 'index']);
+    Route::post('/api/alert-channels', [AlertChannelController::class, 'store']);
+    Route::put('/api/alert-channels/{id}', [AlertChannelController::class, 'update']);
+    Route::delete('/api/alert-channels/{id}', [AlertChannelController::class, 'destroy']);
+    Route::post('/api/alert-channels/{id}/test', [AlertChannelController::class, 'test'])
         ->middleware('throttle:outbound-test');
 
     Route::get('/api/monitors', [MonitorController::class, 'index']);

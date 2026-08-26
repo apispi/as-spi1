@@ -75,6 +75,11 @@ class Monitor extends Model
         return $this->belongsTo(Environment::class);
     }
 
+    public function alertChannels()
+    {
+        return $this->belongsToMany(AlertChannel::class);
+    }
+
     public function results()
     {
         return $this->hasMany(MonitorResult::class)->latest('id');

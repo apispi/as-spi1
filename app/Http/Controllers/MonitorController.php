@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Monitor;
 use App\Services\Monitors\MonitorRunner;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 
 class MonitorController extends Controller
@@ -49,7 +50,9 @@ class MonitorController extends Controller
 
         $validated = $this->validated($request, null);
 
-        $monitor = $user->monitors()->create($validated);
+        $monitor = $user->monitors()->create(Arr::except($validated, 'alert_channel_ids'));
+
+        $this->syncChannels($monitor, $validated['alert_channel_ids'] ?? null, $request);
 
         return response()->json($this->present($monitor->fresh()), 201);
     }
@@ -58,7 +61,11 @@ class MonitorController extends Controller
     {
         $monitor = $request->user()->monitors()->findOrFail($id);
 
-        $monitor->update($this->validated($request, $monitor));
+        $validated = $this->validated($request, $monitor);
+
+        $monitor->update(Arr::except($validated, 'alert_channel_ids'));
+
+        $this->syncChannels($monitor, $validated['alert_channel_ids'] ?? null, $request);
 
         return response()->json($this->present($monitor->fresh()));
     }
@@ -85,6 +92,20 @@ class MonitorController extends Controller
         );
     }
 
+    /**
+     * Attach alert channels, ignoring any id that is not the caller's own.
+     */
+    private function syncChannels(Monitor $monitor, ?array $ids, Request $request): void
+    {
+        if ($ids === null) {
+            return;
+        }
+
+        $owned = $request->user()->alertChannels()->whereIn('id', $ids)->pluck('id');
+
+        $monitor->alertChannels()->sync($owned);
+    }
+
     private function present(Monitor $monitor): array
     {
         return [
@@ -99,6 +120,7 @@ class MonitorController extends Controller
             'last_run_at' => $monitor->last_run_at,
             'consecutive_failures' => $monitor->consecutive_failures,
             'uptime' => $monitor->uptime(),
+            'alert_channel_ids' => $monitor->alertChannels()->pluck('alert_channels.id'),
         ];
     }
 
@@ -124,6 +146,8 @@ class MonitorController extends Controller
             'interval_minutes' => ['required', 'integer', Rule::in(Monitor::INTERVALS)],
             'is_enabled' => 'nullable|boolean',
             'alerts_enabled' => 'nullable|boolean',
+            'alert_channel_ids' => 'nullable|array',
+            'alert_channel_ids.*' => 'integer',
         ]);
     }
 }

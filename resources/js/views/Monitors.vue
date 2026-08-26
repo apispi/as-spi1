@@ -5,9 +5,12 @@
         <h1 class="mon-title">Monitors</h1>
         <p class="mon-sub">Run a collection on a schedule and get alerted when it starts failing.</p>
       </div>
-      <button class="mon-primary" @click="startNew" :disabled="!collectionsStore.collections.length">
-        New monitor
-      </button>
+      <div class="mon-head-actions">
+        <button class="mon-btn" @click="openChannels">Alert channels</button>
+        <button class="mon-primary" @click="startNew" :disabled="!collectionsStore.collections.length">
+          New monitor
+        </button>
+      </div>
     </header>
 
     <p v-if="!collectionsStore.collections.length && collectionsStore.loaded" class="mon-empty">
@@ -89,6 +92,14 @@
             <span>Email me when the status changes</span>
           </label>
 
+          <template v-if="channels.length">
+            <label class="mon-label">Also alert</label>
+            <label v-for="c in channels" :key="c.id" class="mon-check">
+              <input type="checkbox" :value="c.id" v-model="editing.alert_channel_ids" />
+              <span>{{ c.name }} <em class="mon-chan-type">{{ c.type }}</em></span>
+            </label>
+          </template>
+
           <p class="mon-note">
             Alerts fire when a monitor changes between passing and failing — not
             on every failing run.
@@ -103,6 +114,81 @@
             <button v-if="editing.id" class="mon-danger" @click="remove" :disabled="saving">Delete</button>
             <button class="mon-btn" @click="editing = null" :disabled="saving">Cancel</button>
           </footer>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert channels -->
+    <div v-if="showChannels" class="mon-scrim" @click.self="showChannels = false">
+      <div class="mon-modal">
+        <header class="mon-modal-head">
+          <h2>Alert channels</h2>
+          <button class="mon-x" @click="showChannels = false" aria-label="Close"><Icon name="close" :size="18" /></button>
+        </header>
+
+        <div class="mon-form">
+          <p class="mon-note">
+            Post alerts to Slack, Discord, or any endpoint. Webhook alerts need
+            no mail server, so they work even if SMTP is not configured.
+          </p>
+
+          <ul v-if="channels.length" class="mon-chan-list">
+            <li v-for="c in channels" :key="c.id" class="mon-chan">
+              <span class="mon-dot" :class="c.last_error ? 'failing' : (c.last_delivered_at ? 'passing' : '')"></span>
+              <div class="mon-chan-main">
+                <div>
+                  <span class="mon-chan-name">{{ c.name }}</span>
+                  <em class="mon-chan-type">{{ c.type }}</em>
+                  <span v-if="!c.is_enabled" class="mon-pill paused">disabled</span>
+                </div>
+                <div class="mon-chan-url">{{ c.url_preview }}</div>
+                <div v-if="c.last_error" class="mon-chan-error">{{ c.last_error }}</div>
+              </div>
+              <div class="mon-actions">
+                <button class="mon-btn" @click="testChannel(c)" :disabled="busyChannel === c.id">
+                  {{ busyChannel === c.id ? 'Sending…' : 'Test' }}
+                </button>
+                <button class="mon-btn" @click="editChannel(c)">Edit</button>
+              </div>
+            </li>
+          </ul>
+
+          <div v-if="channelForm" class="mon-chan-form">
+            <label class="mon-label">Name</label>
+            <input v-model="channelForm.name" class="input-field" placeholder="Ops Slack" maxlength="60" />
+
+            <label class="mon-label">Type</label>
+            <select v-model="channelForm.type" class="input-field">
+              <option value="slack">Slack</option>
+              <option value="discord">Discord</option>
+              <option value="webhook">Generic webhook</option>
+            </select>
+
+            <label class="mon-label">Webhook URL</label>
+            <input
+              v-model="channelForm.url"
+              class="input-field mono"
+              :placeholder="channelForm.id ? 'unchanged' : 'https://hooks.slack.com/services/…'"
+              autocomplete="off"
+            />
+
+            <label class="mon-check">
+              <input type="checkbox" v-model="channelForm.is_enabled" />
+              <span>Enabled</span>
+            </label>
+
+            <p v-if="channelError" class="mon-error">{{ channelError }}</p>
+
+            <footer class="mon-modal-actions">
+              <button class="mon-primary" @click="saveChannel" :disabled="savingChannel || !channelForm.name.trim()">
+                {{ savingChannel ? 'Saving…' : 'Save' }}
+              </button>
+              <button v-if="channelForm.id" class="mon-danger" @click="removeChannel" :disabled="savingChannel">Delete</button>
+              <button class="mon-btn" @click="channelForm = null" :disabled="savingChannel">Cancel</button>
+            </footer>
+          </div>
+
+          <button v-else class="mon-btn mon-chan-add" @click="newChannel">+ New channel</button>
         </div>
       </div>
     </div>
@@ -153,6 +239,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import axios from 'axios';
 import { useMonitorsStore } from '../store/monitors';
 import { useCollectionsStore } from '../store/collections';
 import { useEnvironmentsStore } from '../store/environments';
@@ -166,6 +253,12 @@ const envStore = useEnvironmentsStore();
 const INTERVALS = [5, 15, 30, 60, 180, 360, 720, 1440];
 
 const editing = ref(null);
+const channels = ref([]);
+const showChannels = ref(false);
+const channelForm = ref(null);
+const channelError = ref('');
+const savingChannel = ref(false);
+const busyChannel = ref(null);
 const history = ref(null);
 const saving = ref(false);
 const busy = ref(null);
@@ -175,7 +268,88 @@ onMounted(() => {
   store.fetch();
   collectionsStore.fetch();
   envStore.fetch();
+  fetchChannels();
 });
+
+const fetchChannels = async () => {
+  try {
+    channels.value = (await axios.get('/api/alert-channels')).data;
+  } catch {
+    channels.value = [];
+  }
+};
+
+const openChannels = () => {
+  channelError.value = '';
+  channelForm.value = null;
+  showChannels.value = true;
+  fetchChannels();
+};
+
+const newChannel = () => {
+  channelError.value = '';
+  channelForm.value = { id: null, name: '', type: 'slack', url: '', is_enabled: true };
+};
+
+const editChannel = (c) => {
+  channelError.value = '';
+  // The URL is never sent to the browser, so an empty field means "unchanged".
+  channelForm.value = { id: c.id, name: c.name, type: c.type, url: '', is_enabled: c.is_enabled };
+};
+
+const saveChannel = async () => {
+  savingChannel.value = true;
+  channelError.value = '';
+  const payload = {
+    name: channelForm.value.name.trim(),
+    type: channelForm.value.type,
+    is_enabled: channelForm.value.is_enabled,
+  };
+  if (channelForm.value.url.trim()) payload.url = channelForm.value.url.trim();
+
+  try {
+    if (channelForm.value.id) {
+      await axios.put(`/api/alert-channels/${channelForm.value.id}`, payload);
+    } else {
+      await axios.post('/api/alert-channels', payload);
+    }
+    channelForm.value = null;
+    await fetchChannels();
+  } catch (e) {
+    const data = e.response?.data;
+    channelError.value = data?.message || Object.values(data?.errors || {})[0]?.[0] || 'Failed to save channel.';
+  } finally {
+    savingChannel.value = false;
+  }
+};
+
+const removeChannel = async () => {
+  if (!confirm(`Delete the "${channelForm.value.name}" channel?`)) return;
+  savingChannel.value = true;
+  try {
+    await axios.delete(`/api/alert-channels/${channelForm.value.id}`);
+    channelForm.value = null;
+    await fetchChannels();
+    await store.fetch();
+  } catch {
+    channelError.value = 'Failed to delete channel.';
+  } finally {
+    savingChannel.value = false;
+  }
+};
+
+const testChannel = async (c) => {
+  busyChannel.value = c.id;
+  channelError.value = '';
+  try {
+    await axios.post(`/api/alert-channels/${c.id}/test`);
+  } catch (e) {
+    channelError.value = e.response?.data?.last_error || 'The test alert did not get through.';
+  } finally {
+    busyChannel.value = null;
+    await fetchChannels();
+  }
+};
 
 const intervalLabel = (m) => {
   if (m < 60) return `${m} min`;
@@ -215,6 +389,7 @@ const startNew = () => {
     interval_minutes: 60,
     is_enabled: true,
     alerts_enabled: true,
+    alert_channel_ids: [],
   };
 };
 
@@ -228,6 +403,7 @@ const edit = (m) => {
     interval_minutes: m.interval_minutes,
     is_enabled: m.is_enabled,
     alerts_enabled: m.alerts_enabled,
+    alert_channel_ids: [...(m.alert_channel_ids || [])],
   };
 };
 
@@ -242,6 +418,7 @@ const save = async () => {
       interval_minutes: editing.value.interval_minutes,
       is_enabled: editing.value.is_enabled,
       alerts_enabled: editing.value.alerts_enabled,
+      alert_channel_ids: editing.value.alert_channel_ids,
     }, editing.value.id);
     editing.value = null;
   } catch (e) {
@@ -331,6 +508,19 @@ const openHistory = async (m) => {
 .mon-note { font-size: 12.5px; line-height: 1.6; color: var(--text-secondary); background: var(--panel-bg); border-left: 3px solid var(--accent-color); padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 16px 0 0; }
 .mon-error { color: #f85149; font-size: 13px; margin: 12px 0 0; }
 .mon-modal-actions { display: flex; gap: 8px; margin-top: 18px; }
+
+.mon-head-actions { display: flex; gap: 8px; }
+.mon-chan-list { list-style: none; margin: 0 0 14px; padding: 0; border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; }
+.mon-chan { display: flex; align-items: center; gap: 10px; padding: 11px 13px; }
+.mon-chan + .mon-chan { border-top: 1px solid var(--border-color); }
+.mon-chan-main { flex: 1; min-width: 0; }
+.mon-chan-name { font-size: 13.5px; font-weight: 600; color: var(--text-primary); margin-right: 6px; }
+.mon-chan-type { font-size: 11px; color: var(--text-secondary); font-style: normal; text-transform: uppercase; letter-spacing: .04em; }
+.mon-chan-url { font-family: 'Courier New', monospace; font-size: 11.5px; color: var(--text-secondary); margin-top: 2px; }
+.mon-chan-error { font-size: 11.5px; color: #f85149; margin-top: 3px; }
+.mon-chan-form { border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; }
+.mon-chan-add { width: 100%; }
+.mono { font-family: 'Courier New', monospace; }
 
 .mon-history { padding: 18px 20px; overflow-y: auto; }
 .mon-strip { display: flex; gap: 2px; align-items: flex-end; height: 32px; }
