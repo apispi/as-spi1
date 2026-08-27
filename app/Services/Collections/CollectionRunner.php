@@ -5,6 +5,7 @@ namespace App\Services\Collections;
 use App\Models\Collection;
 use App\Models\Environment;
 use App\Services\Assertions\AssertionEvaluator;
+use App\Services\Contracts\ContractChecker;
 use App\Services\Variables\SecretMasker;
 use App\Services\Variables\VariableResolver;
 use Illuminate\Support\Arr;
@@ -23,6 +24,7 @@ class CollectionRunner
         private readonly RequestExecutor $executor,
         private readonly AssertionEvaluator $evaluator,
         private readonly SecretMasker $masker,
+        private readonly ContractChecker $contracts = new ContractChecker,
     ) {
     }
 
@@ -103,9 +105,17 @@ class CollectionRunner
             ? $this->evaluator->evaluate($assertions, $response)
             : null;
 
-        // A transport failure fails the step regardless of assertions; there
-        // is no response to assert against.
-        $passed = $response['ok'] && ($evaluation === null || $evaluation['passed']);
+        // Contract drift: if a schema baseline is attached, check the live
+        // response against it. Breaking drift (a removed required field or a
+        // type change) fails the step, catching silent breaks no assertion was
+        // written for. Additive drift is reported but does not fail.
+        $contract = ! empty($saved->contract) && $response['ok']
+            ? $this->contracts->fromBody($saved->contract, is_string($response['body'] ?? null) ? $response['body'] : json_encode($response['body'] ?? null))
+            : null;
+
+        $passed = $response['ok']
+            && ($evaluation === null || $evaluation['passed'])
+            && ($contract === null || ! $contract['breaking']);
 
         $extracted = [];
         if ($response['ok']) {
@@ -127,6 +137,7 @@ class CollectionRunner
                 'error' => $response['error'],
                 'unresolved' => $resolver->unresolved(),
                 'assertions' => $evaluation ? $this->masker->mask($evaluation) : null,
+                'contract' => $contract,
                 'extracted' => array_keys($extracted),
                 'passed' => $passed,
                 'skipped' => false,

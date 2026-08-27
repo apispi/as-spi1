@@ -44,6 +44,11 @@
             :savedRequestId="currentLoadedRequest?.id || null"
             :initial="currentLoadedRequest?.assertions || []"
           />
+          <ContractPanel
+            :response="responseData"
+            :savedRequestId="currentLoadedRequest?.id || null"
+            :hasContractInitial="!!currentLoadedRequest?.contract"
+          />
         </div>
       </main>
     </div>
@@ -60,6 +65,7 @@ import RequestPanel from '../components/RequestPanel.vue';
 import ResponsePanel from '../components/ResponsePanel.vue';
 import EnvironmentManager from '../components/EnvironmentManager.vue';
 import AssertionsPanel from '../components/AssertionsPanel.vue';
+import ContractPanel from '../components/ContractPanel.vue';
 import ImportDialog from '../components/ImportDialog.vue';
 import RunResults from '../components/RunResults.vue';
 import Icon from '../components/Icon.vue';

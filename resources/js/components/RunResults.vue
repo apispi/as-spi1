@@ -39,6 +39,15 @@
             </li>
           </ul>
 
+          <div v-if="step.contract && !step.contract.conforms" class="run-contract">
+            <span class="run-c-head" :class="step.contract.breaking ? 'bad' : 'warn'">
+              {{ step.contract.breaking ? 'Contract broke' : 'Contract changed' }}
+            </span>
+            <span v-for="c in step.contract.removed" :key="'r'+c.path" class="run-c-item bad">removed <code>{{ c.path }}</code></span>
+            <span v-for="c in step.contract.type_changed" :key="'t'+c.path" class="run-c-item bad"><code>{{ c.path }}</code> {{ c.expected }}→{{ c.actual }}</span>
+            <span v-for="c in step.contract.added" :key="'a'+c.path" class="run-c-item warn">added <code>{{ c.path }}</code></span>
+          </div>
+
           <p v-if="step.extracted && step.extracted.length" class="run-extracted">
             Extracted: <code v-for="n in step.extracted" :key="n">{{ n }}</code>
           </p>
@@ -96,6 +105,14 @@ const format = (v) => {
 .run-asrts .pass .run-asrt-mark { color: #3fb950; }
 .run-asrts .fail .run-asrt-mark { color: #f85149; }
 .run-asrt-why { color: #f85149; font-family: 'Courier New', monospace; }
+.run-contract { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px; margin: 6px 0 0; font-size: 11.5px; }
+.run-c-head { font-weight: 700; }
+.run-c-head.bad { color: #f85149; }
+.run-c-head.warn { color: #d29922; }
+.run-c-item { color: var(--text-secondary); }
+.run-c-item.bad { color: #f85149; }
+.run-c-item.warn { color: #d29922; }
+.run-c-item code { font-family: 'Courier New', monospace; }
 .run-extracted { font-size: 11.5px; color: var(--text-secondary); margin: 5px 0 0; }
 .run-extracted code { font-family: 'Courier New', monospace; background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 4px; margin-right: 4px; }
 </style>

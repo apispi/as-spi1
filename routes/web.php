@@ -106,6 +106,9 @@ Route::middleware('auth')->group(function () {
     Route::put('/api/user/preferences', [UserController::class, 'updatePreferences']);
     Route::delete('/api/user/account', [UserController::class, 'deleteAccount']);
     Route::post('/api/assertions/evaluate', [AssertionController::class, 'evaluate']);
+    Route::post('/api/contract/infer', [\App\Http\Controllers\ContractController::class, 'infer']);
+    Route::put('/api/saved-requests/{id}/contract', [\App\Http\Controllers\ContractController::class, 'update']);
+    Route::post('/api/saved-requests/{id}/contract/check', [\App\Http\Controllers\ContractController::class, 'check']);
     Route::put('/api/saved-requests/{id}/assertions', [AssertionController::class, 'update']);
 
     Route::post('/api/import/curl', [ImportController::class, 'curl']);

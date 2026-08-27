@@ -19,12 +19,14 @@ class SavedRequest extends Model
         'body',
         'params',
         'assertions',
+        'contract',
     ];
 
     protected $casts = [
         'headers' => 'array',
         'params' => 'array',
         'assertions' => 'array',
+        'contract' => 'array',
     ];
 
     public function user()

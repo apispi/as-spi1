@@ -348,6 +348,22 @@ Alerts also need real mail credentials in the production `.env`
 (`MAIL_MAILER=smtp` and the rest). With `MAIL_MAILER=log` they are written to
 the log file instead of sent.
 
+## Response contracts (schema drift)
+
+A contract is a JSON-Schema baseline **inferred from a known-good response** —
+no schema authoring. `App\Services\Contracts\SchemaInferrer` walks a response
+into types, object properties, which fields were always present, and array
+element shape; `ContractChecker` validates a later response against it.
+
+Attach one to a saved request (tester → Contract → Capture, or
+`PUT /api/saved-requests/{id}/contract` with a good response). Every collection
+run then checks the live response against it: a **removed required field or a
+type change is breaking and fails the step** — catching silent breaks no
+assertion was written for, even at a green 200 — while a new field is reported
+as additive and passes. Drift shows per step in run results and, since runs are
+monitored, alerts through the existing machinery. This is contract testing with
+zero assertions written.
+
 ## Self-healing assertions
 
 When assertions fail because the API legitimately changed, `POST /api/ai/heal`
