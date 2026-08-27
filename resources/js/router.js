@@ -12,6 +12,7 @@ import CatalogSection from './views/CatalogSection.vue';
 import CompleteRegistration from './views/CompleteRegistration.vue';
 import Developers from './views/Developers.vue';
 import AiLab from './views/AiLab.vue';
+import Explore from './views/Explore.vue';
 import Reports from './views/Reports.vue';
 import SharedReport from './views/SharedReport.vue';
 import StatusPage from './views/StatusPage.vue';
@@ -86,6 +87,12 @@ const routes = [
         path: '/ai-lab',
         name: 'ai-lab',
         component: AiLab,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/explore',
+        name: 'explore',
+        component: Explore,
         meta: { requiresAuth: true }
     },
     {

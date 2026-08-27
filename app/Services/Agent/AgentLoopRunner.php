@@ -114,7 +114,7 @@ class AgentLoopRunner
      * Execute one model-requested tool call against the MCP server, capturing
      * arguments, the result, and any error for the trace.
      */
-    private function executeToolCall(array $call): array
+    protected function executeToolCall(array $call): array
     {
         $name = $call['function']['name'] ?? 'unknown';
         $rawArgs = $call['function']['arguments'] ?? '{}';
@@ -159,9 +159,13 @@ class AgentLoopRunner
     /**
      * Convert MCP tools/list into OpenAI-style function tool definitions.
      */
-    private function buildToolDefinitions(): array
+    /** @var array<int,array> the raw tools/list seen, for subclasses to inspect */
+    protected array $toolList = [];
+
+    protected function buildToolDefinitions(): array
     {
         $tools = $this->mcp->listTools()['tools'] ?? [];
+        $this->toolList = $tools;
         $defs = [];
 
         foreach ($tools as $tool) {

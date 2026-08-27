@@ -97,6 +97,7 @@ const filters = [
   { value: 'collection_run', label: 'Collection runs' },
   { value: 'mcp_drift', label: 'MCP drift' },
   { value: 'parity', label: 'Env parity' },
+  { value: 'exploration', label: 'Explorations' },
 ];
 
 const rows = ref([]);
@@ -124,7 +125,7 @@ async function load() {
 }
 
 function setFilter(v) { typeFilter.value = v; cancelCompare(); load(); }
-const typeName = (t) => ({ conformance: 'Conformance', security: 'Security', agent_loop: 'Agent run', collection_run: 'Collection run', mcp_drift: 'MCP drift', parity: 'Env parity' }[t] || t);
+const typeName = (t) => ({ conformance: 'Conformance', security: 'Security', agent_loop: 'Agent run', collection_run: 'Collection run', mcp_drift: 'MCP drift', parity: 'Env parity', exploration: 'Exploration' }[t] || t);
 
 function rowClick(r) {
   if (compareMode.value) { toggleSelect(r); return; }

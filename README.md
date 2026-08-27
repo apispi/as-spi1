@@ -234,6 +234,23 @@ of what the secret flag is for.
 - `GET /api/saved-requests/{id}/export?format=` — snippet for a saved request
 - `POST /api/export` — snippet for an unsaved draft
 
+## Agent Explorer (autonomous MCP exploration)
+
+`POST /api/explore` points an autonomous agent at any MCP server with a goal:
+`App\Services\Agent\ServerExplorer` (a subclass of the connector agent loop)
+lets SCX pursue the goal by calling the server's tools, and reports the path it
+took, the tool surface it was exposed to, and — the point — every destructive
+tool it reached for.
+
+**Safe by default.** Safe mode (on unless explicitly disabled) refuses tools
+whose names look side-effecting (`DestructiveHeuristic` — delete/update/send/
+pay/deploy…), so aiming an autonomous model at a live server does not risk
+mutating it. A refused call is a *finding*, not an execution: "the agent tried
+to call `delete_user` to meet the goal" is exactly what you want to learn. The
+discovered tools are also run through the injection scanner, so an exploration
+doubles as a security scan of what the agent saw. Runs on the caller's SCX key;
+persists as an `exploration` report. Launched from the Explorer view.
+
 ## MCP flight recorder
 
 A pass-through proxy at `/mcp-proxy/{token}`: point an agent at the recorder

@@ -124,6 +124,7 @@ const workspaceNav = [
   { to: '/tester', label: 'Tester', icon: 'send' },
   { to: '/collections', label: 'Collections', icon: 'layers' },
   { to: '/ai-lab', label: 'AI Lab', icon: 'sparkles' },
+  { to: '/explore', label: 'Explorer', icon: 'sparkles' },
   { to: '/monitors', label: 'Monitors', icon: 'activity' },
   { to: '/webhooks', label: 'Webhooks', icon: 'plug' },
   { to: '/recorder', label: 'Recorder', icon: 'activity' },
