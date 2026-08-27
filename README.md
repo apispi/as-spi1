@@ -219,6 +219,29 @@ of what the secret flag is for.
 - `GET /api/saved-requests/{id}/export?format=` — snippet for a saved request
 - `POST /api/export` — snippet for an unsaved draft
 
+## MCP gateway (Spi as an MCP server)
+
+`POST /api/gateway/tools` is a real MCP endpoint (Streamable HTTP, stateless),
+authenticated with a personal API key. Its tools are the caller's own
+artefacts: `list_collections`, `run_collection`, `get_monitor_status`,
+`evaluate_assertions`, and a guarded `http_request`. Any MCP client — an
+agent included — can run your test suites and read your monitors; runs
+persist as reports exactly like UI runs. This is the endpoint the seeded
+"Spi Gateway" connector advertises.
+
+## Webhook capture
+
+Each endpoint gets a URL at `/hook/{token}` — the token is the credential.
+Whatever arrives (any method) is captured: headers (with
+Authorization/Cookie redacted at capture), query, body (truncated at 64KB),
+and IP, with per-endpoint retention. Captures replay into the tester.
+
+With an expectation set ("a request at least every N minutes") the endpoint
+becomes a **dead-man's switch**: a scheduler tick flags silence and alerts on
+the transition — email plus every enabled alert channel — and again on
+recovery. This watches for *absence*: dead crons, stuck queues, revoked
+callbacks. An endpoint that never received anything can still go silent.
+
 ## Monitors
 
 A monitor runs a collection on a schedule and alerts on status changes:
@@ -237,6 +260,16 @@ monitor. The first run establishes a baseline and never alerts.
 A run that throws is still recorded as a failing result: a monitor that goes
 silent is worse than one reporting an error. Intervals are restricted to
 `Monitor::INTERVALS` so a monitor cannot hammer a target.
+
+### MCP drift watch
+
+A monitor with `type: mcp_drift` watches an MCP endpoint instead of running a
+collection: each run snapshots `tools/list` (canonical-JSON hashes, so key
+order is not drift) and alerts when a tool is added, removed, or changes its
+schema — or its **description**, which counts deliberately: agents read
+descriptions as instructions, so a rewritten description is a changed
+contract and the classic prompt-injection vector. Drift alerts once, then the
+new shape becomes the baseline. Snapshots persist as `mcp_drift` reports.
 
 ### Alert channels
 
@@ -271,6 +304,15 @@ Laravel's scheduler needs one cron entry on the server. In SiteGround's cPanel
 Alerts also need real mail credentials in the production `.env`
 (`MAIL_MAILER=smtp` and the rest). With `MAIL_MAILER=log` they are written to
 the log file instead of sent.
+
+## Self-healing assertions
+
+When assertions fail because the API legitimately changed, `POST /api/ai/heal`
+asks SCX for the updated set that preserves each assertion's intent —
+structural checks keep their shape, expected values update, and assertions
+whose fields vanished are dropped with a stated reason, never silently. The
+tester's Heal button applies the proposal for review with one-click Undo;
+nothing is saved until the user saves. Runs on the caller's own SCX key.
 
 ## Spi (AI assistant)
 

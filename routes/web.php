@@ -146,6 +146,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/ai/author', [AiAssistController::class, 'author'])->middleware('throttle:outbound-test');
     Route::post('/api/ai/explain', [AiAssistController::class, 'explain'])->middleware('throttle:outbound-test');
     Route::post('/api/ai/assert', [AiAssistController::class, 'assert'])->middleware('throttle:outbound-test');
+    Route::post('/api/ai/heal', [AiAssistController::class, 'heal'])->middleware('throttle:outbound-test');
     Route::post('/api/ai/fix', [AiAssistController::class, 'fix'])->middleware('throttle:outbound-test');
 
     // MCP security scanner (#3) on caller-supplied tool/prompt descriptors.

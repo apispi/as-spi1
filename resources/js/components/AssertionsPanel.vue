@@ -14,6 +14,15 @@
                 title="Generate assertions from the current response with AI">
           {{ generating ? 'Generating…' : 'Generate' }}
         </button>
+        <button
+          v-if="summary && !summary.passed"
+          class="asrt-btn asrt-heal"
+          @click="heal"
+          :disabled="healing"
+          title="The API changed? Let AI propose updated assertions from this response — review before saving."
+        >
+          {{ healing ? 'Proposing…' : 'Heal' }}
+        </button>
         <button class="asrt-btn" @click="run" :disabled="!response || !rows.length || running">
           {{ running ? 'Running…' : 'Run' }}
         </button>
@@ -25,6 +34,15 @@
 
     <div v-if="!collapsed" class="asrt-body">
       <p v-if="error" class="asrt-error">{{ error }}</p>
+
+      <div v-if="healNote" class="asrt-healnote">
+        <p><strong>AI proposal applied:</strong> {{ healNote.summary }}</p>
+        <p v-for="d in healNote.dropped" :key="d.path" class="asrt-dropped">
+          Dropped <code>{{ d.path }}</code> — {{ d.reason }}
+        </p>
+        <p class="asrt-healhint">Review the rows above, re-run, and Save to accept the new contract — or Undo.</p>
+        <button class="asrt-btn" @click="undoHeal">Undo</button>
+      </div>
 
       <p v-if="!rows.length" class="asrt-empty">
         No assertions yet. Send a request, then <strong>Generate</strong> them from the
@@ -93,6 +111,9 @@ const running = ref(false);
 const generating = ref(false);
 const saving = ref(false);
 const error = ref('');
+const healing = ref(false);
+const healNote = ref(null);
+let preHealRows = null;
 
 const needsExpected = (op) => !NO_EXPECTED.includes(op);
 const summary = computed(() => results.value);
@@ -200,6 +221,52 @@ const generate = async () => {
   }
 };
 
+// The API changed and assertions started failing: ask AI for the updated set
+// that preserves intent, applied as a reviewable proposal — never saved
+// without the user pressing Save.
+const heal = async () => {
+  if (!props.response) return;
+  healing.value = true;
+  error.value = '';
+  try {
+    const res = await axios.post('/api/ai/heal', {
+      assertions: payloadRows(),
+      response: typeof props.response.body === 'string'
+        ? props.response.body
+        : JSON.stringify(props.response.body ?? ''),
+      status: props.response.status,
+    });
+    const proposed = res.data?.assertions || [];
+    if (!proposed.length) {
+      error.value = 'The model proposed nothing usable.';
+      return;
+    }
+    preHealRows = rows.value.map((r) => ({ ...r }));
+    rows.value = proposed.map((a) => ({
+      path: a.path || '',
+      operator: OPERATORS.includes(a.operator) ? a.operator : 'equals',
+      expected: a.expected ?? '',
+      description: a.description || null,
+    }));
+    healNote.value = {
+      summary: res.data.summary || 'Assertions updated to match the new response.',
+      dropped: res.data.dropped || [],
+    };
+    await run();
+  } catch (e) {
+    error.value = e.response?.data?.error || 'Failed to propose a fix.';
+  } finally {
+    healing.value = false;
+  }
+};
+
+const undoHeal = () => {
+  if (preHealRows) rows.value = preHealRows.map((r) => ({ ...r }));
+  preHealRows = null;
+  healNote.value = null;
+  results.value = null;
+};
+
 const save = async () => {
   if (!props.savedRequestId) return;
   saving.value = true;
@@ -232,6 +299,13 @@ const save = async () => {
 .asrt-body { padding: 0 16px 14px; overflow-y: auto; max-height: 40vh; }
 .asrt-empty { font-size: 12.5px; color: var(--text-secondary); line-height: 1.6; margin: 4px 0 12px; }
 .asrt-error { color: #f85149; font-size: 12.5px; margin: 4px 0 8px; }
+.asrt-heal { border-color: #a371f7; color: #a371f7; }
+.asrt-heal:hover:not(:disabled) { border-color: #a371f7; color: #a371f7; background: rgba(163,113,247,.1); }
+.asrt-healnote { border: 1px solid #a371f7; border-radius: 9px; padding: 10px 12px; margin: 8px 0; font-size: 12.5px; color: var(--text-secondary); }
+.asrt-healnote p { margin: 0 0 6px; line-height: 1.5; }
+.asrt-healnote code { font-family: 'Courier New', monospace; background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 4px; }
+.asrt-dropped { color: #d29922; }
+.asrt-healhint { font-size: 12px; }
 
 .asrt-row { display: grid; grid-template-columns: 18px 1.3fr 1fr 1.2fr 26px; gap: 6px; align-items: center; margin-bottom: 6px; }
 .asrt-row .input-field { padding: 5px 8px; font-size: 12.5px; }

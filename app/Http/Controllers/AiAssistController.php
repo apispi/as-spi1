@@ -102,6 +102,47 @@ class AiAssistController extends Controller
     }
 
     /**
+     * Given assertions that have started failing against a response, propose
+     * the updated set — the "accept the new contract" half of a failing check.
+     *
+     * The model is told to preserve intent, not to make the suite pass at any
+     * cost: structural checks keep their shape with updated expected values,
+     * and an assertion that no longer applies is dropped with a reason rather
+     * than silently deleted.
+     */
+    public function heal(Request $request)
+    {
+        $v = $request->validate([
+            'assertions' => 'required|array|min:1|max:50',
+            'assertions.*.path' => 'required|string|max:255',
+            'assertions.*.operator' => ['required', 'string', \Illuminate\Validation\Rule::in(Assertion::operators())],
+            'assertions.*.expected' => 'nullable',
+            'assertions.*.description' => 'nullable|string|max:255',
+            'response' => 'required|string|max:40000',
+            'status' => 'nullable',
+        ]);
+
+        $operators = implode('|', Assertion::operators());
+
+        $sys = 'You repair API response assertions after the API changed. You receive the CURRENT '
+            .'assertions and the NEW response. Propose the updated assertion set that preserves each '
+            .'assertion\'s INTENT against the new response. Rules: '
+            .'1) Keep structural checks (exists, is_type) with their shape unless the field is gone. '
+            .'2) Update expected values to match the new response only where the old intent clearly maps. '
+            .'3) If an assertion no longer applies (field removed), drop it and explain why in `dropped`. '
+            .'4) Never invent assertions for fields the current set does not cover. '
+            ."5) `operator` MUST be one of: {$operators}. "
+            .'Respond ONLY as JSON: {"assertions":[{"path":string,"operator":string,"expected":string|null,"description":string}],'
+            .'"dropped":[{"path":string,"reason":string}],"summary":string}.';
+
+        $user = 'Current assertions: '.json_encode($v['assertions'])
+            ."\n\nStatus: ".($v['status'] ?? 'unknown')
+            ."\n\nNew response body:\n".$v['response'];
+
+        return $this->respondJson($request, $sys, $user, 0.1);
+    }
+
+    /**
      * Given a failing request and its error, propose a corrected request.
      */
     public function fix(Request $request)
