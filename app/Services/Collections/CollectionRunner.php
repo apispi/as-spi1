@@ -28,7 +28,7 @@ class CollectionRunner
     ) {
     }
 
-    public function run(Collection $collection, ?Environment $environment = null): array
+    public function run(Collection $collection, ?Environment $environment = null, bool $captureBodies = false): array
     {
         $variables = $environment?->map() ?? [];
 
@@ -58,7 +58,7 @@ class CollectionRunner
                 continue;
             }
 
-            $result = $this->runStep($step, $saved, $variables, $index);
+            $result = $this->runStep($step, $saved, $variables, $index, $captureBodies);
 
             $steps[] = $result['step'];
             $variables = $result['variables'];
@@ -85,7 +85,7 @@ class CollectionRunner
         ];
     }
 
-    private function runStep($step, $saved, array $variables, int $index): array
+    private function runStep($step, $saved, array $variables, int $index, bool $captureBodies = false): array
     {
         $resolver = new VariableResolver;
 
@@ -138,6 +138,7 @@ class CollectionRunner
                 'unresolved' => $resolver->unresolved(),
                 'assertions' => $evaluation ? $this->masker->mask($evaluation) : null,
                 'contract' => $contract,
+                'body' => $captureBodies ? $this->masker->mask(is_string($response['body'] ?? null) ? $response['body'] : json_encode($response['body'] ?? null)) : null,
                 'extracted' => array_keys($extracted),
                 'passed' => $passed,
                 'skipped' => false,

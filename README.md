@@ -364,6 +364,17 @@ as additive and passes. Drift shows per step in run results and, since runs are
 monitored, alerts through the existing machinery. This is contract testing with
 zero assertions written.
 
+## Environment parity
+
+`POST /api/collections/{id}/parity` runs a collection against **two**
+environments and diffs the responses — "does staging behave like production?".
+`App\Services\Collections\ParityChecker` compares by **shape**, reusing the
+contract engine: value differences (ids, timestamps) are expected between
+environments and ignored, while a field one side returns and the other does
+not, a type that differs, or a status mismatch is flagged as divergence. Runs
+persist as `parity` reports; secret values are masked and raw bodies are
+diffed transiently, never stored. Launched from Collections → Compare envs.
+
 ## Self-healing assertions
 
 When assertions fail because the API legitimately changed, `POST /api/ai/heal`

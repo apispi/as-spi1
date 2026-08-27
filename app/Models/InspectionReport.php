@@ -17,7 +17,7 @@ class InspectionReport extends Model
 {
     use SharedInWorkspace;
 
-    public const TYPES = ['agent_loop', 'conformance', 'security', 'collection_run', 'mcp_drift'];
+    public const TYPES = ['agent_loop', 'conformance', 'security', 'collection_run', 'mcp_drift', 'parity'];
 
     protected $fillable = [
         'user_id',

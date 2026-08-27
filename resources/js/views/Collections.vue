@@ -68,6 +68,8 @@
             <button class="col-btn" @click="run(c)" :disabled="running === c.id || !c.steps.length">
               {{ running === c.id ? 'Running…' : 'Run' }}
             </button>
+            <button class="col-btn" @click="openParity(c)" :disabled="!c.steps.length || envStore.environments.length < 2"
+                    title="Run against two environments and diff the responses">Compare envs</button>
             <button class="col-btn" @click="showManager = true">Edit</button>
           </div>
         </li>
@@ -79,6 +81,28 @@
         :run="collectionsStore.lastRun"
         @close="collectionsStore.lastRun = null"
       />
+
+      <div v-if="parity" class="col-parity col-run">
+        <div class="col-parity-head">
+          <span class="col-parity-verdict" :class="parity.result ? (parity.result.in_parity ? 'ok' : 'bad') : ''">
+            {{ parity.running ? 'Comparing…' : (parity.result ? (parity.result.in_parity ? 'In parity' : parity.result.diverged_count + ' diverged') : '') }}
+          </span>
+          <span class="col-parity-title">{{ parity.name }}: {{ parity.envA }} vs {{ parity.envB }}</span>
+          <button class="col-btn" @click="parity = null">Close</button>
+        </div>
+        <ul v-if="parity.result" class="col-parity-steps">
+          <li v-for="st in parity.result.steps" :key="st.index" :class="st.diverged ? 'diverged' : ''">
+            <span class="col-parity-mark">{{ st.diverged ? '✕' : '✓' }}</span>
+            <span class="col-parity-name">{{ st.name }}</span>
+            <span v-if="st.status_differs" class="col-parity-note bad">{{ st.status_a }} vs {{ st.status_b }}</span>
+            <template v-if="st.shape">
+              <span v-for="c in st.shape.only_in_a" :key="'a'+c.path" class="col-parity-note bad">only in {{ parity.envA }}: {{ c.path }}</span>
+              <span v-for="c in st.shape.only_in_b" :key="'b'+c.path" class="col-parity-note bad">only in {{ parity.envB }}: {{ c.path }}</span>
+              <span v-for="c in st.shape.type_differs" :key="'t'+c.path" class="col-parity-note bad">{{ c.path }} {{ c.expected }}→{{ c.actual }}</span>
+            </template>
+          </li>
+        </ul>
+      </div>
     </section>
 
     <!-- History -->
@@ -138,6 +162,7 @@ const history = ref([]);
 const historyLoading = ref(false);
 const showManager = ref(false);
 const running = ref(null);
+const parity = ref(null);
 
 onMounted(() => {
   requestsStore.fetchSavedRequests();
@@ -184,6 +209,26 @@ const run = async (c) => {
     await collectionsStore.run(c.id, envStore.selectedId);
   } finally {
     running.value = null;
+  }
+};
+
+const openParity = async (c) => {
+  // Default to the first two environments; a fuller picker can come later.
+  const envs = envStore.environments;
+  parity.value = { name: c.name, envA: envs[0].name, envB: envs[1].name, running: true, result: null };
+  try {
+    const res = await axios.post(`/api/collections/${c.id}/parity`, {
+      environment_a: envs[0].id, environment_b: envs[1].id,
+    });
+    parity.value.result = res.data;
+  } catch (e) {
+    if (e.response?.status === 422 && e.response.data?.steps) {
+      parity.value.result = e.response.data;
+    } else {
+      parity.value = null;
+    }
+  } finally {
+    if (parity.value) parity.value.running = false;
   }
 };
 
@@ -266,6 +311,19 @@ const ago = (iso) => {
 .col-clear { margin-top: 12px; padding: 7px 13px; background: none; border: 1px solid var(--border-color); border-radius: 7px; color: var(--text-secondary); font-size: 12.5px; cursor: pointer; }
 .col-clear:hover { border-color: #f85149; color: #f85149; }
 .col-run { margin-top: 16px; border: 1px solid var(--border-color); border-radius: 14px; }
+.col-parity { padding: 12px 14px; }
+.col-parity-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.col-parity-verdict { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.col-parity-verdict.ok { color: #3fb950; background: rgba(63,185,80,.16); }
+.col-parity-verdict.bad { color: #f85149; background: rgba(248,81,73,.14); }
+.col-parity-title { font-size: 13px; color: var(--text-primary); flex: 1; }
+.col-parity-steps { list-style: none; margin: 0; padding: 0; }
+.col-parity-steps li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-size: 12.5px; padding: 6px 0; border-top: 1px solid var(--border-color); }
+.col-parity-mark { font-weight: 700; color: #3fb950; }
+.col-parity-steps .diverged .col-parity-mark { color: #f85149; }
+.col-parity-name { font-weight: 600; color: var(--text-primary); }
+.col-parity-note { font-size: 11.5px; color: var(--text-secondary); font-family: 'Courier New', monospace; }
+.col-parity-note.bad { color: #f85149; }
 
 .method-badge { font-size: 10px; font-weight: 700; padding: 3px 7px; border-radius: 4px; flex-shrink: 0; }
 .method-badge.get { color: #3fb950; background: rgba(63,185,80,.15); }

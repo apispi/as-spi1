@@ -115,6 +115,61 @@ class CollectionController extends Controller
         return response()->json($result + ['report_id' => $report->id], $result['passed'] ? 200 : 422);
     }
 
+    /**
+     * Run the collection against two environments and diff the responses —
+     * "does staging behave like production?". Persisted as a parity report.
+     */
+    public function parity(Request $request, CollectionRunner $runner, \App\Services\Collections\ParityChecker $checker, int $id)
+    {
+        $user = $request->user();
+        $collection = Collection::inWorkspaceOf($user)->findOrFail($id);
+
+        if ($collection->steps()->count() === 0) {
+            return response()->json(['message' => 'This collection has no steps.'], 422);
+        }
+
+        $validated = $request->validate([
+            'environment_a' => 'required',
+            'environment_b' => 'required|different:environment_a',
+        ]);
+
+        $envA = $this->resolveEnvironment($user, $validated['environment_a']);
+        $envB = $this->resolveEnvironment($user, $validated['environment_b']);
+
+        if (! $envA || ! $envB) {
+            return response()->json(['message' => 'One of the environments was not found.'], 422);
+        }
+
+        // Bodies are captured only to diff them here; the parity report keeps
+        // the structural diff, not the raw (possibly large or secret) bodies.
+        $runA = $runner->run($collection, $envA, captureBodies: true);
+        $runB = $runner->run($collection, $envB, captureBodies: true);
+
+        $parity = $checker->compare($runA, $runB);
+
+        $report = InspectionReport::create([
+            'user_id' => $user->id,
+            'type' => 'parity',
+            'summary' => sprintf(
+                '%s — %s vs %s: %s',
+                $collection->name,
+                $envA->name,
+                $envB->name,
+                $parity['in_parity'] ? 'in parity' : $parity['diverged_count'].' step(s) diverged'
+            ),
+            'data' => $parity,
+        ]);
+
+        return response()->json($parity + ['report_id' => $report->id], $parity['in_parity'] ? 200 : 422);
+    }
+
+    private function resolveEnvironment($user, mixed $selector)
+    {
+        return is_numeric($selector)
+            ? \App\Models\Environment::inWorkspaceOf($user)->find((int) $selector)
+            : \App\Models\Environment::inWorkspaceOf($user)->where('name', (string) $selector)->first();
+    }
+
     private function fresh(Collection $collection)
     {
         return $collection->fresh()->load('steps.savedRequest:id,name,protocol,method,url');
