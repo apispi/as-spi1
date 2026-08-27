@@ -38,6 +38,12 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by('outbound:user:'.($request->user()?->id ?: $request->ip()));
         });
 
+        // Public webhook capture: per-IP, generous enough for a chatty sender
+        // but a ceiling against being used as a write amplifier.
+        RateLimiter::for('webhook-capture', function (Request $request) {
+            return Limit::perMinute(120)->by('hook:ip:'.$request->ip());
+        });
+
         // Credential endpoints: slow down brute-force attempts per IP.
         RateLimiter::for('auth-attempts', function (Request $request) {
             return Limit::perMinute(10)->by('auth:ip:'.$request->ip());

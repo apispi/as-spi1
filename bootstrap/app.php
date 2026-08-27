@@ -14,6 +14,10 @@ $app = Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Captured webhooks come from third-party servers with no session, so
+        // CSRF cannot apply to them.
+        $middleware->validateCsrfTokens(except: ['hook/*']);
+
         $middleware->alias([
             'admin' => \App\Http\Middleware\IsAdmin::class,
             'auth.apitoken' => \App\Http\Middleware\AuthenticateApiToken::class,

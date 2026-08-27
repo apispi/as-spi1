@@ -33,6 +33,8 @@ use App\Http\Controllers\MonitorController;
 use App\Http\Controllers\AlertChannelController;
 use App\Http\Controllers\OrganisationController;
 use App\Http\Controllers\McpGatewayController;
+use App\Http\Controllers\WebhookCaptureController;
+use App\Http\Controllers\WebhookEndpointController;
 use App\Http\Controllers\ImportController;
 
 // Google OAuth (full-page redirect flow). Registered before the SPA
@@ -42,9 +44,14 @@ Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect'])
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])
     ->middleware('throttle:auth-attempts');
 
+// Inbound webhook capture: any method, unauthenticated — the token is the
+// credential. Registered before (and excluded from) the SPA catch-all.
+Route::any('/hook/{token}', [WebhookCaptureController::class, 'capture'])
+    ->middleware('throttle:webhook-capture');
+
 Route::get('/{any}', function () {
     return view('welcome');
-})->where('any', '^(?!api\/|auth\/).*$');
+})->where('any', '^(?!api\/|auth\/|hook\/).*$');
 
 Route::post('/api/proxy', [ProxyController::class, 'handle'])->middleware(['throttle:proxy', 'resolve.vars']);
 
@@ -107,6 +114,12 @@ Route::middleware('auth')->group(function () {
     Route::delete('/api/alert-channels/{id}', [AlertChannelController::class, 'destroy']);
     Route::post('/api/alert-channels/{id}/test', [AlertChannelController::class, 'test'])
         ->middleware('throttle:outbound-test');
+
+    Route::get('/api/webhook-endpoints', [WebhookEndpointController::class, 'index']);
+    Route::post('/api/webhook-endpoints', [WebhookEndpointController::class, 'store']);
+    Route::put('/api/webhook-endpoints/{id}', [WebhookEndpointController::class, 'update']);
+    Route::delete('/api/webhook-endpoints/{id}', [WebhookEndpointController::class, 'destroy']);
+    Route::get('/api/webhook-endpoints/{id}/captures', [WebhookEndpointController::class, 'captures']);
 
     Route::get('/api/monitors', [MonitorController::class, 'index']);
     Route::get('/api/monitors/{id}', [MonitorController::class, 'show']);

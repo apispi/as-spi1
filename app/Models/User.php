@@ -123,6 +123,11 @@ class User extends Authenticatable
         return $this->belongsTo(Organisation::class);
     }
 
+    public function webhookEndpoints()
+    {
+        return $this->hasMany(WebhookEndpoint::class);
+    }
+
     public function alertChannels()
     {
         return $this->hasMany(AlertChannel::class);

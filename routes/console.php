@@ -15,3 +15,9 @@ Schedule::command('monitors:run')
     ->everyMinute()
     ->withoutOverlapping()
     ->runInBackground();
+
+// Dead-man's-switch check for webhook endpoints with an expectation set.
+Schedule::command('webhooks:check')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->runInBackground();
