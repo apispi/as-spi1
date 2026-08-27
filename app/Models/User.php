@@ -128,6 +128,11 @@ class User extends Authenticatable
         return $this->hasMany(WebhookEndpoint::class);
     }
 
+    public function statusPages()
+    {
+        return $this->hasMany(StatusPage::class);
+    }
+
     public function alertChannels()
     {
         return $this->hasMany(AlertChannel::class);

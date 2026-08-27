@@ -35,6 +35,7 @@ use App\Http\Controllers\OrganisationController;
 use App\Http\Controllers\McpGatewayController;
 use App\Http\Controllers\WebhookCaptureController;
 use App\Http\Controllers\WebhookEndpointController;
+use App\Http\Controllers\StatusPageController;
 use App\Http\Controllers\ImportController;
 
 // Google OAuth (full-page redirect flow). Registered before the SPA
@@ -59,6 +60,10 @@ Route::post('/api/proxy', [ProxyController::class, 'handle'])->middleware(['thro
 // advertises. API-key authenticated and stateless; see McpGatewayController.
 Route::post('/api/gateway/tools', [McpGatewayController::class, 'handle'])
     ->middleware(['auth.apitoken', 'throttle:outbound-test']);
+
+// Public status-page JSON (token-gated, no auth, throttled like other public reads).
+Route::get('/api/status/{token}', [StatusPageController::class, 'show'])
+    ->middleware('throttle:proxy');
 
 // Public, read-only view of a shared inspection report (token-gated, no auth).
 Route::get('/api/reports/shared/{token}', [ReportController::class, 'showShared'])
@@ -120,6 +125,11 @@ Route::middleware('auth')->group(function () {
     Route::put('/api/webhook-endpoints/{id}', [WebhookEndpointController::class, 'update']);
     Route::delete('/api/webhook-endpoints/{id}', [WebhookEndpointController::class, 'destroy']);
     Route::get('/api/webhook-endpoints/{id}/captures', [WebhookEndpointController::class, 'captures']);
+
+    Route::get('/api/status-pages', [StatusPageController::class, 'index']);
+    Route::post('/api/status-pages', [StatusPageController::class, 'store']);
+    Route::put('/api/status-pages/{id}', [StatusPageController::class, 'update']);
+    Route::delete('/api/status-pages/{id}', [StatusPageController::class, 'destroy']);
 
     Route::get('/api/monitors', [MonitorController::class, 'index']);
     Route::get('/api/monitors/{id}', [MonitorController::class, 'show']);

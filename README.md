@@ -271,6 +271,17 @@ descriptions as instructions, so a rewritten description is a changed
 contract and the classic prompt-injection vector. Drift alerts once, then the
 new shape becomes the baseline. Snapshots persist as `mcp_drift` reports.
 
+### Status pages
+
+A monitor set can be published as a public status page at `/status/{token}` —
+overall state, per-monitor uptime strips, and timing, self-refreshing every
+minute. The payload is deliberately sparse: monitor names, pass/fail history,
+and timing — never target URLs, step detail, or the owner's identity, and
+only monitors the owner explicitly opted in. Publishing an MCP drift monitor
+gives the novel case: a public page attesting that an MCP server's tool
+contract is stable. Managed from Monitors → Status pages (capped at 5 per
+user); disabling a page 404s its link immediately.
+
 ### Alert channels
 
 Besides email, a monitor can post to Slack, Discord, or any endpoint. Channels

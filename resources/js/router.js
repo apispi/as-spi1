@@ -14,6 +14,7 @@ import Developers from './views/Developers.vue';
 import AiLab from './views/AiLab.vue';
 import Reports from './views/Reports.vue';
 import SharedReport from './views/SharedReport.vue';
+import StatusPage from './views/StatusPage.vue';
 import Tester from './views/Tester.vue';
 import Monitors from './views/Monitors.vue';
 import Webhooks from './views/Webhooks.vue';
@@ -90,6 +91,11 @@ const routes = [
         path: '/r/:token',
         name: 'shared-report',
         component: SharedReport
+    },
+    {
+        path: '/status/:token',
+        name: 'status-page',
+        component: StatusPage
     },
     {
         path: '/login',

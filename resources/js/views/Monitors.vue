@@ -6,6 +6,7 @@
         <p class="mon-sub">Run a collection on a schedule and get alerted when it starts failing.</p>
       </div>
       <div class="mon-head-actions">
+        <button class="mon-btn" @click="openPages">Status pages</button>
         <button class="mon-btn" @click="openChannels">Alert channels</button>
         <button class="mon-primary" @click="startNew" :disabled="!collectionsStore.collections.length">
           New monitor
@@ -206,6 +207,72 @@
       </div>
     </div>
 
+    <!-- Status pages -->
+    <div v-if="showPages" class="mon-scrim" @click.self="showPages = false">
+      <div class="mon-modal">
+        <header class="mon-modal-head">
+          <h2>Status pages</h2>
+          <button class="mon-x" @click="showPages = false" aria-label="Close"><Icon name="close" :size="18" /></button>
+        </header>
+
+        <div class="mon-form">
+          <p class="mon-note">
+            A status page is a public, read-only view over monitors you choose —
+            names, uptime, and history only. Anyone with the link can see it.
+          </p>
+
+          <ul v-if="pages.length" class="mon-chan-list">
+            <li v-for="p in pages" :key="p.id" class="mon-chan">
+              <span class="mon-dot" :class="p.is_enabled ? 'passing' : ''"></span>
+              <div class="mon-chan-main">
+                <div>
+                  <span class="mon-chan-name">{{ p.name }}</span>
+                  <span v-if="!p.is_enabled" class="mon-pill paused">offline</span>
+                </div>
+                <div class="mon-chan-url">{{ p.url }}</div>
+                <div class="mon-chan-url">{{ p.monitors.join(' · ') || 'no monitors yet' }}</div>
+              </div>
+              <div class="mon-actions">
+                <a :href="p.url" target="_blank" rel="noopener" class="mon-btn">Open</a>
+                <button class="mon-btn" @click="editPage(p)">Edit</button>
+              </div>
+            </li>
+          </ul>
+
+          <div v-if="pageForm" class="mon-chan-form">
+            <label class="mon-label">Name</label>
+            <input v-model="pageForm.name" class="input-field" placeholder="Acme API status" maxlength="80" />
+
+            <label class="mon-label">Description</label>
+            <input v-model="pageForm.description" class="input-field" placeholder="Optional" maxlength="300" />
+
+            <label class="mon-label">Monitors shown</label>
+            <label v-for="m in store.monitors" :key="m.id" class="mon-check">
+              <input type="checkbox" :value="m.id" v-model="pageForm.monitor_ids" />
+              <span>{{ m.name }}</span>
+            </label>
+
+            <label class="mon-check">
+              <input type="checkbox" v-model="pageForm.is_enabled" />
+              <span>Page is live</span>
+            </label>
+
+            <p v-if="pageError" class="mon-error">{{ pageError }}</p>
+
+            <footer class="mon-modal-actions">
+              <button class="mon-primary" @click="savePage" :disabled="savingPage || !pageForm.name.trim()">
+                {{ savingPage ? 'Saving…' : 'Save' }}
+              </button>
+              <button v-if="pageForm.id" class="mon-danger" @click="removePage" :disabled="savingPage">Delete</button>
+              <button class="mon-btn" @click="pageForm = null" :disabled="savingPage">Cancel</button>
+            </footer>
+          </div>
+
+          <button v-else class="mon-btn mon-chan-add" @click="newPage">+ New status page</button>
+        </div>
+      </div>
+    </div>
+
     <!-- History -->
     <div v-if="history" class="mon-scrim" @click.self="history = null">
       <div class="mon-modal">
@@ -267,6 +334,11 @@ const INTERVALS = [5, 15, 30, 60, 180, 360, 720, 1440];
 
 const editing = ref(null);
 const channels = ref([]);
+const pages = ref([]);
+const showPages = ref(false);
+const pageForm = ref(null);
+const pageError = ref('');
+const savingPage = ref(false);
 const showChannels = ref(false);
 const channelForm = ref(null);
 const channelError = ref('');
@@ -289,6 +361,73 @@ const fetchChannels = async () => {
     channels.value = (await axios.get('/api/alert-channels')).data;
   } catch {
     channels.value = [];
+  }
+};
+
+const fetchPages = async () => {
+  try {
+    pages.value = (await axios.get('/api/status-pages')).data;
+  } catch {
+    pages.value = [];
+  }
+};
+
+const openPages = () => {
+  pageError.value = '';
+  pageForm.value = null;
+  showPages.value = true;
+  fetchPages();
+};
+
+const newPage = () => {
+  pageError.value = '';
+  pageForm.value = { id: null, name: '', description: '', is_enabled: true, monitor_ids: [] };
+};
+
+const editPage = (p) => {
+  pageError.value = '';
+  pageForm.value = {
+    id: p.id, name: p.name, description: p.description || '',
+    is_enabled: p.is_enabled, monitor_ids: [...(p.monitor_ids || [])],
+  };
+};
+
+const savePage = async () => {
+  savingPage.value = true;
+  pageError.value = '';
+  const payload = {
+    name: pageForm.value.name.trim(),
+    description: pageForm.value.description || null,
+    is_enabled: pageForm.value.is_enabled,
+    monitor_ids: pageForm.value.monitor_ids,
+  };
+  try {
+    if (pageForm.value.id) {
+      await axios.put(`/api/status-pages/${pageForm.value.id}`, payload);
+    } else {
+      await axios.post('/api/status-pages', payload);
+    }
+    pageForm.value = null;
+    await fetchPages();
+  } catch (e) {
+    const data = e.response?.data;
+    pageError.value = data?.message || Object.values(data?.errors || {})[0]?.[0] || 'Failed to save.';
+  } finally {
+    savingPage.value = false;
+  }
+};
+
+const removePage = async () => {
+  if (!confirm(`Delete "${pageForm.value.name}"? Its public link will stop working.`)) return;
+  savingPage.value = true;
+  try {
+    await axios.delete(`/api/status-pages/${pageForm.value.id}`);
+    pageForm.value = null;
+    await fetchPages();
+  } catch {
+    pageError.value = 'Failed to delete.';
+  } finally {
+    savingPage.value = false;
   }
 };
 
