@@ -29,4 +29,7 @@ return [
 
     'admin_password' => env('ADMIN_PASSWORD'),
 
+    // Shared by the two seeded non-admin accounts (bot89/bot97@apispi.com).
+    'bot_password' => env('BOT_PASSWORD'),
+
 ];

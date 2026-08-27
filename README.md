@@ -42,6 +42,7 @@ Beyond the standard Laravel keys:
 | Variable | Purpose |
 | --- | --- |
 | `ADMIN_PASSWORD` | Password for the seeded `admin@apispi.com` account. If unset, the seeder generates a random one and prints it **once**. |
+| `BOT_PASSWORD` | Shared password for the two seeded test users, `bot89@apispi.com` (User 1) and `bot97@apispi.com` (User 2). Same unset behaviour as above. |
 | `SSRF_RESOLVE_DNS` | When `true` (default), the SSRF guard resolves hostnames and blocks any that map to private/reserved IPs. Set `false` only in test environments. |
 
 ## Protocols
