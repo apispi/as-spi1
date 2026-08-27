@@ -23,6 +23,22 @@ class SchemaInferrer
     }
 
     /**
+     * Infer one schema from many samples of the same thing — e.g. every
+     * observed argument set for a tool. Merging relaxes fields that were not
+     * always present, so the result reflects what is really always sent.
+     */
+    public function inferMany(array $samples): ?array
+    {
+        $schema = null;
+        foreach ($samples as $sample) {
+            $one = $this->describe($sample);
+            $schema = $schema === null ? $one : $this->merge($schema, $one);
+        }
+
+        return $schema;
+    }
+
+    /**
      * Infer from a raw response body string, returning null when it is not
      * JSON (a contract only makes sense over structured data).
      */

@@ -84,6 +84,17 @@ class McpProxyController extends Controller
         ]);
     }
 
+    /**
+     * Reverse-engineer the server's real contract from recorded traffic:
+     * observed input/output schemas per tool, beside what it declared.
+     */
+    public function synthesize(Request $request, \App\Services\Mcp\McpTrafficSynthesizer $synthesizer, int $id)
+    {
+        $proxy = McpProxy::inWorkspaceOf($request->user())->findOrFail($id);
+
+        return response()->json($synthesizer->synthesize($proxy));
+    }
+
     private function present(McpProxy $proxy): array
     {
         return [

@@ -59,10 +59,43 @@
             <input type="checkbox" v-model="onlyFlagged" @change="reloadExchanges" />
             <span>Flagged only</span>
           </label>
+          <button class="rec-btn" @click="synthesize" :disabled="synthesizing" title="Reverse-engineer the server's real contract from this traffic">
+            {{ synthesizing ? '…' : 'Synthesize contract' }}
+          </button>
           <button class="rec-btn" @click="reloadExchanges" :disabled="reloading">{{ reloading ? '…' : 'Refresh' }}</button>
           <button class="rec-x" @click="viewing = null" aria-label="Close"><Icon name="close" :size="18" /></button>
         </header>
         <div class="rec-body">
+          <div v-if="synth" class="rec-synth">
+            <div class="rec-synth-head">
+              <strong>Observed contract</strong>
+              <span class="rec-muted">learned from {{ synth.exchanges_seen }} exchange(s)</span>
+              <button class="rec-btn" @click="synth = null">Hide</button>
+            </div>
+            <p v-if="!synth.tools.length" class="rec-muted">No tool calls recorded yet — use the agent, then synthesize.</p>
+            <div v-for="t in synth.tools" :key="t.name" class="rec-tool">
+              <div class="rec-tool-head">
+                <span class="rec-verb">{{ t.name }}</span>
+                <span v-if="t.only_observed" class="rec-pill bad">undeclared</span>
+                <span class="rec-muted">{{ t.call_count }} call(s)</span>
+              </div>
+              <div class="rec-tool-grid">
+                <div>
+                  <h5>Declared input</h5>
+                  <pre>{{ t.declared_input_schema ? props_(t.declared_input_schema) : '—' }}</pre>
+                </div>
+                <div>
+                  <h5>Observed input</h5>
+                  <pre :class="{ 'rec-diff': differs(t) }">{{ t.observed_input_schema ? props_(t.observed_input_schema) : '—' }}</pre>
+                </div>
+                <div>
+                  <h5>Observed output</h5>
+                  <pre>{{ t.observed_output_schema ? props_(t.observed_output_schema) : '—' }}</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <p v-if="!viewing.exchanges.length" class="rec-muted">
             No exchanges yet. Point an agent at
             <code class="rec-url">{{ viewing.proxy.url }}</code> and refresh.
@@ -136,6 +169,8 @@ const viewing = ref(null);
 const expanded = ref(null);
 const onlyFlagged = ref(false);
 const reloading = ref(false);
+const synthesizing = ref(false);
+const synth = ref(null);
 const saving = ref(false);
 const error = ref('');
 const copied = ref(null);
@@ -207,7 +242,31 @@ const remove = async () => {
 const open = async (p) => {
   expanded.value = null;
   onlyFlagged.value = false;
+  synth.value = null;
   viewing.value = (await axios.get(`/api/mcp-proxies/${p.id}/exchanges`)).data;
+};
+
+const synthesize = async () => {
+  synthesizing.value = true;
+  try {
+    synth.value = (await axios.get(`/api/mcp-proxies/${viewing.value.proxy.id}/synthesize`)).data;
+  } finally {
+    synthesizing.value = false;
+  }
+};
+
+// A compact "field: type" view of a schema's top-level properties.
+const props_ = (schema) => {
+  const p = schema?.properties;
+  if (!p) return schema?.type || '—';
+  return Object.entries(p).map(([k, v]) => `${k}: ${Array.isArray(v.type) ? v.type.join('|') : v.type}`).join('\n');
+};
+
+// Does observed input have fields the declared schema lacks?
+const differs = (t) => {
+  const d = Object.keys(t.declared_input_schema?.properties || {});
+  const o = Object.keys(t.observed_input_schema?.properties || {});
+  return o.some((k) => !d.includes(k));
 };
 
 const reloadExchanges = async () => {
@@ -278,6 +337,18 @@ const ago = (iso) => {
 .rec-error { color: #f85149; font-size: 13px; margin: 12px 0 0; }
 .rec-actions-row { display: flex; gap: 8px; margin-top: 18px; }
 
+.rec-synth { border: 1px solid #a371f7; border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+.rec-synth-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; }
+.rec-synth-head strong { color: var(--text-primary); }
+.rec-synth-head .rec-btn { margin-left: auto; }
+.rec-tool { border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 10px; }
+.rec-tool:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
+.rec-tool-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.rec-tool-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.rec-tool-grid h5 { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-secondary); margin: 0 0 4px; }
+.rec-tool-grid pre { margin: 0; padding: 7px 9px; background: #010409; border: 1px solid var(--border-color); border-radius: 6px; font-family: 'Courier New', monospace; font-size: 11px; line-height: 1.5; color: var(--text-primary); overflow-x: auto; white-space: pre-wrap; }
+.rec-tool-grid pre.rec-diff { border-color: #a371f7; }
+@media (max-width: 640px) { .rec-tool-grid { grid-template-columns: 1fr; } }
 .rec-ex { border: 1px solid var(--border-color); border-radius: 9px; margin-bottom: 8px; overflow: hidden; }
 .rec-ex.flagged { border-color: #f85149; }
 .rec-ex-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; background: none; border: none; cursor: pointer; color: var(--text-primary); font-size: 12.5px; text-align: left; }

@@ -251,6 +251,18 @@ result that tries to hijack the agent flags the exchange on real traffic —
 filterable to flagged-only in the timeline. Managed under Recorder; token-gated
 and revocable, with per-recorder retention.
 
+## Synthesize a contract from traffic
+
+`GET /api/mcp-proxies/{id}/synthesize` reverse-engineers an MCP server's real
+contract from recorded flight-recorder traffic. For each tool an agent actually
+called, `App\Services\Mcp\McpTrafficSynthesizer` infers the input schema from
+the arguments that were really sent and the output schema from the responses
+that really came back, then sets both beside what `tools/list` declared. The
+novel output is the divergence: "the server declares `search` takes `{query}`,
+but agents send `{query, limit}` and get back `{results[], nextCursor}`" — and
+it surfaces tools that were **called but never declared**. No schema authoring;
+it is learned from what happened. Launched from Recorder → Synthesize contract.
+
 ## MCP gateway (Spi as an MCP server)
 
 `POST /api/gateway/tools` is a real MCP endpoint (Streamable HTTP, stateless),
