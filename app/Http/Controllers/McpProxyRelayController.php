@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\McpProxy;
+use App\Services\Mcp\McpPolicyEngine;
 use App\Services\Mcp\McpSecurityScanner;
 use App\Services\Security\SsrfException;
 use App\Services\Security\SsrfGuard;
@@ -21,9 +22,11 @@ use Throwable;
  * redacted from what is stored. The upstream address is re-pinned on every
  * relay, since the owner could have re-pointed the DNS since creation.
  *
- * Every JSON response is run through the injection scanner as it passes:
- * a tool description or result that tries to hijack the agent flags the
- * exchange, giving live detection on real traffic rather than a one-off scan.
+ * Every JSON response is run through the injection scanner as it passes.
+ * A proxy may also carry a firewall POLICY: the relay enforces it inline —
+ * blocking a tool call, redacting secrets in arguments before they leave, or
+ * withholding an injection-flagged response before it reaches the agent. Each
+ * enforcement is recorded on the exchange.
  */
 class McpProxyRelayController extends Controller
 {
@@ -32,7 +35,7 @@ class McpProxyRelayController extends Controller
 
     private const RELAY_TIMEOUT = 60;
 
-    public function relay(Request $request, string $token)
+    public function relay(Request $request, McpPolicyEngine $firewall, string $token)
     {
         $proxy = McpProxy::where('token', $token)->where('is_enabled', true)->first();
 
@@ -55,6 +58,29 @@ class McpProxyRelayController extends Controller
         ]);
 
         $body = (string) $request->getContent();
+        $requestJson = json_decode($body, true);
+        $policy = $proxy->policy ?? [];
+
+        // --- Firewall: request side ---------------------------------------
+        $reqDecision = $firewall->evaluateRequest($policy, is_array($requestJson) ? $requestJson : null);
+
+        if ($reqDecision['action'] === 'block') {
+            // Never forwarded. The agent gets a JSON-RPC error in its place.
+            $rpcId = $requestJson['id'] ?? null;
+            $error = $this->rpcError($rpcId, -32001, 'Spi policy: '.$reqDecision['note']);
+            $this->record($proxy, $request, $body, json_encode($error), 200, 0, null, [
+                'action' => 'blocked_request', 'note' => $reqDecision['note'], 'rule' => $reqDecision['rule'], 'redactions' => 0,
+            ]);
+
+            return response()->json($error);
+        }
+
+        // Redacted arguments are what actually leave (and what we store).
+        if ($reqDecision['redactions'] > 0 && is_array($requestJson)) {
+            $requestJson['params']['arguments'] = $reqDecision['arguments'];
+            $body = json_encode($requestJson, JSON_UNESCAPED_SLASHES);
+        }
+
         $started = microtime(true);
 
         try {
@@ -69,18 +95,43 @@ class McpProxyRelayController extends Controller
         }
 
         $durationMs = (int) round((microtime(true) - $started) * 1000);
+        $upstreamBody = $upstream->body();
+        $responseJson = json_decode($upstreamBody, true);
 
-        $this->record($proxy, $request, $body, $upstream->body(), $upstream->status(), $durationMs);
+        // --- Firewall: response side --------------------------------------
+        [$flagged] = $this->scanResponse('', is_array($responseJson) ? $responseJson : null);
+        $respDecision = $firewall->evaluateResponse($policy, is_array($responseJson) ? $responseJson : null, $flagged);
+
+        $enforcement = null;
+        $returnBody = $upstreamBody;
+
+        if ($respDecision['action'] === 'block') {
+            $safe = $this->rpcError($requestJson['id'] ?? null, -32002, 'Spi policy: '.$respDecision['note']);
+            $returnBody = json_encode($safe);
+            $enforcement = ['action' => 'blocked_response', 'note' => $respDecision['note'], 'rule' => $respDecision['rule'], 'redactions' => 0];
+        } elseif ($respDecision['action'] === 'redact') {
+            $returnBody = json_encode($respDecision['result'], JSON_UNESCAPED_SLASHES);
+            $enforcement = ['action' => 'redacted_response', 'note' => $respDecision['note'], 'rule' => null, 'redactions' => $respDecision['redactions']];
+        } elseif ($reqDecision['redactions'] > 0) {
+            $enforcement = ['action' => 'redacted_request', 'note' => $reqDecision['note'], 'rule' => null, 'redactions' => $reqDecision['redactions']];
+        }
+
+        // Record what actually flowed (redactions included, secrets excluded).
+        $this->record($proxy, $request, $body, $returnBody, $upstream->status(), $durationMs, null, $enforcement);
 
         $proxy->forceFill(['last_used_at' => now()])->save();
 
-        // Relay the response as-is, session headers included.
-        return response($upstream->body(), $upstream->status())
+        return response($returnBody, $upstream->status())
             ->withHeaders(array_filter([
                 'Content-Type' => $upstream->header('Content-Type'),
                 'Mcp-Session-Id' => $upstream->header('Mcp-Session-Id'),
                 'Mcp-Protocol-Version' => $upstream->header('Mcp-Protocol-Version'),
             ]));
+    }
+
+    private function rpcError(mixed $id, int $code, string $message): array
+    {
+        return ['jsonrpc' => '2.0', 'id' => $id, 'error' => ['code' => $code, 'message' => $message]];
     }
 
     private function record(
@@ -91,6 +142,7 @@ class McpProxyRelayController extends Controller
         ?int $status,
         int $durationMs,
         ?string $error = null,
+        ?array $enforcement = null,
     ): void {
         $requestJson = json_decode($requestBody, true);
         $responseJson = $responseBody !== null ? json_decode($responseBody, true) : null;
@@ -113,6 +165,7 @@ class McpProxyRelayController extends Controller
             'duration_ms' => $durationMs,
             'flagged' => $flagged,
             'flag_summary' => $summary,
+            'enforcement' => $enforcement,
         ]);
 
         $this->trim($proxy);

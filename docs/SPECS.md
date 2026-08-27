@@ -383,7 +383,11 @@ records every exchange (Authorization forwarded, never stored; upstream
 re-pinned per relay; responses scanned for injection live → `flagged`).
 `GET /api/mcp-proxies/{id}/exchanges|synthesize` — synthesis reverse-engineers
 the observed contract (input from real arguments, output from real responses)
-beside what `tools/list` declared, surfacing undeclared tools.
+beside what `tools/list` declared, surfacing undeclared tools. A proxy may also
+carry a **firewall** `policy` (`McpPolicyEngine`): ordered block/redact rules the
+relay enforces inline — block a tool, redact secret arguments before they leave,
+or withhold an injection-flagged response. Enforcement is recorded per exchange;
+redacted values replace secrets in storage too.
 
 ### Webhook capture (dead-man's switch)
 `ANY /hook/{token}` captures inbound requests (Authorization/Cookie redacted,

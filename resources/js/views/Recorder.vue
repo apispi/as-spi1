@@ -104,6 +104,9 @@
             <button class="rec-ex-head" @click="expanded = expanded === ex.id ? null : ex.id">
               <span class="rec-verb">{{ ex.method }}</span>
               <span v-if="ex.flagged" class="rec-flag" :title="ex.flag_summary">⚠ {{ ex.flag_summary }}</span>
+              <span v-if="ex.enforcement" class="rec-pill" :class="ex.enforcement.action.includes('blocked') ? 'bad' : 'warn'" :title="ex.enforcement.note">
+                {{ enforcementLabel(ex.enforcement) }}
+              </span>
               <span class="rec-ex-meta">{{ ex.status || 'ERR' }} · {{ ex.duration_ms }}ms · {{ when(ex.created_at) }}</span>
             </button>
             <div v-if="expanded === ex.id" class="rec-ex-detail">
@@ -141,6 +144,30 @@
             <input type="checkbox" v-model="editing.is_enabled" />
             <span>Enabled</span>
           </label>
+
+          <label class="rec-label">Firewall policy</label>
+          <p class="rec-hint">
+            Rules run in order on every call. Block a tool, redact secrets in
+            arguments before they leave, or withhold an injection-flagged
+            response before it reaches the agent.
+          </p>
+          <div v-for="(r, i) in editing.policy" :key="i" class="rec-rule">
+            <select v-model="r.action" class="input-field">
+              <option value="block">block</option>
+              <option value="redact">redact</option>
+            </select>
+            <select v-model="r.direction" class="input-field">
+              <option value="request">request</option>
+              <option value="response">response</option>
+            </select>
+            <input v-if="r.direction === 'request'" v-model="r.tool" class="input-field mono" placeholder="tool regex (blank = any)" />
+            <input v-if="r.action === 'redact' || r.direction === 'response'" v-model="r.pattern" class="input-field mono" placeholder="pattern regex" />
+            <label v-if="r.direction === 'response'" class="rec-rule-check">
+              <input type="checkbox" v-model="r.on_injection" /><span>on injection</span>
+            </label>
+            <button class="rec-del" @click="editing.policy.splice(i, 1)" aria-label="Remove rule"><Icon name="close" :size="13" /></button>
+          </div>
+          <button class="rec-btn rec-rule-add" @click="addRule">+ Add rule</button>
 
           <p v-if="error" class="rec-error">{{ error }}</p>
 
@@ -196,12 +223,16 @@ const copy = async (p) => {
 
 const startNew = () => {
   error.value = '';
-  editing.value = { id: null, name: '', upstream_url: '', is_enabled: true };
+  editing.value = { id: null, name: '', upstream_url: '', is_enabled: true, policy: [] };
 };
 
 const edit = (p) => {
   error.value = '';
-  editing.value = { id: p.id, name: p.name, upstream_url: '', is_enabled: p.is_enabled };
+  editing.value = { id: p.id, name: p.name, upstream_url: '', is_enabled: p.is_enabled, policy: (p.policy || []).map((r) => ({ ...r })) };
+};
+
+const addRule = () => {
+  editing.value.policy.push({ action: 'block', direction: 'request', tool: '', pattern: '', on_injection: false });
 };
 
 const save = async () => {
@@ -209,6 +240,14 @@ const save = async () => {
   error.value = '';
   const payload = { name: editing.value.name.trim(), is_enabled: editing.value.is_enabled };
   if (editing.value.upstream_url.trim()) payload.upstream_url = editing.value.upstream_url.trim();
+  payload.policy = editing.value.policy
+    .filter((r) => r.action && r.direction)
+    .map((r) => ({
+      action: r.action, direction: r.direction,
+      tool: r.direction === 'request' ? (r.tool || null) : null,
+      pattern: r.pattern || null,
+      on_injection: !!r.on_injection,
+    }));
   try {
     if (editing.value.id) {
       await axios.put(`/api/mcp-proxies/${editing.value.id}`, payload);
@@ -278,6 +317,11 @@ const reloadExchanges = async () => {
     reloading.value = false;
   }
 };
+
+const enforcementLabel = (e) => ({
+  blocked_request: 'blocked', blocked_response: 'response blocked',
+  redacted_request: 'redacted', redacted_response: 'response redacted',
+}[e.action] || e.action);
 
 const pretty = (obj) => JSON.stringify(obj, null, 2);
 const when = (iso) => new Date(iso).toLocaleString('en-AU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -349,6 +393,14 @@ const ago = (iso) => {
 .rec-tool-grid pre { margin: 0; padding: 7px 9px; background: #010409; border: 1px solid var(--border-color); border-radius: 6px; font-family: 'Courier New', monospace; font-size: 11px; line-height: 1.5; color: var(--text-primary); overflow-x: auto; white-space: pre-wrap; }
 .rec-tool-grid pre.rec-diff { border-color: #a371f7; }
 @media (max-width: 640px) { .rec-tool-grid { grid-template-columns: 1fr; } }
+.rec-rule { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+.rec-rule .input-field { padding: 5px 8px; font-size: 12.5px; }
+.rec-rule select.input-field { max-width: 110px; }
+.rec-rule-check { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+.rec-del { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 3px; }
+.rec-del:hover { color: #f85149; }
+.rec-rule-add { margin-top: 2px; }
+.rec-pill.warn { color: #d29922; background: rgba(210,153,34,.14); }
 .rec-ex { border: 1px solid var(--border-color); border-radius: 9px; margin-bottom: 8px; overflow: hidden; }
 .rec-ex.flagged { border-color: #f85149; }
 .rec-ex-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; background: none; border: none; cursor: pointer; color: var(--text-primary); font-size: 12.5px; text-align: left; }

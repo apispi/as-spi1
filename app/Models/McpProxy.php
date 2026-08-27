@@ -30,12 +30,14 @@ class McpProxy extends Model
         'name',
         'token',
         'upstream_url',
+        'policy',
         'is_enabled',
         'last_used_at',
     ];
 
     protected $casts = [
         'is_enabled' => 'boolean',
+        'policy' => 'array',
         'last_used_at' => 'datetime',
     ];
 

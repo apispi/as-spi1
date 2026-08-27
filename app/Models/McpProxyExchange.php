@@ -15,12 +15,14 @@ class McpProxyExchange extends Model
         'duration_ms',
         'flagged',
         'flag_summary',
+        'enforcement',
     ];
 
     protected $casts = [
         'request' => 'array',
         'response' => 'array',
         'flagged' => 'boolean',
+        'enforcement' => 'array',
     ];
 
     public function proxy()

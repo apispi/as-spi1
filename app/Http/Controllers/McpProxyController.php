@@ -103,6 +103,7 @@ class McpProxyController extends Controller
             'url' => url('/mcp-proxy/'.$proxy->token),
             'upstream_url' => $proxy->upstream_url,
             'is_enabled' => $proxy->is_enabled,
+            'policy' => $proxy->policy ?? [],
             'last_used_at' => $proxy->last_used_at,
             'exchanges_count' => $proxy->exchanges_count ?? 0,
             'flagged_count' => $proxy->flagged_count ?? 0,
@@ -111,7 +112,7 @@ class McpProxyController extends Controller
 
     private function validated(Request $request, ?McpProxy $existing): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'name' => [
                 'required', 'string', 'max:60',
                 Rule::unique('mcp_proxies', 'name')
@@ -124,6 +125,19 @@ class McpProxyController extends Controller
                 'string', 'max:2048', 'url', new PubliclyRoutableUrl,
             ],
             'is_enabled' => 'nullable|boolean',
+            'policy' => 'nullable|array|max:50',
+            'policy.*.action' => ['required', \Illuminate\Validation\Rule::in(['block', 'redact'])],
+            'policy.*.direction' => ['required', \Illuminate\Validation\Rule::in(['request', 'response'])],
+            'policy.*.tool' => 'nullable|string|max:200',
+            'policy.*.pattern' => 'nullable|string|max:200',
+            'policy.*.on_injection' => 'nullable|boolean',
         ]);
+
+        if (isset($validated['policy'])
+            && $error = \App\Services\Mcp\McpPolicyEngine::validate($validated['policy'])) {
+            abort(response()->json(['message' => $error], 422));
+        }
+
+        return $validated;
     }
 }
