@@ -32,6 +32,7 @@ use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\MonitorController;
 use App\Http\Controllers\AlertChannelController;
 use App\Http\Controllers\OrganisationController;
+use App\Http\Controllers\McpGatewayController;
 use App\Http\Controllers\ImportController;
 
 // Google OAuth (full-page redirect flow). Registered before the SPA
@@ -46,6 +47,11 @@ Route::get('/{any}', function () {
 })->where('any', '^(?!api\/|auth\/).*$');
 
 Route::post('/api/proxy', [ProxyController::class, 'handle'])->middleware(['throttle:proxy', 'resolve.vars']);
+
+// Spi's own MCP server — the endpoint the seeded "Spi Gateway" connector
+// advertises. API-key authenticated and stateless; see McpGatewayController.
+Route::post('/api/gateway/tools', [McpGatewayController::class, 'handle'])
+    ->middleware(['auth.apitoken', 'throttle:outbound-test']);
 
 // Public, read-only view of a shared inspection report (token-gated, no auth).
 Route::get('/api/reports/shared/{token}', [ReportController::class, 'showShared'])
