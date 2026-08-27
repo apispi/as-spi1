@@ -24,11 +24,16 @@ class MonitorRunner
     public function __construct(
         private readonly CollectionRunner $runner,
         private readonly AlertDispatcher $alerts,
+        private readonly McpDriftDetector $drift = new McpDriftDetector,
     ) {
     }
 
     public function run(Monitor $monitor): MonitorResult
     {
+        if ($monitor->type === Monitor::TYPE_MCP_DRIFT) {
+            return $this->runDrift($monitor);
+        }
+
         $monitor->loadMissing(['collection', 'environment', 'user']);
 
         try {
@@ -72,6 +77,88 @@ class MonitorRunner
         ]);
 
         $this->applyStatus($monitor, (bool) $result['passed'], $entry);
+        $this->trim($monitor);
+
+        return $entry;
+    }
+
+    /**
+     * A drift run: snapshot the target's tools/list and compare with the
+     * previous snapshot. Drift records a failing result and alerts once; the
+     * new shape then becomes the baseline, so the status returns to passing
+     * without emitting a misleading "recovered" alert.
+     */
+    private function runDrift(Monitor $monitor): MonitorResult
+    {
+        $monitor->loadMissing('user');
+
+        $previous = $monitor->results()->first()?->driftSnapshot();
+
+        try {
+            $current = $this->drift->snapshot((string) $monitor->target_url);
+        } catch (Throwable $e) {
+            // Unreachable is a plain failure, not drift.
+            $report = InspectionReport::create([
+                'user_id' => $monitor->user_id,
+                'type' => 'mcp_drift',
+                'summary' => $monitor->name.' — unreachable',
+                'data' => ['error' => $e->getMessage(), 'monitor' => ['id' => $monitor->id, 'name' => $monitor->name]],
+            ]);
+
+            $entry = $monitor->results()->create([
+                'inspection_report_id' => $report->id,
+                'passed' => false,
+                'time_ms' => 0,
+                'passed_count' => 0,
+                'total' => 0,
+                'summary' => 'Unreachable: '.$e->getMessage(),
+            ]);
+
+            $this->applyStatus($monitor, false, $entry);
+            $this->trim($monitor);
+
+            return $entry;
+        }
+
+        $diff = $previous === null
+            ? ['drifted' => false, 'added' => [], 'removed' => [], 'changed' => []]
+            : $this->drift->compare($previous, $current['snapshot']);
+
+        $summary = $previous === null
+            ? sprintf('Baseline captured: %d tool(s).', $current['tools'])
+            : $this->drift->describe($diff);
+
+        $report = InspectionReport::create([
+            'user_id' => $monitor->user_id,
+            'type' => 'mcp_drift',
+            'summary' => $monitor->name.' — '.$summary,
+            'data' => [
+                'snapshot' => $current['snapshot'],
+                'diff' => $diff,
+                'monitor' => ['id' => $monitor->id, 'name' => $monitor->name],
+                'target_url' => $monitor->target_url,
+            ],
+        ]);
+
+        $entry = $monitor->results()->create([
+            'inspection_report_id' => $report->id,
+            'passed' => ! $diff['drifted'],
+            'time_ms' => 0,
+            'passed_count' => $current['tools'],
+            'total' => $current['tools'],
+            'summary' => $summary,
+        ]);
+
+        $this->applyStatus($monitor, ! $diff['drifted'], $entry);
+
+        // The changed surface is the new contract; comparing every future run
+        // against the pre-drift shape would re-alert forever. Resetting to
+        // passing after the alert also prevents a bogus "recovered" email on
+        // the next quiet run.
+        if ($diff['drifted']) {
+            $monitor->forceFill(['last_status' => Monitor::STATUS_PASSING])->save();
+        }
+
         $this->trim($monitor);
 
         return $entry;

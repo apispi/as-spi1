@@ -18,6 +18,10 @@ class Monitor extends Model
     /** Retained history points per monitor; older results are trimmed. */
     public const RETENTION = 500;
 
+    public const TYPE_COLLECTION = 'collection';
+
+    public const TYPE_MCP_DRIFT = 'mcp_drift';
+
     public const STATUS_UNKNOWN = 'unknown';
 
     public const STATUS_PASSING = 'passing';
@@ -30,6 +34,8 @@ class Monitor extends Model
     protected $fillable = [
         'user_id',
         'collection_id',
+        'type',
+        'target_url',
         'environment_id',
         'name',
         'interval_minutes',
@@ -47,6 +53,7 @@ class Monitor extends Model
      * of the request that created it.
      */
     protected $attributes = [
+        'type' => self::TYPE_COLLECTION,
         'interval_minutes' => 60,
         'is_enabled' => true,
         'alerts_enabled' => true,

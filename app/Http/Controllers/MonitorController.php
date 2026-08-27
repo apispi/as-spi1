@@ -111,6 +111,8 @@ class MonitorController extends Controller
         return [
             'id' => $monitor->id,
             'name' => $monitor->name,
+            'type' => $monitor->type,
+            'target_url' => $monitor->target_url,
             'collection' => $monitor->collection ? ['id' => $monitor->collection->id, 'name' => $monitor->collection->name] : null,
             'environment' => $monitor->environment ? ['id' => $monitor->environment->id, 'name' => $monitor->environment->name] : null,
             'interval_minutes' => $monitor->interval_minutes,
@@ -133,10 +135,18 @@ class MonitorController extends Controller
                 'required', 'string', 'max:80',
                 Rule::unique('monitors', 'name')->where('user_id', $userId)->ignore($existing?->id),
             ],
+            'type' => ['nullable', Rule::in([Monitor::TYPE_COLLECTION, Monitor::TYPE_MCP_DRIFT])],
+            // Drift monitors watch a URL instead of running a collection; the
+            // target gets the same SSRF vetting as any outbound endpoint.
+            'target_url' => [
+                'required_if:type,'.Monitor::TYPE_MCP_DRIFT,
+                'nullable', 'string', 'max:2048', 'url', new \App\Rules\PubliclyRoutableUrl,
+            ],
             // Both must belong to the caller — a monitor cannot be pointed at
             // someone else's collection or environment.
             'collection_id' => [
-                'required', 'integer',
+                'required_unless:type,'.Monitor::TYPE_MCP_DRIFT,
+                'nullable', 'integer',
                 Rule::exists('collections', 'id')->where('user_id', $userId),
             ],
             'environment_id' => [

@@ -95,6 +95,7 @@ const filters = [
   { value: 'security', label: 'Security' },
   { value: 'agent_loop', label: 'Agent runs' },
   { value: 'collection_run', label: 'Collection runs' },
+  { value: 'mcp_drift', label: 'MCP drift' },
 ];
 
 const rows = ref([]);
@@ -122,7 +123,7 @@ async function load() {
 }
 
 function setFilter(v) { typeFilter.value = v; cancelCompare(); load(); }
-const typeName = (t) => ({ conformance: 'Conformance', security: 'Security', agent_loop: 'Agent run', collection_run: 'Collection run' }[t] || t);
+const typeName = (t) => ({ conformance: 'Conformance', security: 'Security', agent_loop: 'Agent run', collection_run: 'Collection run', mcp_drift: 'MCP drift' }[t] || t);
 
 function rowClick(r) {
   if (compareMode.value) { toggleSelect(r); return; }

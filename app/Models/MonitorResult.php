@@ -20,6 +20,17 @@ class MonitorResult extends Model
         'passed' => 'boolean',
     ];
 
+    /**
+     * The tools/list snapshot stored with this result's report, when it was a
+     * drift run. Null for collection runs and unreachable drift runs.
+     */
+    public function driftSnapshot(): ?array
+    {
+        $report = \App\Models\InspectionReport::find($this->inspection_report_id);
+
+        return $report?->data['snapshot'] ?? null;
+    }
+
     public function monitor()
     {
         return $this->belongsTo(Monitor::class);

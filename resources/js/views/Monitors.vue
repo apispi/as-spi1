@@ -13,12 +13,7 @@
       </div>
     </header>
 
-    <p v-if="!collectionsStore.collections.length && collectionsStore.loaded" class="mon-empty">
-      Monitors run a collection, so create one first in
-      <router-link to="/tester" class="mon-link">Tester → Collections</router-link>.
-    </p>
-
-    <p v-else-if="store.isLoading" class="mon-muted">Loading…</p>
+    <p v-if="store.isLoading" class="mon-muted">Loading…</p>
 
     <div v-else-if="!store.monitors.length" class="mon-empty">
       <Icon name="activity" :size="26" />
@@ -36,7 +31,7 @@
             <span v-if="!m.is_enabled" class="mon-pill paused">paused</span>
           </div>
           <div class="mon-meta">
-            {{ m.collection?.name || '—' }}
+            {{ m.type === 'mcp_drift' ? (m.target_url || 'MCP drift') : (m.collection?.name || '—') }}
             <template v-if="m.environment"> · {{ m.environment.name }}</template>
             · every {{ intervalLabel(m.interval_minutes) }}
             <template v-if="m.last_run_at"> · last run {{ ago(m.last_run_at) }}</template>
@@ -67,10 +62,28 @@
           <label class="mon-label">Name</label>
           <input v-model="editing.name" class="input-field" placeholder="Production smoke tests" maxlength="80" />
 
+          <label class="mon-label">Watches</label>
+          <select v-model="editing.type" class="input-field">
+            <option value="collection">A collection (run it and check assertions)</option>
+            <option value="mcp_drift">An MCP server (alert when its tools change)</option>
+          </select>
+
+          <template v-if="editing.type === 'mcp_drift'">
+            <label class="mon-label">MCP endpoint</label>
+            <input v-model="editing.target_url" class="input-field" placeholder="https://mcp.example.com/tools" />
+            <p class="mon-note">
+              Each run snapshots the server's <code>tools/list</code> and alerts
+              when a tool is added, removed, or changes its schema or
+              description — then the new shape becomes the baseline.
+            </p>
+          </template>
+
+          <template v-else>
           <label class="mon-label">Collection</label>
           <select v-model="editing.collection_id" class="input-field">
             <option v-for="c in collectionsStore.collections" :key="c.id" :value="c.id">{{ c.name }}</option>
           </select>
+          </template>
 
           <label class="mon-label">Environment</label>
           <select v-model="editing.environment_id" class="input-field">
@@ -108,7 +121,7 @@
           <p v-if="error" class="mon-error">{{ error }}</p>
 
           <footer class="mon-modal-actions">
-            <button class="mon-primary" @click="save" :disabled="saving || !editing.name.trim() || !editing.collection_id">
+            <button class="mon-primary" @click="save" :disabled="saving || !editing.name.trim() || (editing.type === 'mcp_drift' ? !editing.target_url.trim() : !editing.collection_id)">
               {{ saving ? 'Saving…' : 'Save' }}
             </button>
             <button v-if="editing.id" class="mon-danger" @click="remove" :disabled="saving">Delete</button>
@@ -384,6 +397,8 @@ const startNew = () => {
   editing.value = {
     id: null,
     name: '',
+    type: 'collection',
+    target_url: '',
     collection_id: collectionsStore.collections[0]?.id || null,
     environment_id: envStore.environments.find((e) => e.is_default)?.id || null,
     interval_minutes: 60,
@@ -398,6 +413,8 @@ const edit = (m) => {
   editing.value = {
     id: m.id,
     name: m.name,
+    type: m.type || 'collection',
+    target_url: m.target_url || '',
     collection_id: m.collection?.id || null,
     environment_id: m.environment?.id || null,
     interval_minutes: m.interval_minutes,
@@ -413,7 +430,9 @@ const save = async () => {
   try {
     await store.save({
       name: editing.value.name.trim(),
-      collection_id: editing.value.collection_id,
+      type: editing.value.type,
+      target_url: editing.value.type === 'mcp_drift' ? editing.value.target_url.trim() : null,
+      collection_id: editing.value.type === 'mcp_drift' ? null : editing.value.collection_id,
       environment_id: editing.value.environment_id,
       interval_minutes: editing.value.interval_minutes,
       is_enabled: editing.value.is_enabled,
