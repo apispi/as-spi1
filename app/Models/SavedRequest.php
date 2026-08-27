@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SharedInWorkspace;
 use Illuminate\Database\Eloquent\Model;
 
 class SavedRequest extends Model
 {
+    use SharedInWorkspace;
+
     protected $fillable = [
         'user_id',
         'name',

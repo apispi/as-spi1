@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SharedInWorkspace;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Collection extends Model
 {
+    use SharedInWorkspace;
+
     public const MAX_PER_USER = 25;
 
     public const MAX_STEPS = 50;

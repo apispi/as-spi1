@@ -15,7 +15,7 @@ class AlertChannelController extends Controller
     public function index(Request $request)
     {
         return response()->json(
-            $request->user()->alertChannels()->orderBy('name')->get()->map->toClientArray()->values()
+            AlertChannel::inWorkspaceOf($request->user())->with('owner:id,name')->orderBy('name')->get()->map->toClientArray()->values()
         );
     }
 
@@ -36,7 +36,7 @@ class AlertChannelController extends Controller
 
     public function update(Request $request, int $id)
     {
-        $channel = $request->user()->alertChannels()->findOrFail($id);
+        $channel = AlertChannel::inWorkspaceOf($request->user())->findOrFail($id);
 
         $validated = $this->validated($request, $channel);
 
@@ -53,7 +53,7 @@ class AlertChannelController extends Controller
 
     public function destroy(Request $request, int $id)
     {
-        $request->user()->alertChannels()->findOrFail($id)->delete();
+        AlertChannel::inWorkspaceOf($request->user())->findOrFail($id)->delete();
 
         return response()->json(['message' => 'Deleted']);
     }
@@ -64,7 +64,7 @@ class AlertChannelController extends Controller
      */
     public function test(Request $request, AlertDispatcher $dispatcher, int $id)
     {
-        $channel = $request->user()->alertChannels()->findOrFail($id);
+        $channel = AlertChannel::inWorkspaceOf($request->user())->findOrFail($id);
 
         $monitor = new Monitor(['name' => 'Test alert']);
         $monitor->id = 0;
@@ -94,7 +94,7 @@ class AlertChannelController extends Controller
             'name' => [
                 'required', 'string', 'max:60',
                 Rule::unique('alert_channels', 'name')
-                    ->where('user_id', $request->user()->id)
+                    ->whereIn('user_id', $request->user()->workspaceUserIds())
                     ->ignore($existing?->id),
             ],
             'type' => ['required', Rule::in(AlertChannel::TYPES)],

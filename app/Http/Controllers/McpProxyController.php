@@ -15,7 +15,7 @@ class McpProxyController extends Controller
     public function index(Request $request)
     {
         return response()->json(
-            $request->user()->mcpProxies()
+            McpProxy::inWorkspaceOf($request->user())
                 ->withCount(['exchanges', 'exchanges as flagged_count' => fn ($q) => $q->where('flagged', true)])
                 ->orderBy('name')->get()
                 ->map(fn ($proxy) => $this->present($proxy))
@@ -42,7 +42,7 @@ class McpProxyController extends Controller
 
     public function update(Request $request, int $id)
     {
-        $proxy = $request->user()->mcpProxies()->findOrFail($id);
+        $proxy = McpProxy::inWorkspaceOf($request->user())->findOrFail($id);
 
         $validated = $this->validated($request, $proxy);
 
@@ -60,14 +60,14 @@ class McpProxyController extends Controller
 
     public function destroy(Request $request, int $id)
     {
-        $request->user()->mcpProxies()->findOrFail($id)->delete();
+        McpProxy::inWorkspaceOf($request->user())->findOrFail($id)->delete();
 
         return response()->json(['message' => 'Deleted']);
     }
 
     public function exchanges(Request $request, int $id)
     {
-        $proxy = $request->user()->mcpProxies()->findOrFail($id);
+        $proxy = McpProxy::inWorkspaceOf($request->user())->findOrFail($id);
 
         $query = $proxy->exchanges();
 
@@ -104,7 +104,7 @@ class McpProxyController extends Controller
             'name' => [
                 'required', 'string', 'max:60',
                 Rule::unique('mcp_proxies', 'name')
-                    ->where('user_id', $request->user()->id)
+                    ->whereIn('user_id', $request->user()->workspaceUserIds())
                     ->ignore($existing?->id),
             ],
             // We connect to this server-side on every relay: full SSRF vetting.

@@ -17,7 +17,7 @@ class StatusPageController extends Controller
     public function index(Request $request)
     {
         return response()->json(
-            $request->user()->statusPages()
+            StatusPage::inWorkspaceOf($request->user())
                 ->with('monitors:monitors.id,name')
                 ->orderBy('name')->get()
                 ->map(fn ($page) => $this->presentForOwner($page))
@@ -51,7 +51,7 @@ class StatusPageController extends Controller
 
     public function update(Request $request, int $id)
     {
-        $page = $request->user()->statusPages()->findOrFail($id);
+        $page = StatusPage::inWorkspaceOf($request->user())->findOrFail($id);
 
         $validated = $this->validated($request, $page);
 
@@ -70,7 +70,7 @@ class StatusPageController extends Controller
 
     public function destroy(Request $request, int $id)
     {
-        $request->user()->statusPages()->findOrFail($id)->delete();
+        StatusPage::inWorkspaceOf($request->user())->findOrFail($id)->delete();
 
         return response()->json(['message' => 'Deleted']);
     }
@@ -142,7 +142,7 @@ class StatusPageController extends Controller
      */
     private function syncMonitors(StatusPage $page, array $ids, Request $request): void
     {
-        $owned = $request->user()->monitors()->whereIn('id', $ids)->pluck('id')->all();
+        $owned = \App\Models\Monitor::inWorkspaceOf($request->user())->whereIn('id', $ids)->pluck('id')->all();
 
         $ordered = [];
         foreach (array_values(array_intersect($ids, $owned)) as $position => $id) {
@@ -158,7 +158,7 @@ class StatusPageController extends Controller
             'name' => [
                 'required', 'string', 'max:80',
                 Rule::unique('status_pages', 'name')
-                    ->where('user_id', $request->user()->id)
+                    ->whereIn('user_id', $request->user()->workspaceUserIds())
                     ->ignore($existing?->id),
             ],
             'description' => 'nullable|string|max:300',

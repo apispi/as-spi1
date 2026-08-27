@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SharedInWorkspace;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -17,6 +18,8 @@ use Illuminate\Support\Str;
  */
 class McpProxy extends Model
 {
+    use SharedInWorkspace;
+
     public const MAX_PER_USER = 10;
 
     /** Exchanges kept per proxy; older ones are trimmed. */

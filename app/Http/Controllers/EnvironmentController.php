@@ -11,7 +11,8 @@ class EnvironmentController extends Controller
 {
     public function index(Request $request)
     {
-        $environments = $request->user()->environments()->orderBy('name')->get();
+        $environments = Environment::inWorkspaceOf($request->user())
+            ->with('owner:id,name')->orderBy('name')->get();
 
         return response()->json($environments->map->toClientArray()->values());
     }
@@ -41,7 +42,7 @@ class EnvironmentController extends Controller
 
     public function update(Request $request, int $id)
     {
-        $environment = $request->user()->environments()->findOrFail($id);
+        $environment = Environment::inWorkspaceOf($request->user())->findOrFail($id);
 
         $validated = $this->validated($request, $environment);
 
@@ -58,7 +59,7 @@ class EnvironmentController extends Controller
 
     public function destroy(Request $request, int $id)
     {
-        $request->user()->environments()->findOrFail($id)->delete();
+        Environment::inWorkspaceOf($request->user())->findOrFail($id)->delete();
 
         return response()->json(['message' => 'Deleted']);
     }
@@ -75,8 +76,10 @@ class EnvironmentController extends Controller
         $data = $request->validate([
             'name' => [
                 'required', 'string', 'max:60',
+                // Environments are selected by name across the shared
+                // workspace, so names are unique per workspace, not per user.
                 Rule::unique('environments', 'name')
-                    ->where('user_id', $request->user()->id)
+                    ->whereIn('user_id', $request->user()->workspaceUserIds())
                     ->ignore($existing?->id),
             ],
             'is_default' => 'nullable|boolean',
@@ -118,7 +121,8 @@ class EnvironmentController extends Controller
     }
 
     /**
-     * At most one default per user.
+     * At most one default per workspace: the default is shared, so setting one
+     * clears any other in the same organisation.
      */
     private function syncDefault(Environment $environment): void
     {
@@ -126,7 +130,7 @@ class EnvironmentController extends Controller
             return;
         }
 
-        Environment::where('user_id', $environment->user_id)
+        Environment::inWorkspaceOf($environment->owner)
             ->where('id', '!=', $environment->id)
             ->update(['is_default' => false]);
     }

@@ -137,7 +137,7 @@ class ImportController extends Controller
             'format' => ['nullable', 'string', Rule::in(RequestExporter::FORMATS)],
         ]);
 
-        $saved = $request->user()->savedRequests()->findOrFail($id);
+        $saved = SavedRequest::inWorkspaceOf($request->user())->findOrFail($id);
         $format = $validated['format'] ?? 'curl';
 
         return response()->json([

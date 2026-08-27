@@ -14,7 +14,7 @@ class WebhookEndpointController extends Controller
     public function index(Request $request)
     {
         return response()->json(
-            $request->user()->webhookEndpoints()
+            WebhookEndpoint::inWorkspaceOf($request->user())
                 ->withCount('captures')
                 ->orderBy('name')->get()
                 ->map(fn ($e) => $this->present($e))
@@ -43,7 +43,7 @@ class WebhookEndpointController extends Controller
 
     public function update(Request $request, int $id)
     {
-        $endpoint = $request->user()->webhookEndpoints()->findOrFail($id);
+        $endpoint = WebhookEndpoint::inWorkspaceOf($request->user())->findOrFail($id);
 
         $endpoint->update($this->validated($request, $endpoint));
 
@@ -62,14 +62,14 @@ class WebhookEndpointController extends Controller
 
     public function destroy(Request $request, int $id)
     {
-        $request->user()->webhookEndpoints()->findOrFail($id)->delete();
+        WebhookEndpoint::inWorkspaceOf($request->user())->findOrFail($id)->delete();
 
         return response()->json(['message' => 'Deleted']);
     }
 
     public function captures(Request $request, int $id)
     {
-        $endpoint = $request->user()->webhookEndpoints()->findOrFail($id);
+        $endpoint = WebhookEndpoint::inWorkspaceOf($request->user())->findOrFail($id);
 
         return response()->json([
             'endpoint' => $this->present($endpoint->loadCount('captures')),
@@ -98,7 +98,7 @@ class WebhookEndpointController extends Controller
             'name' => [
                 'required', 'string', 'max:60',
                 Rule::unique('webhook_endpoints', 'name')
-                    ->where('user_id', $request->user()->id)
+                    ->whereIn('user_id', $request->user()->workspaceUserIds())
                     ->ignore($existing?->id),
             ],
             'expect_interval_minutes' => 'nullable|integer|min:5|max:10080',

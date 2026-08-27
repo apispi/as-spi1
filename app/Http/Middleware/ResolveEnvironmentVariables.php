@@ -41,7 +41,7 @@ class ResolveEnvironmentVariables
             return $next($request);
         }
 
-        $environment = $this->pick($user->id, $selector, $payload);
+        $environment = $this->pick($user, $selector, $payload);
 
         if (! $environment) {
             if ($selector !== null) {
@@ -64,11 +64,11 @@ class ResolveEnvironmentVariables
     }
 
     /**
-     * Resolve the selector to one of the user's environments.
+     * Resolve the selector to an environment in the user's workspace.
      */
-    private function pick(int $userId, mixed $selector, array $payload): ?Environment
+    private function pick(\App\Models\User $user, mixed $selector, array $payload): ?Environment
     {
-        $query = Environment::where('user_id', $userId);
+        $query = Environment::inWorkspaceOf($user);
 
         if ($selector !== null && $selector !== '') {
             return is_numeric($selector)

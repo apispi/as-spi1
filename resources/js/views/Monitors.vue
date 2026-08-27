@@ -32,6 +32,7 @@
             <span v-if="!m.is_enabled" class="mon-pill paused">paused</span>
           </div>
           <div class="mon-meta">
+            <em v-if="ownerName(m)" class="mon-owner">{{ ownerName(m) }}</em>
             {{ m.type === 'mcp_drift' ? (m.target_url || 'MCP drift') : (m.collection?.name || '—') }}
             <template v-if="m.environment"> · {{ m.environment.name }}</template>
             · every {{ intervalLabel(m.interval_minutes) }}
@@ -323,11 +324,13 @@ import axios from 'axios';
 import { useMonitorsStore } from '../store/monitors';
 import { useCollectionsStore } from '../store/collections';
 import { useEnvironmentsStore } from '../store/environments';
+import { useAuthStore } from '../store/auth';
 import Icon from '../components/Icon.vue';
 
 const store = useMonitorsStore();
 const collectionsStore = useCollectionsStore();
 const envStore = useEnvironmentsStore();
+const authStore = useAuthStore();
 
 // Mirrors Monitor::INTERVALS.
 const INTERVALS = [5, 15, 30, 60, 180, 360, 720, 1440];
@@ -503,6 +506,8 @@ const testChannel = async (c) => {
   }
 };
 
+const ownerName = (m) => (m.owner && m.owner.id !== authStore.user?.id ? m.owner.name : '');
+
 const intervalLabel = (m) => {
   if (m < 60) return `${m} min`;
   if (m === 60) return 'hour';
@@ -673,6 +678,7 @@ const openHistory = async (m) => {
 .mon-chan + .mon-chan { border-top: 1px solid var(--border-color); }
 .mon-chan-main { flex: 1; min-width: 0; }
 .mon-chan-name { font-size: 13.5px; font-weight: 600; color: var(--text-primary); margin-right: 6px; }
+.mon-owner { font-style: normal; color: var(--text-secondary); margin-right: 6px; }
 .mon-chan-type { font-size: 11px; color: var(--text-secondary); font-style: normal; text-transform: uppercase; letter-spacing: .04em; }
 .mon-chan-url { font-family: 'Courier New', monospace; font-size: 11.5px; color: var(--text-secondary); margin-top: 2px; }
 .mon-chan-error { font-size: 11.5px; color: #f85149; margin-top: 3px; }

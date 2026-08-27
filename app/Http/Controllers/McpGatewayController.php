@@ -170,7 +170,7 @@ class McpGatewayController extends Controller
     private function listCollections($user): array
     {
         return [
-            'collections' => $user->collections()->with('steps.savedRequest:id,name,protocol,method')
+            'collections' => \App\Models\Collection::inWorkspaceOf($user)->with('steps.savedRequest:id,name,protocol,method')
                 ->orderBy('name')->get()
                 ->map(fn ($c) => [
                     'id' => $c->id,
@@ -186,8 +186,8 @@ class McpGatewayController extends Controller
         $selector = (string) ($arguments['collection'] ?? '');
 
         $collection = is_numeric($selector)
-            ? $user->collections()->find((int) $selector)
-            : $user->collections()->where('name', $selector)->first();
+            ? \App\Models\Collection::inWorkspaceOf($user)->find((int) $selector)
+            : \App\Models\Collection::inWorkspaceOf($user)->where('name', $selector)->first();
 
         if (! $collection) {
             throw new GatewayToolException("No collection matches \"{$selector}\".", -32602);
@@ -200,8 +200,8 @@ class McpGatewayController extends Controller
         $environment = null;
         if (($env = (string) ($arguments['environment'] ?? '')) !== '') {
             $environment = is_numeric($env)
-                ? $user->environments()->find((int) $env)
-                : $user->environments()->where('name', $env)->first();
+                ? \App\Models\Environment::inWorkspaceOf($user)->find((int) $env)
+                : \App\Models\Environment::inWorkspaceOf($user)->where('name', $env)->first();
 
             if (! $environment) {
                 throw new GatewayToolException("No environment matches \"{$env}\".", -32602);
@@ -230,8 +230,8 @@ class McpGatewayController extends Controller
 
         if ($selector !== '') {
             $monitor = is_numeric($selector)
-                ? $user->monitors()->find((int) $selector)
-                : $user->monitors()->where('name', $selector)->first();
+                ? \App\Models\Monitor::inWorkspaceOf($user)->find((int) $selector)
+                : \App\Models\Monitor::inWorkspaceOf($user)->where('name', $selector)->first();
 
             if (! $monitor) {
                 throw new GatewayToolException("No monitor matches \"{$selector}\".", -32602);
@@ -245,7 +245,7 @@ class McpGatewayController extends Controller
         }
 
         return [
-            'monitors' => $user->monitors()->with('collection:id,name')->orderBy('name')->get()
+            'monitors' => \App\Models\Monitor::inWorkspaceOf($user)->with('collection:id,name')->orderBy('name')->get()
                 ->map(fn ($m) => $this->presentMonitor($m)),
         ];
     }

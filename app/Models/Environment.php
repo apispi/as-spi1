@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SharedInWorkspace;
 use Illuminate\Database\Eloquent\Model;
 
 class Environment extends Model
 {
+    use SharedInWorkspace;
+
     /**
      * Environments per user. Keeps the picker usable and the table bounded.
      */
@@ -79,6 +82,9 @@ class Environment extends Model
             'name' => $this->name,
             'is_default' => (bool) $this->is_default,
             'variables' => $variables,
+            'owner' => $this->relationLoaded('owner') && $this->owner
+                ? ['id' => $this->owner->id, 'name' => $this->owner->name]
+                : null,
             'updated_at' => $this->updated_at,
         ];
     }

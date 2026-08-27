@@ -16,6 +16,7 @@
             @click="edit(env)"
           >
             <span class="env-item-name">{{ env.name }}</span>
+            <span v-if="ownerName(env)" class="env-owner">{{ ownerName(env) }}</span>
             <span v-if="env.is_default" class="env-badge">default</span>
           </button>
           <p v-if="!store.environments.length" class="env-none">No environments yet.</p>
@@ -100,10 +101,13 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useEnvironmentsStore } from '../store/environments';
+import { useAuthStore } from '../store/auth';
 import Icon from './Icon.vue';
 
 const emit = defineEmits(['close']);
 const store = useEnvironmentsStore();
+const authStore = useAuthStore();
+const ownerName = (env) => (env.owner && env.owner.id !== authStore.user?.id ? env.owner.name : '');
 
 const editing = ref(null);
 const saving = ref(false);
@@ -205,6 +209,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey));
 .env-item:hover { background: var(--bg-color); }
 .env-item.active { background: var(--accent-soft, rgba(88,166,255,.12)); border-color: var(--accent-color); color: var(--accent-color); font-weight: 600; }
 .env-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.env-owner { font-size: 10.5px; color: var(--text-secondary); }
 .env-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: rgba(63,185,80,.16); color: #3fb950; }
 .env-none { color: var(--text-secondary); font-size: 13px; padding: 8px 11px; margin: 0; }
 .env-new { margin-top: 4px; padding: 9px; border: 1px dashed var(--border-color); border-radius: 8px; background: none; color: var(--text-secondary); font-size: 13px; cursor: pointer; }

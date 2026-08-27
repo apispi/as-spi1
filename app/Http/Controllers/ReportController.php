@@ -25,7 +25,7 @@ class ReportController extends Controller
             'connector_slug' => 'nullable|string',
         ]);
 
-        $reports = InspectionReport::where('user_id', $request->user()->id)
+        $reports = InspectionReport::inWorkspaceOf($request->user())
             ->when($validated['type'] ?? null, fn ($q, $t) => $q->where('type', $t))
             ->when($validated['connector_slug'] ?? null, fn ($q, $s) => $q->where('connector_slug', $s))
             ->orderByDesc('id')
@@ -61,8 +61,8 @@ class ReportController extends Controller
             'b' => 'required|integer',
         ]);
 
-        $a = InspectionReport::where('user_id', $request->user()->id)->findOrFail($validated['a']);
-        $b = InspectionReport::where('user_id', $request->user()->id)->findOrFail($validated['b']);
+        $a = InspectionReport::inWorkspaceOf($request->user())->findOrFail($validated['a']);
+        $b = InspectionReport::inWorkspaceOf($request->user())->findOrFail($validated['b']);
 
         if ($a->type !== $b->type) {
             return response()->json(['message' => 'Reports must be the same type to compare.'], 422);
@@ -107,7 +107,12 @@ class ReportController extends Controller
 
     private function authorizeOwner(Request $request, InspectionReport $report): void
     {
-        abort_unless($report->user_id === $request->user()->id, 403);
+        // Reports are shared across the workspace, not just visible to their
+        // creator.
+        abort_unless(
+            in_array($report->user_id, $request->user()->workspaceUserIds(), true),
+            403
+        );
     }
 
     private function listRow(InspectionReport $r): array

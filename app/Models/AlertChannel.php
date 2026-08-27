@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SharedInWorkspace;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -13,6 +14,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class AlertChannel extends Model
 {
+    use SharedInWorkspace;
+
     public const MAX_PER_USER = 10;
 
     public const TYPES = ['slack', 'discord', 'webhook'];

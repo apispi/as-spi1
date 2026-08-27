@@ -13,8 +13,8 @@ class CollectionController extends Controller
 {
     public function index(Request $request)
     {
-        $collections = $request->user()->collections()
-            ->with('steps.savedRequest:id,name,protocol,method,url')
+        $collections = Collection::inWorkspaceOf($request->user())
+            ->with(['owner:id,name', 'steps.savedRequest:id,name,protocol,method,url'])
             ->orderBy('name')
             ->get();
 
@@ -46,7 +46,7 @@ class CollectionController extends Controller
 
     public function update(Request $request, int $id)
     {
-        $collection = $request->user()->collections()->findOrFail($id);
+        $collection = Collection::inWorkspaceOf($request->user())->findOrFail($id);
 
         $validated = $this->validated($request, $collection);
 
@@ -65,7 +65,7 @@ class CollectionController extends Controller
 
     public function destroy(Request $request, int $id)
     {
-        $request->user()->collections()->findOrFail($id)->delete();
+        Collection::inWorkspaceOf($request->user())->findOrFail($id)->delete();
 
         return response()->json(['message' => 'Deleted']);
     }
@@ -76,7 +76,7 @@ class CollectionController extends Controller
     public function run(Request $request, CollectionRunner $runner, int $id)
     {
         $user = $request->user();
-        $collection = $user->collections()->findOrFail($id);
+        $collection = Collection::inWorkspaceOf($user)->findOrFail($id);
 
         if ($collection->steps()->count() === 0) {
             return response()->json(['message' => 'This collection has no steps.'], 422);
@@ -87,14 +87,14 @@ class CollectionController extends Controller
 
         if ($selector !== null && $selector !== '') {
             $environment = is_numeric($selector)
-                ? $user->environments()->find((int) $selector)
-                : $user->environments()->where('name', $selector)->first();
+                ? \App\Models\Environment::inWorkspaceOf($user)->find((int) $selector)
+                : \App\Models\Environment::inWorkspaceOf($user)->where('name', $selector)->first();
 
             if (! $environment) {
                 return response()->json(['message' => 'Unknown environment: '.$selector], 422);
             }
         } else {
-            $environment = $user->environments()->where('is_default', true)->first();
+            $environment = \App\Models\Environment::inWorkspaceOf($user)->where('is_default', true)->first();
         }
 
         $result = $runner->run($collection, $environment);
@@ -126,7 +126,8 @@ class CollectionController extends Controller
     private function syncSteps(Collection $collection, array $steps, Request $request): void
     {
         // Only the caller's own saved requests may be referenced.
-        $ownedIds = $request->user()->savedRequests()->pluck('id')->all();
+        // Steps may reference any saved request in the shared workspace.
+        $ownedIds = \App\Models\SavedRequest::inWorkspaceOf($request->user())->pluck('id')->all();
 
         $collection->steps()->delete();
 
@@ -152,7 +153,7 @@ class CollectionController extends Controller
             'name' => [
                 'required', 'string', 'max:80',
                 Rule::unique('collections', 'name')
-                    ->where('user_id', $request->user()->id)
+                    ->whereIn('user_id', $request->user()->workspaceUserIds())
                     ->ignore($existing?->id),
             ],
             'description' => 'nullable|string|max:500',

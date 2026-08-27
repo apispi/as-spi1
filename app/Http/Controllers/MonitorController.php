@@ -12,8 +12,8 @@ class MonitorController extends Controller
 {
     public function index(Request $request)
     {
-        $monitors = $request->user()->monitors()
-            ->with(['collection:id,name', 'environment:id,name'])
+        $monitors = Monitor::inWorkspaceOf($request->user())
+            ->with(['owner:id,name', 'collection:id,name', 'environment:id,name'])
             ->orderBy('name')
             ->get();
 
@@ -25,8 +25,8 @@ class MonitorController extends Controller
      */
     public function show(Request $request, int $id)
     {
-        $monitor = $request->user()->monitors()
-            ->with(['collection:id,name', 'environment:id,name'])
+        $monitor = Monitor::inWorkspaceOf($request->user())
+            ->with(['owner:id,name', 'collection:id,name', 'environment:id,name'])
             ->findOrFail($id);
 
         $results = $monitor->results()->take(60)->get(
@@ -59,7 +59,7 @@ class MonitorController extends Controller
 
     public function update(Request $request, int $id)
     {
-        $monitor = $request->user()->monitors()->findOrFail($id);
+        $monitor = Monitor::inWorkspaceOf($request->user())->findOrFail($id);
 
         $validated = $this->validated($request, $monitor);
 
@@ -72,7 +72,7 @@ class MonitorController extends Controller
 
     public function destroy(Request $request, int $id)
     {
-        $request->user()->monitors()->findOrFail($id)->delete();
+        Monitor::inWorkspaceOf($request->user())->findOrFail($id)->delete();
 
         return response()->json(['message' => 'Deleted']);
     }
@@ -82,7 +82,7 @@ class MonitorController extends Controller
      */
     public function run(Request $request, MonitorRunner $runner, int $id)
     {
-        $monitor = $request->user()->monitors()->findOrFail($id);
+        $monitor = Monitor::inWorkspaceOf($request->user())->findOrFail($id);
 
         $result = $runner->run($monitor);
 
@@ -101,7 +101,7 @@ class MonitorController extends Controller
             return;
         }
 
-        $owned = $request->user()->alertChannels()->whereIn('id', $ids)->pluck('id');
+        $owned = \App\Models\AlertChannel::inWorkspaceOf($request->user())->whereIn('id', $ids)->pluck('id');
 
         $monitor->alertChannels()->sync($owned);
     }
@@ -123,17 +123,17 @@ class MonitorController extends Controller
             'consecutive_failures' => $monitor->consecutive_failures,
             'uptime' => $monitor->uptime(),
             'alert_channel_ids' => $monitor->alertChannels()->pluck('alert_channels.id'),
+            'owner' => $monitor->relationLoaded('owner') && $monitor->owner
+                ? ['id' => $monitor->owner->id, 'name' => $monitor->owner->name] : null,
         ];
     }
 
     private function validated(Request $request, ?Monitor $existing): array
     {
-        $userId = $request->user()->id;
-
         return $request->validate([
             'name' => [
                 'required', 'string', 'max:80',
-                Rule::unique('monitors', 'name')->where('user_id', $userId)->ignore($existing?->id),
+                Rule::unique('monitors', 'name')->whereIn('user_id', $request->user()->workspaceUserIds())->ignore($existing?->id),
             ],
             'type' => ['nullable', Rule::in([Monitor::TYPE_COLLECTION, Monitor::TYPE_MCP_DRIFT])],
             // Drift monitors watch a URL instead of running a collection; the
@@ -147,11 +147,11 @@ class MonitorController extends Controller
             'collection_id' => [
                 'required_unless:type,'.Monitor::TYPE_MCP_DRIFT,
                 'nullable', 'integer',
-                Rule::exists('collections', 'id')->where('user_id', $userId),
+                Rule::exists('collections', 'id')->whereIn('user_id', $request->user()->workspaceUserIds()),
             ],
             'environment_id' => [
                 'nullable', 'integer',
-                Rule::exists('environments', 'id')->where('user_id', $userId),
+                Rule::exists('environments', 'id')->whereIn('user_id', $request->user()->workspaceUserIds()),
             ],
             'interval_minutes' => ['required', 'integer', Rule::in(Monitor::INTERVALS)],
             'is_enabled' => 'nullable|boolean',

@@ -34,7 +34,7 @@
         <li v-for="req in requestsStore.savedRequests" :key="req.id" class="col-row">
           <span class="method-badge" :class="badgeClass(req)">{{ badgeLabel(req) }}</span>
           <div class="col-row-main" @click="open(req)">
-            <span class="col-row-name">{{ req.name }}</span>
+            <span class="col-row-name">{{ req.name }} <em v-if="ownerName(req)" class="col-owner">{{ ownerName(req) }}</em></span>
             <span class="col-row-url" :title="req.url">{{ req.url }}</span>
           </div>
           <span v-if="req.assertions && req.assertions.length" class="col-tag">
@@ -61,7 +61,7 @@
         <li v-for="c in collectionsStore.collections" :key="c.id" class="col-row">
           <span class="col-steps">{{ c.steps.length }}</span>
           <div class="col-row-main">
-            <span class="col-row-name">{{ c.name }}</span>
+            <span class="col-row-name">{{ c.name }} <em v-if="ownerName(c)" class="col-owner">{{ ownerName(c) }}</em></span>
             <span class="col-row-url">{{ c.description || stepNames(c) }}</span>
           </div>
           <div class="col-row-actions">
@@ -125,11 +125,13 @@ import RunResults from '../components/RunResults.vue';
 import { useRequestsStore } from '../store/requests';
 import { useCollectionsStore } from '../store/collections';
 import { useEnvironmentsStore } from '../store/environments';
+import { useAuthStore } from '../store/auth';
 
 const router = useRouter();
 const requestsStore = useRequestsStore();
 const collectionsStore = useCollectionsStore();
 const envStore = useEnvironmentsStore();
+const authStore = useAuthStore();
 
 const tab = ref('saved');
 const history = ref([]);
@@ -142,6 +144,10 @@ onMounted(() => {
   collectionsStore.fetch();
   envStore.fetch();
 });
+
+// In a shared workspace, show whose resource this is — but only when it
+// is not the current user's, so solo accounts see no noise.
+const ownerName = (x) => (x.owner && x.owner.id !== authStore.user?.id ? x.owner.name : '');
 
 const badgeLabel = (req) => (req.protocol && req.protocol !== 'rest' ? req.protocol.toUpperCase() : req.method);
 const badgeClass = (req) => (req.protocol && req.protocol !== 'rest' ? req.protocol : (req.method || 'get').toLowerCase());
@@ -251,6 +257,7 @@ const ago = (iso) => {
 .col-row-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
 .col-del { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; }
 .col-del:hover { color: #f85149; }
+.col-owner { font-size: 11.5px; font-style: normal; color: var(--text-secondary); font-weight: 400; }
 .col-tag { font-size: 11px; color: var(--text-secondary); background: rgba(255,255,255,.06); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
 .col-steps { width: 24px; height: 24px; border-radius: 999px; background: var(--accent-soft, rgba(88,166,255,.12)); color: var(--accent-color); font-size: 11.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .col-status { font-size: 11.5px; font-weight: 700; }

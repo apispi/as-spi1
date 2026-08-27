@@ -123,6 +123,23 @@ class User extends Authenticatable
         return $this->belongsTo(Organisation::class);
     }
 
+    /**
+     * Ids of every user whose shared resources this user may see and use.
+     *
+     * In an organisation that is every member — the full shared workspace.
+     * With no organisation it is just this user, so a solo account behaves
+     * exactly as before. Resolved once per instance.
+     */
+    public function workspaceUserIds(): array
+    {
+        return $this->workspaceUserIds ??= $this->organisation_id
+            ? static::where('organisation_id', $this->organisation_id)->pluck('id')->all()
+            : [$this->id];
+    }
+
+    /** @var array<int>|null cache for workspaceUserIds() */
+    protected ?array $workspaceUserIds = null;
+
     public function webhookEndpoints()
     {
         return $this->hasMany(WebhookEndpoint::class);

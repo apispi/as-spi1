@@ -24,7 +24,9 @@ class SavedRequestController extends Controller
 
     public function index(Request $request)
     {
-        return response()->json($request->user()->savedRequests()->latest()->get());
+        return response()->json(
+            SavedRequest::inWorkspaceOf($request->user())->with('owner:id,name')->latest()->get()
+        );
     }
 
     public function store(Request $request)
@@ -66,7 +68,7 @@ class SavedRequestController extends Controller
 
     public function destroy(Request $request, $id)
     {
-        $savedRequest = $request->user()->savedRequests()->findOrFail($id);
+        $savedRequest = SavedRequest::inWorkspaceOf($request->user())->findOrFail($id);
         $savedRequest->delete();
 
         return response()->json(['message' => 'Deleted']);

@@ -6,6 +6,7 @@ use App\Services\Assertions\Assertion;
 use App\Services\Assertions\AssertionEvaluator;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use App\Models\SavedRequest;
 
 class AssertionController extends Controller
 {
@@ -46,7 +47,7 @@ class AssertionController extends Controller
      */
     public function update(Request $request, int $id)
     {
-        $saved = $request->user()->savedRequests()->findOrFail($id);
+        $saved = SavedRequest::inWorkspaceOf($request->user())->findOrFail($id);
 
         $validated = $request->validate([
             'assertions' => 'present|array|max:'.self::MAX_ASSERTIONS,

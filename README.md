@@ -147,10 +147,25 @@ rather than a foreign key, and `admin_id` nulls out while `admin_email` keeps
 the identity — so hard-deleting an admin no longer erases every action they
 took.
 
-Organisations group users for administration and reporting. They are
-deliberately **not** an authorisation boundary — nothing reads
-`organisation_id` to decide who may see what, and deleting an organisation
-unassigns its members rather than deleting them.
+Organisations are a **full shared workspace**: everyone in an organisation
+sees and uses one shared pool of resources — saved requests, environments,
+collections, monitors, alert channels, webhook endpoints, MCP recorders,
+status pages, and reports. A user with **no** organisation is a workspace of
+one, so solo accounts are unchanged.
+
+`user_id` still records the creator (shown as an owner badge on shared items
+so the pool is not anonymous); scoping is what changes. The
+`App\Models\Concerns\SharedInWorkspace` trait adds `inWorkspaceOf($user)`,
+which every resource controller uses in place of per-user scoping — read, use,
+edit, and delete all operate over `User::workspaceUserIds()`. Names that are
+selected by name (environments, collections, monitors…) are unique per
+workspace, and cross-references (a monitor's collection, a collection step's
+saved request, a status page's monitors) resolve across the workspace too.
+
+**Personal, not shared:** request history, API keys, SCX keys, and profile —
+these are individual activity and credentials, not workspace artefacts.
+Deleting an organisation unassigns its members (their resources revert to
+private) rather than deleting anything.
 
 ## Collections
 

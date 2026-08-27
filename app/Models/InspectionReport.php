@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\CatalogItem;
+use App\Models\Concerns\SharedInWorkspace;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
@@ -14,6 +15,8 @@ use Illuminate\Support\Str;
  */
 class InspectionReport extends Model
 {
+    use SharedInWorkspace;
+
     public const TYPES = ['agent_loop', 'conformance', 'security', 'collection_run', 'mcp_drift'];
 
     protected $fillable = [
