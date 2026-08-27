@@ -133,6 +133,11 @@ class User extends Authenticatable
         return $this->hasMany(StatusPage::class);
     }
 
+    public function mcpProxies()
+    {
+        return $this->hasMany(McpProxy::class);
+    }
+
     public function alertChannels()
     {
         return $this->hasMany(AlertChannel::class);

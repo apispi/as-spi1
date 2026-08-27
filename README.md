@@ -219,6 +219,23 @@ of what the secret flag is for.
 - `GET /api/saved-requests/{id}/export?format=` — snippet for a saved request
 - `POST /api/export` — snippet for an unsaved draft
 
+## MCP flight recorder
+
+A pass-through proxy at `/mcp-proxy/{token}`: point an agent at the recorder
+URL instead of a real MCP server, and every call it makes is forwarded
+upstream and recorded — method, arguments, response, status, timing. Everything
+else in Spi tests a server directly; this records what an agent actually *did*
+with one.
+
+Faithful relay: the JSON-RPC body and the MCP session headers travel unchanged
+both ways, and the agent's `Authorization` is forwarded so upstream auth
+works — but it is never written to the recording. The upstream is re-pinned
+against the SSRF guard on every relay. Each JSON response passes through the
+same injection scanner the security page uses, live, so a tool description or
+result that tries to hijack the agent flags the exchange on real traffic —
+filterable to flagged-only in the timeline. Managed under Recorder; token-gated
+and revocable, with per-recorder retention.
+
 ## MCP gateway (Spi as an MCP server)
 
 `POST /api/gateway/tools` is a real MCP endpoint (Streamable HTTP, stateless),

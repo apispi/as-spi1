@@ -126,6 +126,7 @@ const workspaceNav = [
   { to: '/ai-lab', label: 'AI Lab', icon: 'sparkles' },
   { to: '/monitors', label: 'Monitors', icon: 'activity' },
   { to: '/webhooks', label: 'Webhooks', icon: 'plug' },
+  { to: '/recorder', label: 'Recorder', icon: 'activity' },
   { to: '/reports', label: 'Reports', icon: 'report' },
   { to: '/chat', label: 'Spi', icon: 'chat' },
 ];

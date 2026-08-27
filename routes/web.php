@@ -36,6 +36,8 @@ use App\Http\Controllers\McpGatewayController;
 use App\Http\Controllers\WebhookCaptureController;
 use App\Http\Controllers\WebhookEndpointController;
 use App\Http\Controllers\StatusPageController;
+use App\Http\Controllers\McpProxyController;
+use App\Http\Controllers\McpProxyRelayController;
 use App\Http\Controllers\ImportController;
 
 // Google OAuth (full-page redirect flow). Registered before the SPA
@@ -50,9 +52,14 @@ Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])
 Route::any('/hook/{token}', [WebhookCaptureController::class, 'capture'])
     ->middleware('throttle:webhook-capture');
 
+// The MCP flight recorder's relay: agents speak MCP to this URL and the
+// exchange is forwarded upstream and recorded. Token is the credential.
+Route::any('/mcp-proxy/{token}', [McpProxyRelayController::class, 'relay'])
+    ->middleware('throttle:webhook-capture');
+
 Route::get('/{any}', function () {
     return view('welcome');
-})->where('any', '^(?!api\/|auth\/|hook\/).*$');
+})->where('any', '^(?!api\/|auth\/|hook\/|mcp-proxy\/).*$');
 
 Route::post('/api/proxy', [ProxyController::class, 'handle'])->middleware(['throttle:proxy', 'resolve.vars']);
 
@@ -125,6 +132,12 @@ Route::middleware('auth')->group(function () {
     Route::put('/api/webhook-endpoints/{id}', [WebhookEndpointController::class, 'update']);
     Route::delete('/api/webhook-endpoints/{id}', [WebhookEndpointController::class, 'destroy']);
     Route::get('/api/webhook-endpoints/{id}/captures', [WebhookEndpointController::class, 'captures']);
+
+    Route::get('/api/mcp-proxies', [McpProxyController::class, 'index']);
+    Route::post('/api/mcp-proxies', [McpProxyController::class, 'store']);
+    Route::put('/api/mcp-proxies/{id}', [McpProxyController::class, 'update']);
+    Route::delete('/api/mcp-proxies/{id}', [McpProxyController::class, 'destroy']);
+    Route::get('/api/mcp-proxies/{id}/exchanges', [McpProxyController::class, 'exchanges']);
 
     Route::get('/api/status-pages', [StatusPageController::class, 'index']);
     Route::post('/api/status-pages', [StatusPageController::class, 'store']);

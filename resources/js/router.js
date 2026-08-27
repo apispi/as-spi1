@@ -18,6 +18,7 @@ import StatusPage from './views/StatusPage.vue';
 import Tester from './views/Tester.vue';
 import Monitors from './views/Monitors.vue';
 import Webhooks from './views/Webhooks.vue';
+import Recorder from './views/Recorder.vue';
 import Collections from './views/Collections.vue';
 import AdminOrganisations from './views/AdminOrganisations.vue';
 import AdminMonitoring from './views/AdminMonitoring.vue';
@@ -49,6 +50,12 @@ const routes = [
         path: '/collections',
         name: 'collections',
         component: Collections,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/recorder',
+        name: 'recorder',
+        component: Recorder,
         meta: { requiresAuth: true }
     },
     {

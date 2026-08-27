@@ -16,7 +16,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Captured webhooks come from third-party servers with no session, so
         // CSRF cannot apply to them.
-        $middleware->validateCsrfTokens(except: ['hook/*']);
+        $middleware->validateCsrfTokens(except: ['hook/*', 'mcp-proxy/*']);
 
         $middleware->alias([
             'admin' => \App\Http\Middleware\IsAdmin::class,
