@@ -129,7 +129,8 @@ const workspaceNav = [
   { to: '/chat', label: 'Spi', icon: 'chat' },
 ];
 const adminNav = [
-  { to: '/admin', label: 'Users', icon: 'user' },
+  { to: '/admin', label: 'Overview', icon: 'home' },
+  { to: '/admin/users', label: 'Users', icon: 'user' },
   { to: '/admin/organisations', label: 'Organisations', icon: 'shield' },
   { to: '/admin/monitoring', label: 'Monitoring', icon: 'activity' },
   { to: '/catalog', label: 'Catalog', icon: 'layers' },
@@ -274,6 +275,9 @@ const handleLogout = async () => {
 }
 .nav-link:hover { background: var(--border-color); color: var(--text-primary); }
 .nav-link.router-link-active { background: var(--accent-soft); color: var(--accent-color); font-weight: 600; }
+/* /admin is a prefix of every admin route, so without this the Overview link
+   would stay highlighted on /admin/users etc. Only the exact match counts. */
+.nav-link[href="/admin"].router-link-active:not(.router-link-exact-active) { background: none; color: var(--text-secondary); font-weight: 400; }
 /* Leaving admin is a way out, not a section — set apart from the list above. */
 .nav-leave { margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 14px; color: var(--text-secondary); }
 .nav-leave.router-link-active { background: none; color: var(--text-secondary); font-weight: 400; }

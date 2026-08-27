@@ -20,6 +20,7 @@ import Collections from './views/Collections.vue';
 import AdminOrganisations from './views/AdminOrganisations.vue';
 import AdminMonitoring from './views/AdminMonitoring.vue';
 import AdminUserDetail from './views/AdminUserDetail.vue';
+import AdminUsers from './views/AdminUsers.vue';
 import Terms from './views/Terms.vue';
 import Privacy from './views/Privacy.vue';
 
@@ -120,6 +121,12 @@ const routes = [
         path: '/admin',
         name: 'admin',
         component: Admin,
+        meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+        path: '/admin/users',
+        name: 'admin-users',
+        component: AdminUsers,
         meta: { requiresAuth: true, requiresAdmin: true }
     },
     {

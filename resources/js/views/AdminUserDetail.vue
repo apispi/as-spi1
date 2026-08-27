@@ -1,6 +1,6 @@
 <template>
   <div class="ad">
-    <router-link to="/admin" class="ad-back">← Back to users</router-link>
+    <router-link to="/admin/users" class="ad-back">← Back to users</router-link>
 
     <p v-if="loading" class="ad-muted">Loading…</p>
     <p v-else-if="error" class="ad-error">{{ error }}</p>

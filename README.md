@@ -118,10 +118,14 @@ tester itself stays a single-purpose two-pane view with no sidebar.
 
 The **admin area** is separate: it is reached from the profile menu, and
 inside it the sidebar shows admin sections only — the workspace nav is
-replaced entirely, with a "Leave admin" link back to the dashboard. It has five sections — **Users**
-(`/admin`, with a detail page per user at `/admin/users/{id}`),
-**Organisations**, **Monitoring** (every monitor in the workspace, failing
-first), **Catalog**, and **Active**.
+replaced entirely, with a "Leave admin" link back to the dashboard. It has six sections — **Overview**
+(`/admin`: failing monitors, stats, connectors, recent admin actions),
+**Users** (`/admin/users`, with a detail page per user at
+`/admin/users/{id}`), **Organisations**, **Monitoring** (every monitor in the
+workspace, failing first), **Catalog**, and **Active**. Admin pages share one
+design contract, `resources/js/views/admin-shared.css` — every page opens
+with stat tiles answering "is anything wrong?", then the list answering
+"where?".
 
 **User lifecycle.** An admin can create accounts directly (created verified,
 so the person can sign in immediately) and remove them two ways:

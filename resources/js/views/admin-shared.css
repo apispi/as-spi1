@@ -62,3 +62,49 @@
 @media (max-width: 720px) {
   .ad-head { flex-direction: column; }
 }
+
+/* Toolbar above a table */
+.ad-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.ad-filter { max-width: 150px; padding: 7px 10px; font-size: 13px; }
+.ad-search { flex: 1; max-width: 320px; padding: 7px 10px; font-size: 13px; }
+.ad-total { margin-left: auto; font-size: 12.5px; }
+
+/* Table: one treatment for every admin table */
+.ad-tablewrap { border: 1px solid var(--border-color); border-radius: 14px; overflow-x: auto; }
+.ad-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.ad-table th {
+  position: sticky; top: 0; text-align: left; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary);
+  background: var(--panel-bg); padding: 10px 14px; border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+.ad-table th.sortable { cursor: pointer; user-select: none; }
+.ad-table th.sortable:hover { color: var(--text-primary); }
+.ad-table th.num, .ad-table td.num { text-align: right; }
+.ad-table td { padding: 10px 14px; border-bottom: 1px solid var(--border-color); }
+.ad-table tbody tr:last-child td { border-bottom: none; }
+.ad-tr { cursor: pointer; min-height: 44px; }
+.ad-tr:hover { background: var(--panel-bg); }
+.ad-tr.trashed { opacity: .55; }
+.ad-tr.trashed .name-cell { text-decoration: line-through; color: var(--text-secondary); }
+.name-cell { font-weight: 600; color: var(--accent-color); white-space: nowrap; }
+.ad-table td.actions { text-align: right; white-space: nowrap; }
+.ad-table td.actions .ad-btn + .ad-btn { margin-left: 6px; }
+.ad-btn.danger { color: #f85149; }
+.ad-btn.danger:hover:not(:disabled) { border-color: #f85149; color: #f85149; }
+
+/* Pager */
+.ad-pager { display: flex; align-items: center; gap: 12px; justify-content: center; margin-top: 14px; }
+
+/* Form hint inside modals */
+.ad-hint { font-size: 12px; color: var(--text-secondary); margin: 6px 0 0; }
+
+/* Toast */
+.ad-toast {
+  position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+  padding: 10px 18px; border-radius: 9px; font-size: 13px; font-weight: 600;
+  background: var(--bg-secondary, var(--panel-bg)); border: 1px solid var(--border-color);
+  color: var(--text-primary); z-index: var(--z-modal, 100);
+}
+.ad-toast.success { border-color: #3fb950; }
+.ad-toast.error { border-color: #f85149; color: #f85149; }
