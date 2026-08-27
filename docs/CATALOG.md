@@ -152,10 +152,17 @@ One component backs both routes, parameterised by `route.meta.section`
 
 ---
 
-## 8. Status & extension notes
+## 8. Status & related features
 
-Current state: agents/skills/prompts can be hand-authored; connectors + sync
-populate tools/prompts/skills from real servers. Natural extensions (not yet
-built): a Catalog **edit UI** (the `PUT` endpoint exists but no UI calls it),
-**connector health checks** (ping + last-synced surfaced), and **active prompts**
-in the tester (mirror of active tools using `prompts/get`).
+The catalog is fully wired: agents/skills/prompts/resources can be hand-authored
+or populated by connector **sync**, with an edit UI, **connector health checks**
+(`POST /api/admin/catalog/{item}/check`, surfaced in the Admin overview), and
+**active tools/prompts/resources** exposed to the tester
+(`/api/{tools,prompts,resources}/active`). Connectors can also be run through
+**conformance grading**, **security scanning**, and the **agent loop**
+(`.../conformance`, `.../security-scan`, `.../agent-loop`), each saved as an
+inspection report.
+
+Note the newer, non-catalog MCP features that a connector URL now composes with:
+the **MCP gateway** (Spi as a server), the **flight recorder** + contract
+**synthesis**, and **MCP drift** monitors — all in [SPECS.md §7a](SPECS.md).

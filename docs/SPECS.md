@@ -20,13 +20,31 @@ stated explicitly.
 
 ## 1. Product overview
 
-**Spi** is a browser-based, multi-protocol **API testing tool** with an admin
-back-office. Signed-in users compose and send requests (REST, MCP, A2A),
-inspect responses, save requests, and review history. Admins manage users and
-a **Catalog** of agents/skills/connectors/tools/prompts that can be synced live
-from connected MCP/A2A servers.
+**Spi** is a browser-based, multi-protocol **API testing and monitoring
+platform** with a distinctive focus on the agent/MCP ecosystem, plus an admin
+back-office. It began as a request tester and grew into a testing platform.
 
-Public marketing homepage + an authenticated single-page app (SPA).
+Signed-in users, working in a **shared per-organisation workspace**:
+- compose and send requests across **REST, GraphQL, WebSocket, SOAP, Webhook,
+  MCP, A2A, gRPC, MQTT, AMQP**, inspect responses, save and replay them;
+- define **environments** (`{{variable}}` substitution with secret masking),
+  **assertions**, and **contracts** (response schemas inferred from traffic);
+- group saved requests into **collections** run in order with value passing,
+  from the UI or `/api/v1` for CI, and diff them across environments (**parity**);
+- schedule **monitors** (collection runs or **MCP drift** watch), alert via
+  Slack/Discord/webhook, and publish public **status pages**;
+- capture inbound webhooks with **dead-man's-switch** silence detection;
+- put Spi **in the path** of an agent as an MCP **flight recorder** (record,
+  scan, synthesize the observed contract) and expose Spi itself as an **MCP
+  gateway**;
+- **explore** an MCP server autonomously (safe by default), and use **AI
+  assist** to author/explain/assert/fix/heal requests on the user's SCX key.
+
+Admins manage users, **organisations**, workspace-wide **monitoring**, and a
+**Catalog** of agents/skills/connectors/tools/prompts synced from live MCP/A2A
+servers. Public marketing homepage + an authenticated SPA. Feature specifics
+with rationale live in the [root README](../README.md); §"Feature areas" below
+maps each area to its endpoints, data, and invariants.
 
 ---
 
@@ -55,7 +73,12 @@ Dev: `vite`, `laravel-vite-plugin`, `tailwindcss`, `@tailwindcss/vite`,
 
 ## 3. Data model
 
-All tables beyond Laravel defaults. Types are the meaningful columns.
+The core tables are described inline below. The full current set — including
+`organisations`, `environments`, `collections`/`collection_steps`,
+`monitors`/`monitor_results`, `alert_channels`, `status_pages`,
+`webhook_endpoints`/`webhook_captures`, `mcp_proxies`/`mcp_proxy_exchanges`, and
+`inspection_reports` — is enumerated in
+[DATABASE-SCHEMA.md](DATABASE-SCHEMA.md). Types are the meaningful columns.
 
 ### `users`
 Base Laravel columns plus:
@@ -182,6 +205,13 @@ Markdown mailable (`emails.registration-verification`) with a `setupUrl`.
 
 ## 6. HTTP API (session-authenticated `/api`, unless noted)
 
+> The endpoints below are the original core. The **full current route surface**
+> is grouped by feature in §7a and is authoritative via `php artisan route:list`
+> and `routes/web.php` / `routes/api.php`. Public token routes (`/hook/{token}`,
+> `/mcp-proxy/{token}`, `/status/{token}`, `/r/{token}`) are unauthenticated by
+> design — the token is the credential.
+
+
 **Public / guest:**
 - `POST /api/proxy` — REST proxy (guest-allowed, `throttle:proxy`).
 - `POST /api/login`, `POST /api/register`, `POST /api/register/start`,
@@ -296,6 +326,94 @@ count in details.
 
 ---
 
+## 7a. Feature areas
+
+Each area below lists its endpoints, storage, and the invariants that matter.
+Detailed rationale is in the [root README](../README.md).
+
+### Environments & variables
+`GET/POST/PUT/DELETE /api/environments`. `ResolveEnvironmentVariables`
+middleware expands `{{var}}` in tester/collection payloads **before**
+validation, so the SSRF guard sees the resolved target. Secret variables are
+masked (`••••••`) in history, echoed requests, and reports, and never returned
+to the browser. Names unique per workspace; one default per workspace.
+
+### Assertions
+`POST /api/assertions/evaluate`, `PUT /api/saved-requests/{id}/assertions`.
+`Assertion` defines a **closed operator vocabulary**; the AI generator and the
+Vue panel are constrained to it (a test pins the two lists together).
+`AssertionEvaluator` never throws — a bad row fails with a reason.
+
+### Contracts (schema drift)
+`POST /api/contract/infer`, `PUT/POST /api/saved-requests/{id}/contract[/check]`.
+`SchemaInferrer` learns a JSON-Schema baseline from a good response;
+`ContractChecker` fails a collection step on a removed-required-field or
+type-change (breaking) even at HTTP 200, while additive fields pass.
+
+### Collections, runner, parity
+`GET/POST/PUT/DELETE /api/collections`, `POST /api/collections/{id}/run`
+(also `/api/v1/...` with an API key — 200 all-passed, 422 any-failed for CI),
+`POST /api/collections/{id}/parity`. `CollectionRunner` threads variables
+between steps (extract → later `{{name}}`); `RequestExecutor` sends each step
+with the same SSRF pinning as the interactive testers, for **all** protocols.
+`ParityChecker` diffs two-environment runs by shape (value diffs ignored).
+Runs persist as `collection_run`/`parity` reports; secrets masked.
+
+### Monitors & alerting
+`GET/POST/PUT/DELETE /api/monitors`, `GET /api/monitors/{id}`,
+`POST /api/monitors/{id}/run`. `type=collection` runs a collection;
+`type=mcp_drift` snapshots `tools/list` and alerts on shape change
+(alert-once, then rebaseline). Scheduled by `monitors:run` (every minute;
+each monitor's own interval decides dueness, evaluated in PHP).
+`AlertDispatcher` delivers to Slack/Discord/webhook channels
+(`/api/alert-channels`, `.../test`) **on transition only**; the URL is a
+credential (never returned in full, SSRF-checked, pinned on delivery).
+Public **status pages**: `GET /api/status-pages` (owner),
+`GET /api/status/{token}` (public, sparse — no URLs/steps/owner identity).
+
+### MCP gateway (Spi as an MCP server)
+`POST /api/gateway/tools` — Streamable HTTP, stateless, API-key auth. Tools are
+the caller's own artefacts (`list_collections`, `run_collection`,
+`get_monitor_status`, `evaluate_assertions`, `http_request`). Satisfies our own
+client/conformance grader; SSRF guard applies to `http_request`.
+
+### Flight recorder & synthesis
+`ANY /mcp-proxy/{token}` relays an agent's MCP calls to `upstream_url` and
+records every exchange (Authorization forwarded, never stored; upstream
+re-pinned per relay; responses scanned for injection live → `flagged`).
+`GET /api/mcp-proxies/{id}/exchanges|synthesize` — synthesis reverse-engineers
+the observed contract (input from real arguments, output from real responses)
+beside what `tools/list` declared, surfacing undeclared tools.
+
+### Webhook capture (dead-man's switch)
+`ANY /hook/{token}` captures inbound requests (Authorization/Cookie redacted,
+64 KB cap). With `expect_interval_minutes` set, `webhooks:check` marks an
+endpoint **silent** when nothing arrives in time and alerts on the transition
+(and on recovery). `GET/POST/PUT/DELETE /api/webhook-endpoints`, `.../captures`.
+
+### Agent explorer
+`POST /api/explore` — `ServerExplorer` (subclass of `AgentLoopRunner`) drives
+an MCP server toward a goal on the caller's SCX key. **Safe mode default on**:
+`DestructiveHeuristic` refuses side-effecting tools (a blocked call is a
+finding, not an execution); discovered tools run through the injection scanner.
+Persists an `exploration` report.
+
+### Import / export & AI assist
+`POST /api/import/curl` (preview), `/api/import/openapi` (→ saved requests +
+optional collection/environment), `POST /api/export`,
+`GET /api/saved-requests/{id}/export`. `POST /api/ai/{author,explain,assert,fix,
+heal}` — SCX-powered, on the caller's key; `heal` proposes updated assertions
+after a legitimate API change (applied for review, never auto-saved).
+
+### Shared workspaces & admin
+Every resource is scoped by **workspace** (organisation members) via
+`SharedInWorkspace`; history and credentials stay personal. Admin area
+(`/api/admin/*`): users (create, soft/hard delete, restore, org assignment),
+`organisations`, workspace-wide `monitoring`, stats, audit `actions`, and the
+Catalog/connector subsystem ([CATALOG.md](CATALOG.md)).
+
+---
+
 ## 8. Frontend (SPA)
 
 **Router** (`resources/js/router.js`), guards via Pinia `auth` store
@@ -378,6 +496,28 @@ can't shadow the app (this actually happened once). There must be **no**
 ---
 
 ## 11. Security invariants (do not regress)
+
+Additions since v1 (full list continues below):
+- **Workspace scoping** — shared resources are read/edited/deleted via
+  `Model::inWorkspaceOf($user)`, **never** a bare `where('user_id', $me)` that
+  would leak across or hide within an organisation. History and credentials
+  stay per-user.
+- **Variable resolution before validation** — `{{var}}` is expanded before the
+  URL/SSRF rules run, so a variable can never smuggle an internal host past
+  them.
+- **Secret masking** — secret variable values are masked in history, echoed
+  requests, run/parity reports, and never returned to the browser.
+- **Credential-bearing URLs** (alert-channel webhooks) and **tokens**
+  (webhook/proxy/status/share) are never returned in full; relayed/captured
+  Authorization headers are forwarded where needed but **never stored**.
+- **SSRF everywhere outbound** — proxy, MCP, A2A, gRPC (CURLOPT_RESOLVE) and the
+  socket testers (MQTT/AMQP via `validatedAddress` + TLS `peer_name`), the
+  flight-recorder relay, and alert delivery all validate and pin. Hosts are
+  canonicalised first (trailing-dot / case bypasses closed).
+- **Agent safety** — the explorer refuses destructive tools by default.
+- **Email validation** uses `email:filter` on every store/mail path
+  (CRLF-injection advisory).
+
 
 1. CSRF is enforced on `/api/*` (session flow). Programmatic access uses the
    separate token-authed `/api/v1` — never weaken CSRF to enable API clients.

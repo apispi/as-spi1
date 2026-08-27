@@ -4,8 +4,8 @@ Authoritative table/column reference. For model behaviour see
 [MODELS.md](MODELS.md). All tables use `bigIncrements id` and Laravel
 `created_at`/`updated_at` timestamps unless noted.
 
-> **Primary source:** `database/migrations/`. Regenerate the live column list
-> with `php artisan db:table <name>` or `Schema::getColumnListing('<name>')`.
+> **Primary source:** `database/migrations/` (29 migrations). Regenerate the
+> live column list with `php artisan db:table <name>`.
 
 ---
 
@@ -15,119 +15,152 @@ Authoritative table/column reference. For model behaviour see
 0001_01_01_000000_create_users_table
 0001_01_01_000001_create_cache_table
 0001_01_01_000002_create_jobs_table
-2026_06_20_071123_create_saved_requests_table
-2026_06_20_074226_add_is_admin_to_users_table
-2026_06_22_083700_add_scx_api_key_to_users_table
-2026_06_22_095250_add_scx_model_to_users_table
-2026_07_15_160245_add_protocol_columns_to_saved_requests_table
-2026_07_15_171717_create_admin_actions_table
-2026_07_15_173322_create_request_histories_table
-2026_07_15_230242_add_preferences_to_users_table
-2026_07_16_071746_add_api_token_to_users_table
-2026_07_16_071747_create_catalog_items_table
-2026_07_17_050204_add_google_oauth_to_users_table
-2026_07_17_054118_add_registration_flow_to_users_table
+2026_06_20  create_saved_requests_table
+2026_06_20  add_is_admin_to_users_table
+2026_06_22  add_scx_api_key_to_users_table
+2026_06_22  add_scx_model_to_users_table
+2026_07_15  add_protocol_columns_to_saved_requests_table
+2026_07_15  create_admin_actions_table
+2026_07_15  create_request_histories_table
+2026_07_15  add_preferences_to_users_table
+2026_07_16  add_api_token_to_users_table
+2026_07_16  create_catalog_items_table
+2026_07_17  add_google_oauth_to_users_table
+2026_07_17  add_registration_flow_to_users_table
+2026_08_05  create_inspection_reports_table
+2026_08_14  create_environments_table
+2026_08_20  add_assertions_to_saved_requests_table
+2026_08_20  create_collections_table            (+ collection_steps)
+2026_08_21  create_monitors_table               (+ monitor_results)
+2026_08_26  create_alert_channels_table         (+ alert_channel_monitor)
+2026_08_27  create_organisations_table          (+ users.organisation_id)
+2026_08_27  add_soft_deletes_to_users_table
+2026_08_27  preserve_admin_actions_when_an_admin_is_deleted
+2026_08_27  add_drift_watch_to_monitors_table
+2026_08_27  create_webhook_endpoints_table      (+ webhook_captures)
+2026_08_27  create_status_pages_table           (+ monitor_status_page)
+2026_08_27  create_mcp_proxies_table            (+ mcp_proxy_exchanges)
+2026_08_28  add_contract_to_saved_requests_table
 ```
 
-Plus Laravel defaults: `cache`, `cache_locks`, `jobs`, `job_batches`,
-`failed_jobs`, `password_reset_tokens`, `sessions`.
+---
+
+## Identity & auth
+
+### `users`
+Base Laravel columns plus:
+- `organisation_id` (FK → organisations, nullable, `nullOnDelete`) — workspace
+- `is_admin` (bool, default false)
+- `scx_api_key` (encrypted, nullable), `scx_model` (string, nullable) — SCX AI
+- `preferences` (json, nullable)
+- `api_token` (string 64, unique, nullable) — **SHA-256** of the personal API key;
+  `api_token_last_four`, `api_token_created_at`
+- `google_id` (unique, nullable), `avatar` (nullable)
+- `registration_token` (**bcrypt**, nullable), `registration_token_expires_at`
+- `deleted_at` (**soft deletes**) — a soft-deleted user is excluded from every
+  query including the auth provider, so deactivation locks the account out.
+
+### `organisations`
+`name`, `slug` (unique), `description` (nullable), `is_active` (bool). A user's
+`organisation_id` defines their **shared workspace** (see MODELS.md
+`SharedInWorkspace`).
+
+### `admin_actions`
+Audit log. `admin_id` (FK → users, **nullable, `nullOnDelete`**),
+`admin_email` (snapshot), `action`, `target_user_id` (snapshot, not FK),
+`target_email` (snapshot), `details` (json). Snapshots + null-on-delete mean the
+log outlives both the acting admin and the target.
 
 ---
 
-## users
+## Requests, history, catalog
 
-Assembled across the base migration and eight `add_*` migrations.
+### `saved_requests`
+`user_id` (owner), `name`, `protocol` (rest|mcp|a2a|grpc|mqtt|amqp),
+`method`, `url` (may hold a `{{templated}}` URL), `headers` (json), `body`,
+`params` (json), `assertions` (json — `[{path,operator,expected,description}]`),
+`contract` (json — inferred response schema baseline).
 
-| Column | Type | Notes |
-|---|---|---|
-| id | bigint PK | |
-| name | string, **nullable** | null for OAuth/email-first until set |
-| email | string, unique | |
-| email_verified_at | timestamp, nullable | set when email-first registration completes |
-| password | string, **nullable** | null for OAuth-only accounts; cast `hashed` |
-| remember_token | string, nullable | hidden |
-| is_admin | boolean, default false | |
-| scx_api_key | text, nullable | cast `encrypted`; hidden |
-| scx_model | string, nullable | |
-| preferences | json, nullable | cast `array` |
-| api_token | string(64), unique, nullable | **SHA-256 hash** of personal API key; hidden |
-| api_token_last_four | string(4), nullable | masked-display hint |
-| api_token_created_at | timestamp, nullable | |
-| google_id | string, unique, nullable | |
-| avatar | string, nullable | Google profile picture URL |
-| registration_token | string, nullable | **bcrypt hash** of email-verify token; hidden |
-| registration_token_expires_at | timestamp, nullable | 60-min TTL |
-| created_at / updated_at | timestamps | |
+### `request_histories`
+Per-user activity log (**not** shared across a workspace). `user_id`, `protocol`,
+`method`, `url`, `params`, `body`, `status`, `time_ms`. Retained 200/user
+(`RequestHistory::RETENTION_PER_USER`); secrets masked before storage.
 
-## saved_requests
-
-| Column | Type | Notes |
-|---|---|---|
-| user_id | FK users, cascade | |
-| name | string | |
-| protocol | string, default `rest` | `rest\|mcp\|a2a` |
-| method | string | HTTP verb (REST) or JSON-RPC method (MCP/A2A) |
-| url | text | |
-| headers | json, nullable | cast `array` |
-| body | longtext, nullable | REST body |
-| params | json, nullable | cast `array` (MCP/A2A args) |
-
-## request_histories
-
-| Column | Type | Notes |
-|---|---|---|
-| user_id | FK users, cascade | |
-| protocol | string, default `rest` | |
-| method | string | |
-| url | text | |
-| params | json, nullable | cast `array` |
-| body | longtext, nullable | **headers deliberately not stored** |
-| status | unsignedSmallInteger, nullable | null = request failed |
-| time_ms | unsignedInteger, nullable | |
-
-Index: `(user_id, created_at)`. Retention: newest 200 per user (trimmed on insert).
-
-## admin_actions
-
-| Column | Type | Notes |
-|---|---|---|
-| admin_id | FK users, cascade | acting admin |
-| action | string | promote_admin \| demote_admin \| delete_user |
-| target_user_id | unsignedBigInteger, nullable | **not a FK** — survives target deletion |
-| target_email | string, nullable | snapshot |
-| details | json, nullable | cast `array` (e.g. saved_requests_deleted) |
-
-## catalog_items
-
-| Column | Type | Notes |
-|---|---|---|
-| type | string | agent \| skill \| connector \| tool \| prompt |
-| name | string | |
-| slug | string | connector-namespaced for synced items |
-| description | text, nullable | |
-| version | string, nullable | |
-| provider | string, nullable | connector name for synced items |
-| metadata | json, nullable | cast `array` (see below) |
-| is_active | boolean, default false | workspace-wide activation |
-
-Unique `(type, slug)`; index `(type, is_active)`.
-
-`metadata` shapes:
-- **connector:** `{ endpoint, protocol: mcp|a2a, auth_header?, last_synced_at? }`
-- **tool (imported):** `{ inputSchema, connector_slug, endpoint, protocol }`
-- **prompt (imported):** `{ arguments, connector_slug, endpoint, protocol }`
-- **skill (imported):** the raw A2A skill object + connector fields
-
-> `auth_header` lives only on connector rows and is never copied onto imported
-> items or exposed by read endpoints.
+### `catalog_items`
+One table for all catalog types (`agent|skill|connector|tool|prompt|resource`),
+distinguished by `type`. `name`, `slug`, `description`, `version`, `provider`,
+`metadata` (json — shape depends on type; connectors carry `endpoint`/`protocol`/
+`auth_header`), `is_active`. Unique `(type, slug)`. See [CATALOG.md](CATALOG.md).
 
 ---
 
-## Notes for recreation
+## Environments, collections, runs
 
-- `name` and `password` on `users` are made nullable by later migrations
-  (`add_registration_flow` and `add_google_oauth` respectively). If building
-  fresh, they can be nullable from the start.
-- Column modifications use native Laravel 12 `->change()` (no `doctrine/dbal`).
-- Use `unsignedSmallInteger` for `status` (HTTP codes ≤ 599) and
-  `unsignedInteger` for `time_ms`.
+### `environments`
+`user_id`, `name`, `variables` (json — `[{key,value,secret}]`), `is_default`.
+Names unique per **workspace**; one default per workspace.
+
+### `collections` / `collection_steps`
+`collections`: `user_id`, `name`, `description`, `continue_on_failure`.
+`collection_steps`: `collection_id`, `saved_request_id` (cascade), `position`,
+`extract` (json — `[{name,path}]` pulling response values into later steps).
+
+### `inspection_reports`
+Saved, shareable, diffable results. `user_id`, `catalog_item_id` (nullable),
+`connector_slug`/`connector_name` (snapshots), `type`
+(`agent_loop|conformance|security|collection_run|mcp_drift|parity|exploration`),
+`summary`, `data` (json), `share_token` (unique, nullable, **hidden**).
+
+---
+
+## Monitors & alerting
+
+### `monitors`
+`user_id`, `collection_id` (nullable), `environment_id` (nullable, `nullOnDelete`),
+`name`, `type` (`collection|mcp_drift`), `target_url` (drift only),
+`interval_minutes`, `is_enabled`, `alerts_enabled`, `last_status`
+(`unknown|passing|failing`), `last_run_at`, `consecutive_failures`.
+
+### `monitor_results`
+`monitor_id`, `inspection_report_id` (nullable), `passed`, `time_ms`,
+`passed_count`, `total`, `summary`. Retained 500/monitor.
+
+### `alert_channels` / `alert_channel_monitor`
+`alert_channels`: `user_id`, `name`, `type` (`slack|discord|webhook`), `url`
+(a credential — never returned to the client in full), `is_enabled`,
+`last_delivered_at`, `last_error`. Pivot attaches channels to monitors.
+
+### `status_pages` / `monitor_status_page`
+`status_pages`: `user_id`, `name`, `description`, `token` (unique — public URL),
+`is_enabled`. Pivot lists the monitors a page publishes, with `position`.
+
+---
+
+## Inbound capture & the flight recorder
+
+### `webhook_endpoints` / `webhook_captures`
+`webhook_endpoints`: `user_id`, `name`, `token` (unique — the `/hook/{token}`
+URL), `expect_interval_minutes` (nullable — dead-man's switch),
+`alerts_enabled`, `last_received_at`, `last_status`
+(`unknown|receiving|silent`). `webhook_captures`: `webhook_endpoint_id`,
+`method`, `headers` (json — Authorization/Cookie redacted at capture), `query`,
+`body` (truncated at 64 KB), `ip`. Retained 100/endpoint.
+
+### `mcp_proxies` / `mcp_proxy_exchanges`
+`mcp_proxies`: `user_id`, `name`, `token` (unique — the `/mcp-proxy/{token}`
+relay URL), `upstream_url`, `is_enabled`, `last_used_at`.
+`mcp_proxy_exchanges`: `mcp_proxy_id`, `method`, `request` (json), `response`
+(json — Authorization never stored), `status`, `duration_ms`, `flagged`
+(injection scanner hit), `flag_summary`. Retained 200/proxy.
+
+---
+
+## Ownership & sharing
+
+Every resource table above carries `user_id` as the **creator**. Resources
+tagged with the `SharedInWorkspace` trait (environments, saved requests,
+collections, monitors, alert channels, webhook endpoints, status pages, mcp
+proxies, inspection reports) are scoped by **workspace** (`user_id IN` the
+organisation's members) for read/use/edit/delete — not by the single creator.
+`request_histories` and user credentials are the deliberate exceptions and
+stay personal. See [ARCHITECTURE.md](ARCHITECTURE.md) and MODELS.md.

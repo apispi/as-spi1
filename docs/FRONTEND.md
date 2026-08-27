@@ -45,10 +45,12 @@ navigation it hydrates the user via the auth store.
 
 ## 3. Stores (`resources/js/store`)
 
-- **auth** — current `user`, `isAuthenticated`, `isInitialized`; `fetchUser()`
-  (`GET /api/user`), `login()`, `register()`, `logout()`.
-- **requests** — `savedRequests`, `fetchSavedRequests()`, `saveRequest()`,
-  `deleteRequest()`.
+`resources/js/store`: `auth` (session user), `requests` (saved
+requests + cross-view `openInTester` handoff), `environments` (selected
+environment, persisted), `collections` (+ last run), `monitors`. Other views
+call the API directly via axios.
+
+---
 
 ## 4. App shell (`App.vue`)
 
@@ -62,33 +64,25 @@ Guests get the plain routed view (Home/Login/Register).
 
 ## 5. Views
 
-- **Home** — marketing sections + a live tester (posts `/api/proxy`) + a
-  **Quick start** row of example cards that fill the tester and scroll to it.
-  Protocols: REST, GraphQL, WebSocket, SOAP, Webhook, MCP, A2A, gRPC, MQTT,
-  AMQP. gRPC/MQTT/AMQP connect to real backends via the authenticated
-  `/api/{grpc,mqtt,amqp}/test` endpoints, so a logged-out visitor is prompted
-  to sign in. No fabricated testimonials.
-- **Login** — email/password + `GoogleButton`; surfaces `?error=` OAuth codes.
-- **Register** — **email only** → `POST /api/register/start` → "check your
-  inbox" state. (Email-first flow; see SPECS.md §7.)
-- **CompleteRegistration** — reads `?email&token`, collects name + password →
-  `POST /api/register/complete`, then routes to `/dashboard`.
-- **Dashboard** — two-panel tester (RequestPanel + ResponsePanel) with a
-  sidebar of **Saved / History** tabs (history is click-to-replay, 200 cap,
-  clearable). On mount fetches `/api/user/preferences` (default protocol/method)
-  and `/api/tools/active`, passing both to RequestPanel.
-- **Profile** — tabs: **Account** (name, change password), **Personalisation**
-  (default protocol/method, timezone, compact history →
-  `PUT /api/user/preferences`), **API Keys** (generate/regenerate with a
-  show-once banner; masked hint after; `curl` example for `/api/v1`), **Usage**
-  (stats + recent activity), **Settings** (SCX AI integration), **Danger Zone**
-  (delete account). Notification toggles were removed (no mail system).
-- **Admin** — stat cards (users, new-this-week, admins, saved, request volume,
-  per-protocol bars), searchable paginated users table (promote/demote/delete),
-  and an audit-log table.
-- **CatalogSection** — shared by `/catalog` and `/active`, parameterised by
-  `route.meta.section`. See [CATALOG.md](CATALOG.md).
-- **Chat** — SCX AI chat (uses the user's stored SCX key/model).
+The SPA has grown well beyond the original tester. Current views
+(`resources/js/views`):
+
+**Workspace:** `Home` (public), `Dashboard` (hub), `Tester` (two-pane
+request/response with environment bar, assertions & contract panels),
+`Collections` (saved requests + collections + history, parity),
+`AiLab`, `Explore` (agent explorer), `Monitors` (+ alert channels, status
+pages), `Webhooks` (capture), `Recorder` (flight recorder + synthesis),
+`Reports`, `Chat` (Spi assistant), `Developers`, `Profile`.
+
+**Admin area** (separate nav, entered from the profile menu): `Admin`
+(overview), `AdminUsers`, `AdminUserDetail`, `AdminOrganisations`,
+`AdminMonitoring`, `CatalogSection` (Catalog/Active). Shared admin styling in
+`views/admin-shared.css`.
+
+**Public/auth:** `Login`, `Register`, `CompleteRegistration`, `SharedReport`
+(`/r/{token}`), `StatusPage` (`/status/{token}`), `Terms`, `Privacy`.
+
+---
 
 ## 6. Components
 
@@ -101,6 +95,17 @@ Guests get the plain routed view (Home/Login/Register).
   syntax highlighting. **HTML-escape content before highlighting** (XSS).
 - **GoogleButton** — shared "Continue with Google" (links to
   `/auth/google/redirect`), used on Login and Register.
+- **RequestPanel** now also supports gRPC/MQTT/AMQP connection fields and the
+  active prompts/resources dropdowns.
+- **AssertionsPanel / ContractPanel** — attach assertions and capture/verify a
+  response contract on the loaded saved request, with live verdicts.
+- **EnvironmentManager / CollectionManager** — modal editors (shared items show
+  an owner badge when not the current user).
+- **ImportDialog / ExportMenu** — cURL & OpenAPI import; cURL/fetch/Python/HTTP
+  export.
+- **RunResults** — per-step collection/parity run output (status, assertions,
+  contract drift, extractions).
+- **Icon** — dependency-free SVG icon set.
 
 ## 7. Theming
 

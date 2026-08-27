@@ -54,6 +54,26 @@ Browser ── HTTPS ──> SiteGround (Apache, public_html/) ──> index.php
   ->where('any', '^(?!api\/|auth\/).*$')` — everything that isn't `api/` or
   `auth/` returns the SPA shell, and Vue Router takes over client-side.
 
+### Public token routes
+
+Four route families are unauthenticated by design — the **token in the URL is
+the credential**, and each is excluded from the SPA catch-all and CSRF:
+- `ANY /hook/{token}` — inbound webhook capture
+- `ANY /mcp-proxy/{token}` — flight-recorder relay to an upstream MCP server
+- `GET /api/status/{token}` — public status-page JSON
+- `GET /api/reports/shared/{token}` and the SPA `/r/{token}` — shared reports
+
+CSRF exemptions for `hook/*` and `mcp-proxy/*` are set in `bootstrap/app.php`.
+
+### Scheduler
+
+`routes/console.php` registers two per-minute scheduled commands (they decide
+their own due work): `monitors:run` (runs due monitors) and `webhooks:check`
+(flags silent dead-man's-switch endpoints). Requires one server cron entry
+running `php artisan schedule:run` every minute; alerts also need real SMTP.
+
+---
+
 ## 4. Authentication model (two distinct paths)
 
 1. **Session-cookie auth (the SPA).** Login/register/Google establish a Laravel
@@ -79,6 +99,18 @@ creates a passwordless one.
   - `proxy`: 20/min per IP (guest), 120/min per user.
   - `outbound-test`: 60/min per user (MCP/A2A + `/api/v1`).
   - `auth-attempts`: 10/min per IP (login/register/OAuth).
+
+### Workspace scoping
+
+Beyond auth, resource access is scoped to the acting user's **organisation
+workspace**, not just their own rows. Controllers query
+`Model::inWorkspaceOf($user)` (the `SharedInWorkspace` trait →
+`whereIn('user_id', $user->workspaceUserIds())`). A user with no organisation
+is a workspace of one. `ResolveEnvironmentVariables` (alias `resolve.vars`) is
+the third custom middleware, expanding `{{var}}` on tester/collection payloads
+before validation.
+
+---
 
 ## 6. Outbound requests (proxy & protocol clients)
 
