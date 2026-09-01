@@ -28,6 +28,8 @@ class McpTrafficSynthesizer
         $declared = [];               // name => declared inputSchema (from tools/list)
         $callArgs = [];               // name => [argument sets]
         $callResults = [];            // name => [result payloads]
+        $lastResult = [];             // name => last observed result (for mock seeding)
+        $descriptions = [];           // name => declared description
 
         foreach ($proxy->exchanges()->get() as $ex) {
             $method = $ex->method;
@@ -38,6 +40,7 @@ class McpTrafficSynthesizer
                 foreach ($response['result']['tools'] ?? [] as $tool) {
                     if (! empty($tool['name'])) {
                         $declared[$tool['name']] = $tool['inputSchema'] ?? null;
+                        $descriptions[$tool['name']] = $tool['description'] ?? null;
                     }
                 }
 
@@ -55,6 +58,7 @@ class McpTrafficSynthesizer
                 // Skip error and truncated responses when learning the output.
                 if (isset($response['result']) && ! isset($response['truncated'])) {
                     $callResults[$name][] = $response['result'];
+                    $lastResult[$name] = $response['result'];
                 }
             }
         }
@@ -73,6 +77,10 @@ class McpTrafficSynthesizer
                 'observed_input_schema' => isset($callArgs[$name]) ? $this->inferrer->inferMany($callArgs[$name]) : null,
                 'observed_output_schema' => isset($callResults[$name]) ? $this->inferrer->inferMany($callResults[$name]) : null,
                 'only_observed' => ! array_key_exists($name, $declared),
+                // For mock seeding: the declared description and a real sample
+                // response to replay.
+                'description' => $descriptions[$name] ?? null,
+                'sample_output' => $lastResult[$name] ?? null,
             ];
         }
 

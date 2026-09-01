@@ -268,6 +268,19 @@ result that tries to hijack the agent flags the exchange on real traffic —
 filterable to flagged-only in the timeline. Managed under Recorder; token-gated
 and revocable, with per-recorder retention.
 
+## MCP mock server (service virtualization)
+
+Spi **serves** a fake MCP server at `/mcp-mock/{token}` — point an agent at it
+while the real server does not exist yet, is rate-limited, or costs money to
+call. It answers the handshake, `tools/list`, and `tools/call` from a stored
+definition (`McpMockServeController`, structured like the real gateway).
+
+Define tools by hand, or **seed one from a flight recorder**: `POST
+/api/mcp-mocks/from-recorder/{proxyId}` turns each tool the recorder observed
+into a mock tool — its observed input schema and a real sample response to
+replay. The loop closes: record production MCP traffic once, serve it back as a
+runnable stand-in. Token-gated, workspace-shared, managed from the Mocks view.
+
 ## Synthesize a contract from traffic
 
 `GET /api/mcp-proxies/{id}/synthesize` reverse-engineers an MCP server's real

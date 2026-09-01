@@ -20,6 +20,7 @@ import Tester from './views/Tester.vue';
 import Monitors from './views/Monitors.vue';
 import Webhooks from './views/Webhooks.vue';
 import Recorder from './views/Recorder.vue';
+import Mocks from './views/Mocks.vue';
 import Collections from './views/Collections.vue';
 import AdminOrganisations from './views/AdminOrganisations.vue';
 import AdminMonitoring from './views/AdminMonitoring.vue';
@@ -57,6 +58,12 @@ const routes = [
         path: '/recorder',
         name: 'recorder',
         component: Recorder,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/mocks',
+        name: 'mocks',
+        component: Mocks,
         meta: { requiresAuth: true }
     },
     {

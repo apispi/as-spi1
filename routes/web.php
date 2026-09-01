@@ -38,6 +38,8 @@ use App\Http\Controllers\WebhookEndpointController;
 use App\Http\Controllers\StatusPageController;
 use App\Http\Controllers\McpProxyController;
 use App\Http\Controllers\McpProxyRelayController;
+use App\Http\Controllers\McpMockServeController;
+use App\Http\Controllers\McpMockController;
 use App\Http\Controllers\ImportController;
 
 // Google OAuth (full-page redirect flow). Registered before the SPA
@@ -57,9 +59,13 @@ Route::any('/hook/{token}', [WebhookCaptureController::class, 'capture'])
 Route::any('/mcp-proxy/{token}', [McpProxyRelayController::class, 'relay'])
     ->middleware('throttle:webhook-capture');
 
+// A Spi-served mock MCP server. Unauthenticated — the token is the credential.
+Route::any('/mcp-mock/{token}', [McpMockServeController::class, 'serve'])
+    ->middleware('throttle:webhook-capture');
+
 Route::get('/{any}', function () {
     return view('welcome');
-})->where('any', '^(?!api\/|auth\/|hook\/|mcp-proxy\/).*$');
+})->where('any', '^(?!api\/|auth\/|hook\/|mcp-proxy\/|mcp-mock\/).*$');
 
 Route::post('/api/proxy', [ProxyController::class, 'handle'])->middleware(['throttle:proxy', 'resolve.vars']);
 
@@ -137,6 +143,14 @@ Route::middleware('auth')->group(function () {
     Route::put('/api/webhook-endpoints/{id}', [WebhookEndpointController::class, 'update']);
     Route::delete('/api/webhook-endpoints/{id}', [WebhookEndpointController::class, 'destroy']);
     Route::get('/api/webhook-endpoints/{id}/captures', [WebhookEndpointController::class, 'captures']);
+
+    Route::get('/api/mcp-mocks', [McpMockController::class, 'index']);
+    Route::post('/api/mcp-mocks', [McpMockController::class, 'store']);
+    Route::get('/api/mcp-mocks/{id}', [McpMockController::class, 'show']);
+    Route::put('/api/mcp-mocks/{id}', [McpMockController::class, 'update']);
+    Route::delete('/api/mcp-mocks/{id}', [McpMockController::class, 'destroy']);
+    Route::post('/api/mcp-mocks/from-recorder/{proxyId}', [McpMockController::class, 'fromRecorder'])
+        ->middleware('throttle:outbound-test');
 
     Route::get('/api/mcp-proxies', [McpProxyController::class, 'index']);
     Route::post('/api/mcp-proxies', [McpProxyController::class, 'store']);

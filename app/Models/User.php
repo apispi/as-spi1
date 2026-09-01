@@ -155,6 +155,11 @@ class User extends Authenticatable
         return $this->hasMany(McpProxy::class);
     }
 
+    public function mcpMocks()
+    {
+        return $this->hasMany(McpMock::class);
+    }
+
     public function alertChannels()
     {
         return $this->hasMany(AlertChannel::class);

@@ -371,6 +371,14 @@ credential (never returned in full, SSRF-checked, pinned on delivery).
 Public **status pages**: `GET /api/status-pages` (owner),
 `GET /api/status/{token}` (public, sparse — no URLs/steps/owner identity).
 
+### MCP mock server (service virtualization)
+`ANY /mcp-mock/{token}` serves a **fake** MCP server from a stored definition
+(handshake, `tools/list`, `tools/call` → each tool's canned `response`), so an
+agent can be built against a stand-in. `GET/POST/PUT/DELETE /api/mcp-mocks` +
+`POST /api/mcp-mocks/from-recorder/{proxyId}` — the latter seeds a mock from a
+flight recorder's observed tools (inferred input schema + a real sample
+response). Token-gated; the canned `response` is never leaked in `tools/list`.
+
 ### MCP gateway (Spi as an MCP server)
 `POST /api/gateway/tools` — Streamable HTTP, stateless, API-key auth. Tools are
 the caller's own artefacts (`list_collections`, `run_collection`,
