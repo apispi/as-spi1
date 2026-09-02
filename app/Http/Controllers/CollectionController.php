@@ -163,6 +163,125 @@ class CollectionController extends Controller
         return response()->json($parity + ['report_id' => $report->id], $parity['in_parity'] ? 200 : 422);
     }
 
+    /** Rows per dataset run; bounded so a synchronous run stays responsive. */
+    public const MAX_DATASET_ROWS = 50;
+
+    /**
+     * Run the collection once per row of a dataset — each row's fields become
+     * {{variables}} for that iteration (data-driven testing). Accepts a JSON
+     * array of objects, or CSV text (header row = variable names).
+     */
+    public function runDataset(Request $request, CollectionRunner $runner, int $id)
+    {
+        $user = $request->user();
+        $collection = Collection::inWorkspaceOf($user)->findOrFail($id);
+
+        if ($collection->steps()->count() === 0) {
+            return response()->json(['message' => 'This collection has no steps.'], 422);
+        }
+
+        $validated = $request->validate([
+            'environment_id' => 'nullable',
+            'dataset' => 'nullable|array',
+            'dataset_csv' => 'nullable|string|max:200000',
+        ]);
+
+        $rows = $validated['dataset'] ?? $this->parseCsv($validated['dataset_csv'] ?? '');
+
+        if ($rows === []) {
+            return response()->json(['message' => 'Provide a dataset — a JSON array of objects, or CSV with a header row.'], 422);
+        }
+        if (count($rows) > self::MAX_DATASET_ROWS) {
+            return response()->json(['message' => 'Too many rows (max '.self::MAX_DATASET_ROWS.').'], 422);
+        }
+
+        $environment = $this->resolveEnvironment($user, $request->input('environment_id'))
+            ?? \App\Models\Environment::inWorkspaceOf($user)->where('is_default', true)->first();
+
+        $iterations = [];
+        $passedRows = 0;
+
+        foreach (array_values($rows) as $index => $row) {
+            // Only scalar, validly-named fields become variables.
+            $vars = [];
+            foreach ((array) $row as $key => $value) {
+                if (is_string($key) && preg_match('/^[A-Za-z0-9_.-]+$/', $key) && is_scalar($value)) {
+                    $vars[$key] = is_bool($value) ? ($value ? 'true' : 'false') : (string) $value;
+                }
+            }
+
+            $result = $runner->run($collection, $environment, false, $vars);
+            $result['passed'] && $passedRows++;
+
+            $iterations[] = [
+                'row' => $index + 1,
+                'variables' => array_keys($vars),
+                'passed' => $result['passed'],
+                'passed_count' => $result['passed_count'],
+                'total' => $result['total'],
+                'first_failure' => $this->firstFailure($result),
+            ];
+        }
+
+        $summary = [
+            'passed' => $passedRows === count($iterations),
+            'collection' => ['id' => $collection->id, 'name' => $collection->name],
+            'environment' => $environment ? ['id' => $environment->id, 'name' => $environment->name] : null,
+            'rows' => count($iterations),
+            'passed_rows' => $passedRows,
+            'failed_rows' => count($iterations) - $passedRows,
+            'iterations' => $iterations,
+        ];
+
+        $report = InspectionReport::create([
+            'user_id' => $user->id,
+            'type' => 'dataset_run',
+            'summary' => sprintf('%s — %d/%d rows passed', $collection->name, $passedRows, count($iterations)),
+            'data' => $summary,
+        ]);
+
+        return response()->json($summary + ['report_id' => $report->id], $summary['passed'] ? 200 : 422);
+    }
+
+    /**
+     * Parse CSV text into rows keyed by the header. Minimal by design — quoted
+     * fields are handled by str_getcsv.
+     */
+    private function parseCsv(string $csv): array
+    {
+        $lines = preg_split('/\r\n|\r|\n/', trim($csv));
+        if (count($lines) < 2) {
+            return [];
+        }
+
+        $header = str_getcsv(array_shift($lines));
+        $rows = [];
+        foreach ($lines as $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+            $values = str_getcsv($line);
+            $row = [];
+            foreach ($header as $i => $key) {
+                $row[trim((string) $key)] = $values[$i] ?? null;
+            }
+            $rows[] = $row;
+        }
+
+        return $rows;
+    }
+
+    private function firstFailure(array $result): ?string
+    {
+        foreach ($result['steps'] ?? [] as $step) {
+            if (! ($step['passed'] ?? true) && ! ($step['skipped'] ?? false)) {
+                return $step['name'] ?? '?';
+            }
+        }
+
+        return null;
+    }
+
     private function resolveEnvironment($user, mixed $selector)
     {
         return is_numeric($selector)

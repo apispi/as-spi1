@@ -446,6 +446,16 @@ as additive and passes. Drift shows per step in run results and, since runs are
 monitored, alerts through the existing machinery. This is contract testing with
 zero assertions written.
 
+## Data-driven runs
+
+`POST /api/collections/{id}/run-dataset` runs a collection **once per row** of a
+dataset — each row's fields become `{{variables}}` for that iteration, so one
+suite verifies many inputs. Accepts a JSON array of objects or CSV text (header
+row = variable names); row values override the environment. Bounded to
+`MAX_DATASET_ROWS` per run, reports per-row pass/fail (with the first failing
+step), and persists a `dataset_run` report. Launched from Collections → a
+collection's **With data** button.
+
 ## Environment parity
 
 `POST /api/collections/{id}/parity` runs a collection against **two**

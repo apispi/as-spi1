@@ -132,6 +132,8 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:outbound-test');
     Route::post('/api/collections/{id}/parity', [CollectionController::class, 'parity'])
         ->middleware('throttle:outbound-test');
+    Route::post('/api/collections/{id}/run-dataset', [CollectionController::class, 'runDataset'])
+        ->middleware('throttle:outbound-test');
 
     Route::get('/api/alert-channels', [AlertChannelController::class, 'index']);
     Route::post('/api/alert-channels', [AlertChannelController::class, 'store']);

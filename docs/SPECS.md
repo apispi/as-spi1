@@ -364,6 +364,9 @@ Same SSRF path as the testers; persists a `fuzz` report.
 between steps (extract → later `{{name}}`); `RequestExecutor` sends each step
 with the same SSRF pinning as the interactive testers, for **all** protocols.
 `ParityChecker` diffs two-environment runs by shape (value diffs ignored).
+`POST /api/collections/{id}/run-dataset` runs the collection once per dataset
+row (JSON array or CSV), each row's fields threaded as {{variables}} — data-
+driven testing; persists a `dataset_run` report.
 Runs persist as `collection_run`/`parity` reports; secrets masked.
 
 ### Monitors & alerting

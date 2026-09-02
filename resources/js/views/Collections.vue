@@ -91,6 +91,8 @@
             </button>
             <button class="col-btn" @click="openParity(c)" :disabled="!c.steps.length || envStore.environments.length < 2"
                     title="Run against two environments and diff the responses">Compare envs</button>
+            <button class="col-btn" @click="openDataset(c)" :disabled="!c.steps.length"
+                    title="Run once per row of a dataset">With data</button>
             <button class="col-btn" @click="showManager = true">Edit</button>
           </div>
         </li>
@@ -156,6 +158,47 @@
       </template>
     </section>
 
+    <!-- Data-driven run -->
+    <div v-if="dataset" class="col-scrim" @click.self="dataset = null">
+      <div class="col-modal">
+        <header class="col-modal-head">
+          <h2>Run “{{ dataset.name }}” with data</h2>
+          <button class="col-x" @click="dataset = null" aria-label="Close"><Icon name="close" :size="18" /></button>
+        </header>
+        <div class="col-modal-body">
+          <p class="col-muted col-ds-hint">
+            One run per row. Paste CSV (header row = variable names) or a JSON
+            array of objects; each row's fields are available as
+            <code v-pre>{{variables}}</code>, overriding the environment.
+          </p>
+          <textarea v-model="dataset.text" class="input-field mono col-ds-input" rows="8"
+                    placeholder="id,tag&#10;1,alpha&#10;2,beta" spellcheck="false"></textarea>
+          <p v-if="dataset.error" class="col-ds-error">{{ dataset.error }}</p>
+
+          <div v-if="dataset.result" class="col-ds-result">
+            <span class="col-parity-verdict" :class="dataset.result.passed ? 'ok' : 'bad'">
+              {{ dataset.result.passed_rows }}/{{ dataset.result.rows }} rows passed
+            </span>
+            <ul class="col-parity-steps">
+              <li v-for="it in dataset.result.iterations" :key="it.row" :class="it.passed ? '' : 'diverged'">
+                <span class="col-parity-mark">{{ it.passed ? '✓' : '✕' }}</span>
+                <span class="col-parity-name">Row {{ it.row }}</span>
+                <span class="col-parity-note">{{ it.passed_count }}/{{ it.total }}</span>
+                <span v-if="it.first_failure" class="col-parity-note bad">failed at {{ it.first_failure }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <footer class="col-ds-actions">
+            <button class="col-primary" @click="runDataset" :disabled="dataset.running || !dataset.text.trim()">
+              {{ dataset.running ? 'Running…' : 'Run' }}
+            </button>
+            <button class="col-btn" @click="dataset = null">Close</button>
+          </footer>
+        </div>
+      </div>
+    </div>
+
     <CollectionManager v-if="showManager" @close="closeManager" @ran="onRan" />
   </div>
 </template>
@@ -187,6 +230,7 @@ const parity = ref(null);
 const fuzzing = ref(null);
 const fuzzResult = ref(null);
 const fuzzName = ref('');
+const dataset = ref(null);
 
 onMounted(() => {
   requestsStore.fetchSavedRequests();
@@ -248,6 +292,32 @@ const fuzz = async (req) => {
     else alert(e.response?.data?.message || 'Fuzzing failed.');
   } finally {
     fuzzing.value = null;
+  }
+};
+
+const openDataset = (c) => {
+  dataset.value = { id: c.id, name: c.name, text: '', running: false, error: '', result: null };
+};
+
+const runDataset = async () => {
+  dataset.value.running = true;
+  dataset.value.error = '';
+  const raw = dataset.value.text.trim();
+  const payload = { environment_id: envStore.selectedId || null };
+  // JSON array if it looks like one, else treat as CSV.
+  if (raw.startsWith('[')) {
+    try { payload.dataset = JSON.parse(raw); } catch { dataset.value.error = 'That is not valid JSON.'; dataset.value.running = false; return; }
+  } else {
+    payload.dataset_csv = raw;
+  }
+  try {
+    const res = await axios.post(`/api/collections/${dataset.value.id}/run-dataset`, payload);
+    dataset.value.result = res.data;
+  } catch (e) {
+    if (e.response?.status === 422 && e.response.data?.iterations) dataset.value.result = e.response.data;
+    else dataset.value.error = e.response?.data?.message || 'Run failed.';
+  } finally {
+    dataset.value.running = false;
   }
 };
 
@@ -351,6 +421,19 @@ const ago = (iso) => {
 .col-clear:hover { border-color: #f85149; color: #f85149; }
 .col-run { margin-top: 16px; border: 1px solid var(--border-color); border-radius: 14px; }
 .col-parity { padding: 12px 14px; }
+.col-scrim { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: var(--z-modal, 100); }
+.col-modal { width: min(620px, 100%); max-height: 84vh; display: flex; flex-direction: column; background: var(--bg-secondary, var(--panel-bg)); border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; }
+.col-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid var(--border-color); }
+.col-modal-head h2 { font-size: 16px; font-weight: 700; margin: 0; color: var(--text-primary); }
+.col-x { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; }
+.col-modal-body { padding: 16px 20px; overflow-y: auto; }
+.col-ds-hint { margin: 0 0 10px; line-height: 1.6; }
+.col-ds-hint code { font-family: 'Courier New', monospace; background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 4px; }
+.mono { font-family: 'Courier New', monospace; }
+.col-ds-input { width: 100%; resize: vertical; font-size: 12.5px; }
+.col-ds-error { color: #f85149; font-size: 13px; margin: 8px 0 0; }
+.col-ds-result { margin-top: 14px; }
+.col-ds-actions { display: flex; gap: 8px; margin-top: 16px; }
 .col-fuzz { border: 1px solid var(--border-color); border-radius: 14px; padding: 12px 14px; }
 .col-fuzz-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .col-parity-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
