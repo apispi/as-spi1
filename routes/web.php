@@ -123,6 +123,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/saved-requests/{id}/export', [ImportController::class, 'export']);
     Route::post('/api/saved-requests/{id}/fuzz', [\App\Http\Controllers\FuzzController::class, 'fuzz'])
         ->middleware('throttle:outbound-test');
+    Route::post('/api/saved-requests/{id}/perf', [\App\Http\Controllers\PerfController::class, 'run'])
+        ->middleware('throttle:outbound-test');
 
     Route::get('/api/collections', [CollectionController::class, 'index']);
     Route::post('/api/collections', [CollectionController::class, 'store']);

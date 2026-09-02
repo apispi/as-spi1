@@ -350,6 +350,12 @@ Vue panel are constrained to it (a test pins the two lists together).
 `ContractChecker` fails a collection step on a removed-required-field or
 type-change (breaking) even at HTTP 200, while additive fields pass.
 
+### Performance profiling
+`POST /api/saved-requests/{id}/perf` sends a bounded, sequential batch
+(`LoadTester`, MAX_SAMPLES 100, via RequestExecutor so SSRF applies) and reports
+latency percentiles, success rate, status distribution, and throughput; persists
+a `perf` report.
+
 ### Fuzzing
 `POST /api/saved-requests/{id}/fuzz` mutates a REST body into adversarial
 variants (`FuzzGenerator`, targeted by field type) and classifies each response

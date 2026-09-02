@@ -410,6 +410,17 @@ Alerts also need real mail credentials in the production `.env`
 (`MAIL_MAILER=smtp` and the rest). With `MAIL_MAILER=log` they are written to
 the log file instead of sent.
 
+## Performance profiling
+
+`POST /api/saved-requests/{id}/perf` fires a bounded batch of samples at a REST
+endpoint and reports the latency distribution (min/avg/p50/p90/p95/p99/max),
+success rate, status distribution, and throughput. `App\Services\Perf\LoadTester`
+is **sequential and capped** (`MAX_SAMPLES` = 100) and each sample goes through
+the shared `RequestExecutor`, so the SSRF guard applies and a hosted tool cannot
+be turned into a DoS weapon. `{{variables}}` resolve against an environment and
+the resolved URL is SSRF-checked. Persists a `perf` report. Run from Collections
+→ a saved request's **Perf** button.
+
 ## Contract-driven fuzzing
 
 `POST /api/saved-requests/{id}/fuzz` mutates a REST request's JSON body into

@@ -30,6 +30,23 @@
         <router-link to="/tester" class="col-empty-btn">Open the tester</router-link>
       </div>
 
+      <div v-if="perfResult" class="col-fuzz">
+        <div class="col-fuzz-head">
+          <span class="col-parity-verdict" :class="perfResult.success_rate >= 99 ? 'ok' : (perfResult.success_rate >= 1 ? '' : 'bad')">
+            {{ perfResult.success_rate }}% ok
+          </span>
+          <span class="col-parity-title">{{ perfName }} — {{ perfResult.samples }} samples</span>
+          <button class="col-btn" @click="perfResult = null">Close</button>
+        </div>
+        <div class="col-perf-grid">
+          <div v-for="m in perfMetrics" :key="m.label"><span class="col-perf-v">{{ m.value }}</span><span class="col-perf-l">{{ m.label }}</span></div>
+        </div>
+        <div class="col-perf-status">
+          <span v-for="(count, code) in perfResult.status_distribution" :key="code" class="col-tag" :class="Number(code) >= 400 ? 'bad-tag' : ''">{{ code }}: {{ count }}</span>
+          <span v-if="perfResult.transport_errors" class="col-tag bad-tag">errors: {{ perfResult.transport_errors }}</span>
+        </div>
+      </div>
+
       <div v-if="fuzzResult" class="col-fuzz">
         <div class="col-fuzz-head">
           <span class="col-parity-verdict" :class="fuzzResult.passed ? 'ok' : 'bad'">
@@ -61,6 +78,9 @@
           <div class="col-row-actions">
             <button v-if="(req.protocol || 'rest') === 'rest' && req.body" class="col-btn" @click="fuzz(req)" :disabled="fuzzing === req.id">
               {{ fuzzing === req.id ? 'Fuzzing…' : 'Fuzz' }}
+            </button>
+            <button v-if="(req.protocol || 'rest') === 'rest'" class="col-btn" @click="perf(req)" :disabled="perfing === req.id">
+              {{ perfing === req.id ? 'Profiling…' : 'Perf' }}
             </button>
             <button class="col-btn" @click="open(req)">Open</button>
             <button class="col-del" @click="remove(req)" title="Delete request"><Icon name="close" :size="14" /></button>
@@ -204,7 +224,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
 import Icon from '../components/Icon.vue';
@@ -231,6 +251,9 @@ const fuzzing = ref(null);
 const fuzzResult = ref(null);
 const fuzzName = ref('');
 const dataset = ref(null);
+const perfing = ref(null);
+const perfResult = ref(null);
+const perfName = ref('');
 
 onMounted(() => {
   requestsStore.fetchSavedRequests();
@@ -277,6 +300,31 @@ const run = async (c) => {
     await collectionsStore.run(c.id, envStore.selectedId);
   } finally {
     running.value = null;
+  }
+};
+
+const perfMetrics = computed(() => {
+  const l = perfResult.value?.latency || {};
+  return [
+    { label: 'p50 ms', value: l.p50 ?? '—' },
+    { label: 'p95 ms', value: l.p95 ?? '—' },
+    { label: 'p99 ms', value: l.p99 ?? '—' },
+    { label: 'max ms', value: l.max ?? '—' },
+    { label: 'req/s', value: perfResult.value?.requests_per_sec ?? '—' },
+  ];
+});
+
+const perf = async (req) => {
+  perfing.value = req.id;
+  perfName.value = req.name;
+  perfResult.value = null;
+  try {
+    const res = await axios.post(`/api/saved-requests/${req.id}/perf`, { samples: 20, environment_id: envStore.selectedId || null });
+    perfResult.value = res.data;
+  } catch (e) {
+    alert(e.response?.data?.message || 'Profiling failed.');
+  } finally {
+    perfing.value = null;
   }
 };
 
@@ -436,6 +484,12 @@ const ago = (iso) => {
 .col-ds-actions { display: flex; gap: 8px; margin-top: 16px; }
 .col-fuzz { border: 1px solid var(--border-color); border-radius: 14px; padding: 12px 14px; }
 .col-fuzz-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.col-perf-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 10px; }
+.col-perf-v { display: block; font-size: 20px; font-weight: 700; color: var(--text-primary); }
+.col-perf-l { display: block; font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .04em; }
+.col-perf-status { display: flex; flex-wrap: wrap; gap: 6px; }
+.bad-tag { color: #f85149 !important; background: rgba(248,81,73,.14) !important; }
+@media (max-width: 560px) { .col-perf-grid { grid-template-columns: repeat(3, 1fr); } }
 .col-parity-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .col-parity-verdict { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
 .col-parity-verdict.ok { color: #3fb950; background: rgba(63,185,80,.16); }
