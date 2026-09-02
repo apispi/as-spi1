@@ -160,6 +160,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/api/mcp-proxies/{id}', [McpProxyController::class, 'destroy']);
     Route::get('/api/mcp-proxies/{id}/exchanges', [McpProxyController::class, 'exchanges']);
     Route::get('/api/mcp-proxies/{id}/synthesize', [McpProxyController::class, 'synthesize']);
+    Route::post('/api/mcp-proxies/{id}/replay', [McpProxyController::class, 'replay'])
+        ->middleware('throttle:outbound-test');
 
     Route::get('/api/status-pages', [StatusPageController::class, 'index']);
     Route::post('/api/status-pages', [StatusPageController::class, 'store']);

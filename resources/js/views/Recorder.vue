@@ -62,10 +62,32 @@
           <button class="rec-btn" @click="synthesize" :disabled="synthesizing" title="Reverse-engineer the server's real contract from this traffic">
             {{ synthesizing ? '…' : 'Synthesize contract' }}
           </button>
+          <button class="rec-btn" @click="replay" :disabled="replaying" title="Replay these requests against the upstream and diff responses">
+            {{ replaying ? '…' : 'Replay' }}
+          </button>
           <button class="rec-btn" @click="reloadExchanges" :disabled="reloading">{{ reloading ? '…' : 'Refresh' }}</button>
           <button class="rec-x" @click="viewing = null" aria-label="Close"><Icon name="close" :size="18" /></button>
         </header>
         <div class="rec-body">
+          <div v-if="replayResult" class="rec-synth">
+            <div class="rec-synth-head">
+              <strong :class="replayResult.passed ? '' : 'rec-bad'">
+                Replay — {{ replayResult.passed ? 'no regressions' : replayResult.diverged + ' regression(s)' }}
+              </strong>
+              <span class="rec-muted">{{ replayResult.matched }} matched · {{ replayResult.skipped }} skipped</span>
+              <button class="rec-btn" @click="replayResult = null">Hide</button>
+            </div>
+            <div v-for="(s, i) in replayResult.steps" :key="i" class="rec-replay-step" :class="s.verdict">
+              <span class="rec-verb">{{ s.tool || s.method }}</span>
+              <span class="rec-pill" :class="{ bad: s.verdict === 'diverged', warn: s.verdict === 'skipped' }">{{ s.verdict }}</span>
+              <template v-if="s.shape">
+                <span v-for="c in s.shape.removed" :key="'r'+c.path" class="rec-muted">removed {{ c.path }}</span>
+                <span v-for="c in s.shape.type_changed" :key="'t'+c.path" class="rec-muted">{{ c.path }} {{ c.expected }}→{{ c.actual }}</span>
+              </template>
+              <span v-else-if="s.note" class="rec-muted">{{ s.note }}</span>
+            </div>
+          </div>
+
           <div v-if="synth" class="rec-synth">
             <div class="rec-synth-head">
               <strong>Observed contract</strong>
@@ -198,6 +220,8 @@ const onlyFlagged = ref(false);
 const reloading = ref(false);
 const synthesizing = ref(false);
 const synth = ref(null);
+const replaying = ref(false);
+const replayResult = ref(null);
 const saving = ref(false);
 const error = ref('');
 const copied = ref(null);
@@ -283,6 +307,20 @@ const open = async (p) => {
   onlyFlagged.value = false;
   synth.value = null;
   viewing.value = (await axios.get(`/api/mcp-proxies/${p.id}/exchanges`)).data;
+};
+
+const replay = async () => {
+  replaying.value = true;
+  synth.value = null;
+  try {
+    const res = await axios.post(`/api/mcp-proxies/${viewing.value.proxy.id}/replay`);
+    replayResult.value = res.data;
+  } catch (e) {
+    if (e.response?.status === 422 && e.response.data?.steps) replayResult.value = e.response.data;
+    else alert(e.response?.data?.message || 'Replay failed.');
+  } finally {
+    replaying.value = false;
+  }
 };
 
 const synthesize = async () => {
@@ -381,6 +419,9 @@ const ago = (iso) => {
 .rec-error { color: #f85149; font-size: 13px; margin: 12px 0 0; }
 .rec-actions-row { display: flex; gap: 8px; margin-top: 18px; }
 
+.rec-bad { color: #f85149; }
+.rec-replay-step { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-size: 12px; padding: 5px 0; border-top: 1px solid var(--border-color); }
+.rec-replay-step:first-of-type { border-top: none; }
 .rec-synth { border: 1px solid #a371f7; border-radius: 10px; padding: 12px; margin-bottom: 14px; }
 .rec-synth-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; }
 .rec-synth-head strong { color: var(--text-primary); }

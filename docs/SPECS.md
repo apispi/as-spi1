@@ -398,7 +398,9 @@ records every exchange (Authorization forwarded, never stored; upstream
 re-pinned per relay; responses scanned for injection live → `flagged`).
 `GET /api/mcp-proxies/{id}/exchanges|synthesize` — synthesis reverse-engineers
 the observed contract (input from real arguments, output from real responses)
-beside what `tools/list` declared, surfacing undeclared tools. A proxy may also
+beside what `tools/list` declared, surfacing undeclared tools. `POST /api/mcp-proxies/{id}/replay` replays the recorded requests against a
+target and diffs response shapes (`McpReplayer`, contract-engine diff, safe mode
+skips destructive calls) — regression testing from real traffic. A proxy may also
 carry a **firewall** `policy` (`McpPolicyEngine`): ordered block/redact rules the
 relay enforces inline — block a tool, redact secret arguments before they leave,
 or withhold an injection-flagged response. Enforcement is recorded per exchange;

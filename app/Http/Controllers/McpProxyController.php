@@ -95,6 +95,38 @@ class McpProxyController extends Controller
         return response()->json($synthesizer->synthesize($proxy));
     }
 
+    /**
+     * Replay the recorded requests against a target server and diff the new
+     * responses against the recorded ones — regression testing from real
+     * traffic. Safe by default (destructive calls skipped).
+     */
+    public function replay(Request $request, \App\Services\Mcp\McpReplayer $replayer, int $id)
+    {
+        $proxy = McpProxy::inWorkspaceOf($request->user())->findOrFail($id);
+
+        $validated = $request->validate([
+            'target_url' => ['nullable', 'string', 'url', new PubliclyRoutableUrl],
+            'safe_mode' => 'nullable|boolean',
+        ]);
+
+        $target = $validated['target_url'] ?? $proxy->upstream_url;
+        $result = $replayer->replay($proxy, $target, $validated['safe_mode'] ?? true);
+
+        $report = \App\Models\InspectionReport::create([
+            'user_id' => $request->user()->id,
+            'type' => 'replay',
+            'summary' => sprintf(
+                '%s replay — %s (%d matched, %d diverged, %d skipped)',
+                $proxy->name,
+                $result['passed'] ? 'no regressions' : $result['diverged'].' regression(s)',
+                $result['matched'], $result['diverged'], $result['skipped']
+            ),
+            'data' => $result,
+        ]);
+
+        return response()->json($result + ['report_id' => $report->id], $result['passed'] ? 200 : 422);
+    }
+
     private function present(McpProxy $proxy): array
     {
         return [

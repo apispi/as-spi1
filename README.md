@@ -281,6 +281,18 @@ into a mock tool — its observed input schema and a real sample response to
 replay. The loop closes: record production MCP traffic once, serve it back as a
 runnable stand-in. Token-gated, workspace-shared, managed from the Mocks view.
 
+## Replay regression from recorded traffic
+
+`POST /api/mcp-proxies/{id}/replay` replays a flight recorder's captured
+requests against a target MCP server (the upstream by default, or an override)
+and diffs each new response's shape against what was originally recorded —
+regression testing from real traffic. `App\Services\Mcp\McpReplayer` reuses
+the contract engine to flag a dropped field or changed type as a regression.
+Safe by default: a recorded `tools/call` for a destructive-looking tool
+(`DestructiveHeuristic`) is skipped rather than re-executed, so replaying
+against a live server does not repeat side effects. 200 no-regressions / 422
+with divergences; persists a `replay` report. Launched from Recorder → Replay.
+
 ## Synthesize a contract from traffic
 
 `GET /api/mcp-proxies/{id}/synthesize` reverse-engineers an MCP server's real
