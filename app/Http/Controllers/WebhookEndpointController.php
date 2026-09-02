@@ -89,20 +89,28 @@ class WebhookEndpointController extends Controller
             'last_received_at' => $endpoint->last_received_at,
             'last_status' => $endpoint->last_status,
             'captures_count' => $endpoint->captures_count ?? 0,
+            'trigger_collection_id' => $endpoint->trigger_collection_id,
+            'trigger_environment_id' => $endpoint->trigger_environment_id,
         ];
     }
 
     private function validated(Request $request, ?WebhookEndpoint $existing): array
     {
+        $ids = $request->user()->workspaceUserIds();
+
         return $request->validate([
             'name' => [
                 'required', 'string', 'max:60',
                 Rule::unique('webhook_endpoints', 'name')
-                    ->whereIn('user_id', $request->user()->workspaceUserIds())
+                    ->whereIn('user_id', $ids)
                     ->ignore($existing?->id),
             ],
             'expect_interval_minutes' => 'nullable|integer|min:5|max:10080',
             'alerts_enabled' => 'nullable|boolean',
+            // A trigger may reference any collection/environment in the
+            // workspace; null clears it.
+            'trigger_collection_id' => ['nullable', 'integer', Rule::exists('collections', 'id')->whereIn('user_id', $ids)],
+            'trigger_environment_id' => ['nullable', 'integer', Rule::exists('environments', 'id')->whereIn('user_id', $ids)],
         ]);
     }
 }

@@ -28,9 +28,12 @@ class CollectionRunner
     ) {
     }
 
-    public function run(Collection $collection, ?Environment $environment = null, bool $captureBodies = false): array
+    public function run(Collection $collection, ?Environment $environment = null, bool $captureBodies = false, array $extraVariables = []): array
     {
-        $variables = $environment?->map() ?? [];
+        // Extra variables (e.g. from a webhook payload) override the
+        // environment, so a triggered run can target the specific record the
+        // callback named.
+        $variables = array_merge($environment?->map() ?? [], $extraVariables);
 
         if ($environment) {
             $this->masker->remember($environment->secretValues());

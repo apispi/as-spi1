@@ -406,7 +406,9 @@ redacted values replace secrets in storage too.
 
 ### Webhook capture (dead-man's switch)
 `ANY /hook/{token}` captures inbound requests (Authorization/Cookie redacted,
-64 KB cap). With `expect_interval_minutes` set, `webhooks:check` marks an
+64 KB cap). An endpoint may set `trigger_collection_id` to **fire a collection
+run** per capture (queued via `RunTriggeredCollection`, off the request path);
+top-level JSON payload fields become `{{webhook_<field>}}` variables for the run. With `expect_interval_minutes` set, `webhooks:check` marks an
 endpoint **silent** when nothing arrives in time and alerts on the transition
 (and on recovery). `GET/POST/PUT/DELETE /api/webhook-endpoints`, `.../captures`.
 

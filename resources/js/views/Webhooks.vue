@@ -109,6 +109,20 @@
             <span>Alert me on silence and recovery</span>
           </label>
 
+          <label class="wh-label">Trigger a collection run</label>
+          <select v-model="editing.trigger_collection_id" class="input-field">
+            <option :value="null">None — just capture</option>
+            <option v-for="c in collections" :key="c.id" :value="c.id">{{ c.name }}</option>
+          </select>
+          <select v-if="editing.trigger_collection_id" v-model="editing.trigger_environment_id" class="input-field wh-trig-env">
+            <option :value="null">No environment</option>
+            <option v-for="en in environments" :key="en.id" :value="en.id">{{ en.name }}</option>
+          </select>
+          <p v-if="editing.trigger_collection_id" class="wh-hint">
+            Each captured request runs this suite. Top-level JSON fields are
+            available to it as <code v-pre>{{webhook_&lt;field&gt;}}</code>.
+          </p>
+
           <p v-if="error" class="wh-error">{{ error }}</p>
 
           <footer class="wh-actions-row">
@@ -137,6 +151,8 @@ const requestsStore = useRequestsStore();
 const INTERVALS = [5, 15, 30, 60, 180, 360, 720, 1440];
 
 const endpoints = ref([]);
+const collections = ref([]);
+const environments = ref([]);
 const loading = ref(true);
 const editing = ref(null);
 const viewing = ref(null);
@@ -149,7 +165,14 @@ const copied = ref(null);
 const fetchAll = async () => {
   loading.value = true;
   try {
-    endpoints.value = (await axios.get('/api/webhook-endpoints')).data;
+    const [e, c, en] = await Promise.all([
+      axios.get('/api/webhook-endpoints'),
+      axios.get('/api/collections'),
+      axios.get('/api/environments'),
+    ]);
+    endpoints.value = e.data;
+    collections.value = c.data;
+    environments.value = en.data;
   } finally {
     loading.value = false;
   }
@@ -180,7 +203,7 @@ const copy = async (e) => {
 
 const startNew = () => {
   error.value = '';
-  editing.value = { id: null, name: '', expect_interval_minutes: null, alerts_enabled: true };
+  editing.value = { id: null, name: '', expect_interval_minutes: null, alerts_enabled: true, trigger_collection_id: null, trigger_environment_id: null };
 };
 
 const edit = (e) => {
@@ -190,6 +213,8 @@ const edit = (e) => {
     name: e.name,
     expect_interval_minutes: e.expect_interval_minutes,
     alerts_enabled: e.alerts_enabled,
+    trigger_collection_id: e.trigger_collection_id ?? null,
+    trigger_environment_id: e.trigger_environment_id ?? null,
   };
 };
 
@@ -200,6 +225,8 @@ const save = async () => {
     name: editing.value.name.trim(),
     expect_interval_minutes: editing.value.expect_interval_minutes,
     alerts_enabled: editing.value.alerts_enabled,
+    trigger_collection_id: editing.value.trigger_collection_id,
+    trigger_environment_id: editing.value.trigger_collection_id ? editing.value.trigger_environment_id : null,
   };
   try {
     if (editing.value.id) {
@@ -319,6 +346,7 @@ const ago = (iso) => {
 .wh-label:first-child { margin-top: 0; }
 .wh-hint { font-size: 12px; color: var(--text-secondary); margin: 6px 0 0; line-height: 1.5; }
 .wh-check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); margin-top: 14px; cursor: pointer; }
+.wh-trig-env { margin-top: 8px; }
 .wh-error { color: #f85149; font-size: 13px; margin: 12px 0 0; }
 .wh-actions-row { display: flex; gap: 8px; margin-top: 18px; }
 

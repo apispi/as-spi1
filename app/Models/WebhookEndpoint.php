@@ -36,6 +36,8 @@ class WebhookEndpoint extends Model
         'alerts_enabled',
         'last_received_at',
         'last_status',
+        'trigger_collection_id',
+        'trigger_environment_id',
     ];
 
     protected $casts = [
@@ -61,6 +63,16 @@ class WebhookEndpoint extends Model
     public function captures()
     {
         return $this->hasMany(WebhookCapture::class)->latest('id');
+    }
+
+    public function triggerCollection()
+    {
+        return $this->belongsTo(Collection::class, 'trigger_collection_id');
+    }
+
+    public function triggerEnvironment()
+    {
+        return $this->belongsTo(Environment::class, 'trigger_environment_id');
     }
 
     /**

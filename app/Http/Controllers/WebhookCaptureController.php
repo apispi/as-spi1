@@ -63,9 +63,42 @@ class WebhookCaptureController extends Controller
             $this->alert($dispatcher, $endpoint, recovered: true);
         }
 
+        // Event-driven testing: a configured trigger fires a collection run
+        // off the request path, so this responds to the provider immediately.
+        if ($endpoint->trigger_collection_id) {
+            $this->fireTrigger($endpoint, $body);
+        }
+
         $this->trim($endpoint);
 
         return response()->json(['ok' => true, 'id' => $capture->id, 'truncated' => $truncated]);
+    }
+
+    /**
+     * Queue the triggered collection run. Top-level scalar fields of a JSON
+     * payload become `webhook_<key>` variables, so the suite can target the
+     * exact record the callback named.
+     */
+    private function fireTrigger(WebhookEndpoint $endpoint, string $body): void
+    {
+        $variables = ['webhook_method' => request()->method()];
+
+        $decoded = json_decode($body, true);
+        if (is_array($decoded)) {
+            foreach ($decoded as $key => $value) {
+                if (is_scalar($value) && is_string($key)) {
+                    $variables['webhook_'.$key] = is_bool($value) ? ($value ? 'true' : 'false') : (string) $value;
+                }
+            }
+        }
+
+        \App\Jobs\RunTriggeredCollection::dispatch(
+            $endpoint->user_id,
+            $endpoint->trigger_collection_id,
+            $endpoint->trigger_environment_id,
+            $variables,
+            $endpoint->name,
+        );
     }
 
     /**

@@ -310,6 +310,14 @@ Whatever arrives (any method) is captured: headers (with
 Authorization/Cookie redacted at capture), query, body (truncated at 64KB),
 and IP, with per-endpoint retention. Captures replay into the tester.
 
+**Triggered runs.** An endpoint can fire a **collection run** on every capture
+(`trigger_collection_id`) — event-driven testing: "when the provider sends this
+callback, run my verification suite." The run is queued (off the request path,
+so the webhook 200s immediately), executes as the endpoint's owner, and
+top-level JSON fields of the payload are exposed to it as
+`{{webhook_<field>}}` so the suite can target the exact record the callback
+named. Needs a queue worker to process, like alerts need SMTP.
+
 With an expectation set ("a request at least every N minutes") the endpoint
 becomes a **dead-man's switch**: a scheduler tick flags silence and alerts on
 the transition — email plus every enabled alert channel — and again on
