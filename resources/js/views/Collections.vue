@@ -30,7 +30,25 @@
         <router-link to="/tester" class="col-empty-btn">Open the tester</router-link>
       </div>
 
-      <ul v-else class="col-list">
+      <div v-if="fuzzResult" class="col-fuzz">
+        <div class="col-fuzz-head">
+          <span class="col-parity-verdict" :class="fuzzResult.passed ? 'ok' : 'bad'">
+            {{ fuzzResult.passed ? 'Handled cleanly' : fuzzResult.findings + ' finding' + (fuzzResult.findings === 1 ? '' : 's') }}
+          </span>
+          <span class="col-parity-title">{{ fuzzName }} — {{ fuzzResult.total }} variants</span>
+          <button class="col-btn" @click="fuzzResult = null">Close</button>
+        </div>
+        <ul class="col-parity-steps">
+          <li v-for="(r, i) in fuzzResult.results.filter(x => x.verdict === 'server_error' || x.verdict === 'accepted_invalid')" :key="i" class="diverged">
+            <span class="col-parity-mark">✕</span>
+            <span class="col-parity-name">{{ r.label }}</span>
+            <span class="col-parity-note bad">{{ r.verdict === 'server_error' ? 'server error ' + r.status : 'accepted (' + r.status + ')' }}</span>
+          </li>
+          <li v-if="fuzzResult.passed"><span class="col-parity-mark">✓</span> <span class="col-parity-name">Every malformed variant was rejected or handled.</span></li>
+        </ul>
+      </div>
+
+      <ul v-else-if="requestsStore.savedRequests.length" class="col-list">
         <li v-for="req in requestsStore.savedRequests" :key="req.id" class="col-row">
           <span class="method-badge" :class="badgeClass(req)">{{ badgeLabel(req) }}</span>
           <div class="col-row-main" @click="open(req)">
@@ -41,6 +59,9 @@
             {{ req.assertions.length }} assertion{{ req.assertions.length === 1 ? '' : 's' }}
           </span>
           <div class="col-row-actions">
+            <button v-if="(req.protocol || 'rest') === 'rest' && req.body" class="col-btn" @click="fuzz(req)" :disabled="fuzzing === req.id">
+              {{ fuzzing === req.id ? 'Fuzzing…' : 'Fuzz' }}
+            </button>
             <button class="col-btn" @click="open(req)">Open</button>
             <button class="col-del" @click="remove(req)" title="Delete request"><Icon name="close" :size="14" /></button>
           </div>
@@ -163,6 +184,9 @@ const historyLoading = ref(false);
 const showManager = ref(false);
 const running = ref(null);
 const parity = ref(null);
+const fuzzing = ref(null);
+const fuzzResult = ref(null);
+const fuzzName = ref('');
 
 onMounted(() => {
   requestsStore.fetchSavedRequests();
@@ -209,6 +233,21 @@ const run = async (c) => {
     await collectionsStore.run(c.id, envStore.selectedId);
   } finally {
     running.value = null;
+  }
+};
+
+const fuzz = async (req) => {
+  fuzzing.value = req.id;
+  fuzzName.value = req.name;
+  fuzzResult.value = null;
+  try {
+    const res = await axios.post(`/api/saved-requests/${req.id}/fuzz`, { environment_id: envStore.selectedId || null });
+    fuzzResult.value = res.data;
+  } catch (e) {
+    if (e.response?.status === 422 && e.response.data?.results) fuzzResult.value = e.response.data;
+    else alert(e.response?.data?.message || 'Fuzzing failed.');
+  } finally {
+    fuzzing.value = null;
   }
 };
 
@@ -312,6 +351,8 @@ const ago = (iso) => {
 .col-clear:hover { border-color: #f85149; color: #f85149; }
 .col-run { margin-top: 16px; border: 1px solid var(--border-color); border-radius: 14px; }
 .col-parity { padding: 12px 14px; }
+.col-fuzz { border: 1px solid var(--border-color); border-radius: 14px; padding: 12px 14px; }
+.col-fuzz-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .col-parity-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .col-parity-verdict { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
 .col-parity-verdict.ok { color: #3fb950; background: rgba(63,185,80,.16); }

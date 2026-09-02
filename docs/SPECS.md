@@ -350,6 +350,13 @@ Vue panel are constrained to it (a test pins the two lists together).
 `ContractChecker` fails a collection step on a removed-required-field or
 type-change (breaking) even at HTTP 200, while additive fields pass.
 
+### Fuzzing
+`POST /api/saved-requests/{id}/fuzz` mutates a REST body into adversarial
+variants (`FuzzGenerator`, targeted by field type) and classifies each response
+via `FuzzRunner`: 5xx = server_error (finding), 2xx on a type/shape violation =
+accepted_invalid (finding), 4xx = handled. Injection/oversized are crash-probes.
+Same SSRF path as the testers; persists a `fuzz` report.
+
 ### Collections, runner, parity
 `GET/POST/PUT/DELETE /api/collections`, `POST /api/collections/{id}/run`
 (also `/api/v1/...` with an API key — 200 all-passed, 422 any-failed for CI),

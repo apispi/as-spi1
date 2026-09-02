@@ -390,6 +390,26 @@ Alerts also need real mail credentials in the production `.env`
 (`MAIL_MAILER=smtp` and the rest). With `MAIL_MAILER=log` they are written to
 the log file instead of sent.
 
+## Contract-driven fuzzing
+
+`POST /api/saved-requests/{id}/fuzz` mutates a REST request's JSON body into
+adversarial variants targeted at its real fields — because the field types are
+known, the mutations are pointed: wrong types, dropped required fields, boundary
+numbers, oversized strings, injection payloads, and structural abuse
+(`App\Services\Fuzz\FuzzGenerator`). Each variant is sent through the shared
+`RequestExecutor` (same SSRF pinning as any outbound call) and classified:
+
+- **server_error** (5xx) — the endpoint crashed on bad input (a finding);
+- **accepted_invalid** — 2xx on a genuine type/shape violation the endpoint
+  should have rejected (a finding);
+- **rejected** (4xx) — handled gracefully.
+
+Injection and oversized inputs are crash-probes, not "should-reject" cases, so
+they only surface as findings if they cause a 5xx — keeping results low-noise.
+`{{variables}}` resolve against an environment and the resolved URL is
+SSRF-checked. 200 clean / 422 with findings; persists a `fuzz` report. Run from
+Collections → a saved request's **Fuzz** button.
+
 ## Response contracts (schema drift)
 
 A contract is a JSON-Schema baseline **inferred from a known-good response** —

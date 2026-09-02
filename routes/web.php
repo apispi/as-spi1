@@ -121,6 +121,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/import/openapi', [ImportController::class, 'openapi']);
     Route::post('/api/export', [ImportController::class, 'exportDraft']);
     Route::get('/api/saved-requests/{id}/export', [ImportController::class, 'export']);
+    Route::post('/api/saved-requests/{id}/fuzz', [\App\Http\Controllers\FuzzController::class, 'fuzz'])
+        ->middleware('throttle:outbound-test');
 
     Route::get('/api/collections', [CollectionController::class, 'index']);
     Route::post('/api/collections', [CollectionController::class, 'store']);
