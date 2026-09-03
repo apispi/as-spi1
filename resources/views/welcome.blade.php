@@ -7,6 +7,22 @@
         <link rel="icon" type="image/x-icon" href="/favicon.ico">
         <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
+        <!-- Resolve the theme before first paint to avoid a flash of the wrong
+             colours. Mirrors resources/js/theme.js. -->
+        <script>
+            (function () {
+                try {
+                    var t = localStorage.getItem('spi-theme');
+                    if (!t) {
+                        t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+                    }
+                    document.documentElement.setAttribute('data-theme', t);
+                } catch (e) {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                }
+            })();
+        </script>
+
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

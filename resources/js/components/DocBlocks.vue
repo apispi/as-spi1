@@ -77,15 +77,17 @@ const inline = (text) => {
   padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 0 0 16px;
   line-height: 1.7; color: var(--text-secondary); font-size: 14px;
 }
-.doc-code { margin: 0 0 18px; border: 1px solid var(--border-color, rgba(255,255,255,0.1)); border-radius: 10px; overflow: hidden; }
+/* Code blocks stay dark in both themes (terminal-style), so the copy button
+   and syntax read consistently regardless of the page theme. */
+.doc-code { margin: 0 0 18px; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; overflow: hidden; background: #0d1117; }
 .doc-code-head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 6px 12px; background: rgba(0,0,0,0.25);
-  border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.08));
+  padding: 6px 12px; background: rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
-.doc-code-lang { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); }
+.doc-code-lang { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #8b949e; }
 .doc-code-copy {
-  background: none; border: none; color: var(--accent-color);
+  background: none; border: none; color: #58a6ff;
   font-size: 12px; cursor: pointer; font-family: inherit; padding: 2px 6px;
 }
 .doc-code pre { margin: 0; padding: 14px 16px; overflow-x: auto; }

@@ -223,7 +223,7 @@ const formattedReqBody = computed(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: #0d1117; /* slightly darker for response */
+  background-color: var(--bg-color); /* slightly darker for response */
 }
 
 .panel-header {
@@ -328,7 +328,7 @@ const formattedReqBody = computed(() => {
 }
 
 .code-block {
-  background-color: #010409;
+  background-color: var(--input-bg);
   padding: 16px;
   border-radius: 6px;
   border: 1px solid var(--border-color);
@@ -352,7 +352,7 @@ const formattedReqBody = computed(() => {
   gap: 12px 24px;
   font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
   font-size: 13px;
-  background-color: #010409;
+  background-color: var(--input-bg);
   padding: 16px;
   border-radius: 6px;
   border: 1px solid var(--border-color);

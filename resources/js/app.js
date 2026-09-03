@@ -3,6 +3,10 @@ import { createPinia } from 'pinia';
 import axios from 'axios';
 import App from './App.vue';
 import router from './router';
+import { initTheme } from './theme';
+
+// Resolve the light/dark theme before the app mounts to avoid a flash.
+initTheme();
 
 // A 419 means the CSRF token went stale (session expired while the tab sat
 // open). Refresh the XSRF cookie with a cheap GET and replay the request

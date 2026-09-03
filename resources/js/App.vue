@@ -20,6 +20,11 @@
         </button>
       </div>
 
+      <div class="topbar-right">
+        <button class="icon-btn" @click="toggleTheme" :aria-label="theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'" :title="theme === 'light' ? 'Dark mode' : 'Light mode'">
+          <Icon :name="theme === 'light' ? 'moon' : 'sun'" :size="18" />
+        </button>
+
       <!-- Profile dropdown (top right) -->
       <div ref="acctRoot" class="acct">
         <button type="button" class="acct-trigger" :class="{ open: acctOpen }" @click="acctOpen = !acctOpen" aria-haspopup="true" :aria-expanded="acctOpen">
@@ -51,6 +56,7 @@
             </button>
           </div>
         </transition>
+      </div>
       </div>
     </header>
 
@@ -108,6 +114,9 @@
         </div>
       </div>
       <div class="header-right">
+        <button class="icon-btn theme-toggle-guest" @click="toggleTheme" :aria-label="theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'" :title="theme === 'light' ? 'Dark mode' : 'Light mode'">
+          <Icon :name="theme === 'light' ? 'moon' : 'sun'" :size="18" />
+        </button>
         <router-link to="/login" class="btn btn-login">Sign In</router-link>
         <router-link to="/register" class="btn btn-register">Get Started</router-link>
       </div>
@@ -123,6 +132,7 @@ import { useAuthStore } from './store/auth';
 import { useRouter, useRoute } from 'vue-router';
 import Icon from './components/Icon.vue';
 import CommandPalette from './components/CommandPalette.vue';
+import { theme, toggleTheme } from './theme';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -216,6 +226,7 @@ const handleLogout = async () => {
   position: relative; z-index: var(--z-topbar);
 }
 .topbar-left { display: flex; align-items: center; gap: 10px; }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
 .cmdk { display: inline-flex; align-items: center; gap: 7px; margin-left: 6px; padding: 6px 10px; border-radius: 8px; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-secondary); cursor: pointer; font-size: 12.5px; }
 .cmdk:hover { border-color: var(--accent-color); color: var(--text-primary); }
 .cmdk-kbd { font-size: 11px; border: 1px solid var(--border-color); border-radius: 4px; padding: 0 5px; }
