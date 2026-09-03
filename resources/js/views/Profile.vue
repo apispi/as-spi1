@@ -142,6 +142,19 @@
               </div>
             </form>
           </div>
+
+          <div class="up-card">
+            <div class="up-card-header">
+              <h2 class="up-card-title">Product tour</h2>
+              <p class="up-card-sub">Replay the guided walkthrough of the workspace</p>
+            </div>
+            <p class="up-hint" style="margin-bottom: 1rem">
+              Take the interactive tour again to revisit what each part of Spi does. It starts on your dashboard.
+            </p>
+            <button type="button" class="up-btn-save" style="margin-top: 0" @click="replayTour">
+              Replay the tour
+            </button>
+          </div>
         </template>
 
         <!-- ── API Keys tab ── -->
@@ -343,9 +356,19 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useAuthStore } from '../store/auth';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
+import { restartTour } from '../onboarding';
 
 const authStore = useAuthStore();
+const router = useRouter();
+
+// Clear the completion flag and replay the tour from the dashboard, where all
+// of its highlighted targets exist.
+const replayTour = async () => {
+  await router.push('/dashboard');
+  restartTour(authStore.user?.id);
+};
 
 onMounted(() => {
   form.name = authStore.user?.name || '';

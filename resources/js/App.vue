@@ -13,7 +13,7 @@
           <span class="brand-name">Spi</span>
           <span class="brand-sub">apispi.com</span>
         </router-link>
-        <button class="cmdk" @click="paletteOpen = true" aria-label="Search">
+        <button class="cmdk" data-tour="cmdk" @click="paletteOpen = true" aria-label="Search">
           <Icon name="send" :size="14" />
           <span class="cmdk-label">Search</span>
           <span class="cmdk-kbd">⌘K</span>
@@ -21,12 +21,12 @@
       </div>
 
       <div class="topbar-right">
-        <button class="icon-btn" @click="toggleTheme" :aria-label="theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'" :title="theme === 'light' ? 'Dark mode' : 'Light mode'">
+        <button class="icon-btn" data-tour="theme" @click="toggleTheme" :aria-label="theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'" :title="theme === 'light' ? 'Dark mode' : 'Light mode'">
           <Icon :name="theme === 'light' ? 'moon' : 'sun'" :size="18" />
         </button>
 
       <!-- Profile dropdown (top right) -->
-      <div ref="acctRoot" class="acct">
+      <div ref="acctRoot" class="acct" data-tour="account">
         <button type="button" class="acct-trigger" :class="{ open: acctOpen }" @click="acctOpen = !acctOpen" aria-haspopup="true" :aria-expanded="acctOpen">
           <span class="avatar">{{ initial }}</span>
           <span class="acct-name">{{ authStore.user.name }}</span>
@@ -84,7 +84,7 @@
 
         <nav class="nav" v-else>
           <span class="nav-label">Workspace</span>
-          <router-link v-for="item in workspaceNav" :key="item.to" :to="item.to" class="nav-link" @click="closeOnMobile">
+          <router-link v-for="item in workspaceNav" :key="item.to" :to="item.to" class="nav-link" :data-tour="'nav-' + item.to.slice(1)" @click="closeOnMobile">
             <Icon :name="item.icon" :size="18" />
             <span>{{ item.label }}</span>
           </router-link>
@@ -102,6 +102,7 @@
     </div>
 
     <CommandPalette v-if="paletteOpen" @close="paletteOpen = false" />
+    <OnboardingTour />
   </div>
 
   <!-- Guest: simple top header -->
@@ -127,12 +128,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useAuthStore } from './store/auth';
 import { useRouter, useRoute } from 'vue-router';
 import Icon from './components/Icon.vue';
 import CommandPalette from './components/CommandPalette.vue';
+import OnboardingTour from './components/OnboardingTour.vue';
 import { theme, toggleTheme } from './theme';
+import { maybeStartTour } from './onboarding';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -203,6 +206,13 @@ onUnmounted(() => {
   document.removeEventListener('mousedown', onDocMousedown);
   document.removeEventListener('keydown', onKeydown);
 });
+
+// Offer the guided tour once a user is known, unless they have completed it.
+// Waits for the id so completion is tracked per-account, and for a tick so the
+// shell (and its data-tour targets) is in the DOM.
+watch(() => authStore.user?.id, (id) => {
+  if (id) nextTick(() => maybeStartTour(id));
+}, { immediate: true });
 
 const initial = computed(() => ((authStore.user && authStore.user.name) || 'U').charAt(0).toUpperCase());
 
