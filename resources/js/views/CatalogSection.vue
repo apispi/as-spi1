@@ -86,7 +86,6 @@
                 <button class="cat-btn cat-btn-sync" :disabled="syncingId === item.id" @click="sync(item, true)" title="Sync and activate everything it imports">
                   Sync + Activate
                 </button>
-                <button class="cat-btn" @click="edit(item)">Edit</button>
                 <template v-if="(item.metadata?.protocol || 'mcp') === 'mcp'">
                   <button class="cat-btn cat-btn-ai" :disabled="busyId === item.id" @click="grade(item)" title="Grade MCP spec conformance">
                     {{ busyAction === 'grade' && busyId === item.id ? 'Grading...' : 'Grade' }}
@@ -99,6 +98,7 @@
                   </button>
                 </template>
               </template>
+              <button class="cat-btn" @click="edit(item)">Edit</button>
               <button class="cat-btn" @click="toggleActive(item)">
                 {{ item.is_active ? 'Deactivate' : 'Activate' }}
               </button>

@@ -138,4 +138,61 @@ class CatalogItemControllerTest extends TestCase
         $this->actingAs($admin)->deleteJson("/api/admin/catalog/{$item->id}")->assertStatus(200);
         $this->assertDatabaseMissing('catalog_items', ['id' => $item->id]);
     }
+
+    /**
+     * The whole point of the Catalog admin: every content type can be created,
+     * listed, activated (moved to Active), edited, and removed. This exercises
+     * that lifecycle for each named type so no type silently loses a function.
+     */
+    public function test_full_crud_lifecycle_works_for_every_named_type(): void
+    {
+        $admin = $this->admin();
+
+        foreach (['agent', 'skill', 'tool', 'prompt', 'connector'] as $type) {
+            $payload = [
+                'type' => $type,
+                'name' => ucfirst($type).' One',
+                'description' => 'A '.$type,
+                'provider' => 'internal',
+                'version' => '1.0.0',
+            ];
+            // Connectors require endpoint wiring.
+            if ($type === 'connector') {
+                $payload['metadata'] = ['endpoint' => 'https://example.com/mcp', 'protocol' => 'mcp'];
+            }
+
+            // Create → appears in Catalog for its type.
+            $created = $this->actingAs($admin)->postJson('/api/admin/catalog', $payload)
+                ->assertStatus(201)
+                ->assertJsonPath('type', $type);
+            $id = $created->json('id');
+
+            // Created into the Catalog, inactive by default.
+            $this->assertFalse((bool) CatalogItem::find($id)->is_active);
+
+            $this->actingAs($admin)->getJson("/api/admin/catalog?type={$type}")
+                ->assertStatus(200)
+                ->assertJsonFragment(['id' => $id]);
+
+            // Activate → moves into the Active section for its type.
+            $this->actingAs($admin)->postJson("/api/admin/catalog/{$id}/toggle-active")
+                ->assertStatus(200)->assertJsonPath('item.is_active', true);
+            $this->actingAs($admin)->getJson("/api/admin/catalog?type={$type}&active=1")
+                ->assertStatus(200)->assertJsonFragment(['id' => $id]);
+
+            // Edit.
+            $this->actingAs($admin)->putJson("/api/admin/catalog/{$id}", ['name' => ucfirst($type).' Renamed'])
+                ->assertStatus(200)->assertJsonPath('name', ucfirst($type).' Renamed');
+
+            // Deactivate → leaves the Active section.
+            $this->actingAs($admin)->postJson("/api/admin/catalog/{$id}/toggle-active")
+                ->assertStatus(200)->assertJsonPath('item.is_active', false);
+            $this->actingAs($admin)->getJson("/api/admin/catalog?type={$type}&active=1")
+                ->assertStatus(200)->assertJsonMissing(['id' => $id]);
+
+            // Delete.
+            $this->actingAs($admin)->deleteJson("/api/admin/catalog/{$id}")->assertStatus(200);
+            $this->assertDatabaseMissing('catalog_items', ['id' => $id]);
+        }
+    }
 }
