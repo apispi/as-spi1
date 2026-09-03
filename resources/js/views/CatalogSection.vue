@@ -1,11 +1,30 @@
 <template>
   <main class="cat-content">
     <div class="cat-header">
-      <h1 class="cat-title">{{ sectionLabel }}</h1>
-      <p class="cat-sub">{{ sectionSub }}</p>
+      <div>
+        <h1 class="cat-title">{{ sectionLabel }}</h1>
+        <p class="cat-sub">{{ sectionSub }}</p>
+      </div>
+      <div class="cat-search">
+        <input
+          v-model="search"
+          type="search"
+          class="cat-search-input"
+          :placeholder="`Search ${sectionLabel.toLowerCase()}…`"
+          aria-label="Search catalog"
+        />
+        <button v-if="search" class="cat-search-clear" @click="search = ''" aria-label="Clear search">×</button>
+      </div>
     </div>
 
     <div v-if="flash" class="cat-flash">{{ flash }}</div>
+
+    <p v-if="query" class="cat-search-note">
+      {{ totalMatches }} match{{ totalMatches === 1 ? '' : 'es' }} for “{{ query }}” across all types.
+      <span v-if="!items.length && otherMatches">
+        None in {{ currentTab.label }} — try {{ firstMatchingTab }}.
+      </span>
+    </p>
 
     <div class="cat-tabs">
       <button
@@ -209,6 +228,8 @@ const tabs = [
 const activeTab = ref('agents');
 const items = ref([]);
 const counts = ref({});
+const search = ref('');   // raw input
+const query = ref('');    // debounced, drives the fetch
 const loading = ref(false);
 const flash = ref('');
 const showCreate = ref(false);
@@ -251,9 +272,15 @@ const fetchAll = async () => {
     const params = { type: currentTab.value.type };
     if (mode.value === 'active') params.active = 1;
 
+    const countParams = mode.value === 'active' ? { active: 1 } : {};
+    if (query.value) {
+      params.q = query.value;
+      countParams.q = query.value;
+    }
+
     const [itemsRes, countsRes] = await Promise.all([
       axios.get('/api/admin/catalog', { params }),
-      axios.get('/api/admin/catalog/counts', { params: mode.value === 'active' ? { active: 1 } : {} }),
+      axios.get('/api/admin/catalog/counts', { params: countParams }),
     ]);
     items.value = itemsRes.data;
     counts.value = countsRes.data;
@@ -274,6 +301,23 @@ const selectTab = (key) => {
 watch(mode, () => {
   showCreate.value = false;
   fetchAll();
+});
+
+// Debounce the raw input into `query`, which drives the fetch. `query` flows
+// to both the list and the per-type counts, so the tab badges reflect matches
+// across every type while searching.
+let searchTimer = null;
+watch(search, (v) => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { query.value = v.trim(); }, 250);
+});
+watch(query, fetchAll);
+
+const totalMatches = computed(() => Object.values(counts.value).reduce((sum, n) => sum + (n || 0), 0));
+const otherMatches = computed(() => totalMatches.value > 0);
+const firstMatchingTab = computed(() => {
+  const t = tabs.find((tb) => (counts.value[tb.type] || 0) > 0);
+  return t ? `${sectionLabel.value} ${t.label}` : '';
 });
 
 const openCreate = () => {
@@ -463,9 +507,23 @@ onMounted(fetchAll);
 <style scoped>
 .cat-content { padding: 2rem 2.5rem; }
 
-.cat-header { margin-bottom: 1.5rem; }
+.cat-header { margin-bottom: 1.5rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 .cat-title { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); }
 .cat-sub { font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.25rem; }
+.cat-search { position: relative; flex-shrink: 0; }
+.cat-search-input {
+  width: 280px; max-width: 100%; padding: 0.55rem 2rem 0.55rem 0.85rem;
+  border-radius: 0.5rem; font-size: 0.875rem; font-family: inherit;
+  background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-primary);
+}
+.cat-search-input:focus { outline: none; border-color: var(--accent-color); }
+.cat-search-clear {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--text-secondary); font-size: 1.1rem;
+  cursor: pointer; line-height: 1; padding: 2px 6px;
+}
+.cat-search-clear:hover { color: var(--text-primary); }
+.cat-search-note { font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 0.75rem; }
 
 .cat-flash {
   padding: 0.6rem 1rem; border-radius: 0.5rem; margin-bottom: 1rem;

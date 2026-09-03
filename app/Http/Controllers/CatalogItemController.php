@@ -20,6 +20,7 @@ class CatalogItemController extends Controller
         $validated = $request->validate([
             'type' => ['nullable', Rule::in(CatalogItem::TYPES)],
             'active' => 'nullable|boolean',
+            'q' => 'nullable|string|max:100',
         ]);
 
         $query = CatalogItem::query()->orderBy('name');
@@ -32,18 +33,26 @@ class CatalogItemController extends Controller
             $query->active();
         }
 
+        $this->applySearch($query, $validated['q'] ?? null);
+
         return response()->json($query->get());
     }
 
     /**
      * Counts per type, so the tabs can show badges without fetching rows.
+     * A search term filters the counts too, so the badges reflect matches
+     * across every type — you can see where matches live while on any tab.
      */
     public function counts(Request $request)
     {
-        $onlyActive = $request->boolean('active');
+        $validated = $request->validate([
+            'active' => 'nullable|boolean',
+            'q' => 'nullable|string|max:100',
+        ]);
 
         $counts = CatalogItem::query()
-            ->when($onlyActive, fn ($q) => $q->active())
+            ->when($request->boolean('active'), fn ($q) => $q->active())
+            ->tap(fn ($q) => $this->applySearch($q, $validated['q'] ?? null))
             ->selectRaw('type, count(*) as total')
             ->groupBy('type')
             ->pluck('total', 'type');
@@ -52,6 +61,28 @@ class CatalogItemController extends Controller
             collect(CatalogItem::TYPES)
                 ->mapWithKeys(fn ($type) => [$type => (int) ($counts[$type] ?? 0)])
         );
+    }
+
+    /**
+     * Free-text search over the human-facing fields plus the metadata blob
+     * (so a connector's endpoint or protocol is matchable). metadata is a text
+     * column, so a LIKE works portably on both MySQL and SQLite.
+     */
+    protected function applySearch($query, ?string $term): void
+    {
+        $term = $term !== null ? trim($term) : '';
+        if ($term === '') {
+            return;
+        }
+
+        $like = '%'.$term.'%';
+        $query->where(function ($q) use ($like) {
+            $q->where('name', 'like', $like)
+                ->orWhere('description', 'like', $like)
+                ->orWhere('provider', 'like', $like)
+                ->orWhere('slug', 'like', $like)
+                ->orWhere('metadata', 'like', $like);
+        });
     }
 
     public function store(Request $request)
