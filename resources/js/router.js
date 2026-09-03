@@ -28,6 +28,7 @@ import AdminUserDetail from './views/AdminUserDetail.vue';
 import AdminUsers from './views/AdminUsers.vue';
 import Terms from './views/Terms.vue';
 import Privacy from './views/Privacy.vue';
+import Docs from './views/Docs.vue';
 
 const routes = [
     {
@@ -140,6 +141,16 @@ const routes = [
         path: '/developers',
         name: 'developers',
         component: Developers
+    },
+    {
+        path: '/docs',
+        name: 'docs',
+        component: Docs
+    },
+    {
+        path: '/docs/:slug',
+        name: 'docs-article',
+        component: Docs
     },
     {
         path: '/terms',

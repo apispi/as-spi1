@@ -461,6 +461,7 @@
         </div>
         <div class="footer-links">
           <a href="#">About</a>
+          <router-link to="/docs">Docs</router-link>
           <router-link to="/developers">API Docs</router-link>
           <a href="#">Pricing</a>
           <a href="#">Blog</a>
