@@ -96,13 +96,59 @@ export const DOCS = [
         '**AMQP** — publish or consume against a broker, with a queue or exchange and a message.',
       ] },
       { type: 'note', text: 'There is no separate GraphQL or SOAP protocol: a GraphQL request is a REST `POST` with a JSON body (`{"query": "..."}`), and SOAP is a REST `POST` with an XML body and the appropriate content-type header.' },
+
+      { type: 'h2', text: 'Worked examples by protocol' },
+      { type: 'p', text: 'Concrete values you can adapt. Replace the example hosts with your own, and prefer `{{variables}}` from an [environment](/docs/environments-and-variables) for anything secret.' },
+
+      { type: 'h3', text: 'REST — GET with query params' },
+      { type: 'p', text: 'Fetch a filtered list. The query string can live in the URL or in query-param rows — both produce the same request.' },
+      { type: 'code', lang: 'http', code: 'GET https://api.example.com/v1/users?role=admin&limit=25\nAuthorization: Bearer {{token}}\nAccept: application/json' },
+
+      { type: 'h3', text: 'REST — POST with a JSON body' },
+      { type: 'p', text: 'Create a resource. Set `Content-Type: application/json` and put the JSON in the Body field.' },
+      { type: 'code', lang: 'http', code: 'POST https://api.example.com/v1/users\nAuthorization: Bearer {{token}}\nContent-Type: application/json' },
+      { type: 'code', lang: 'json', code: '{\n  "name": "Ada Lovelace",\n  "email": "ada@example.com",\n  "role": "admin"\n}' },
+
+      { type: 'h3', text: 'GraphQL — a REST POST' },
+      { type: 'p', text: 'Send to your GraphQL endpoint as a `POST`. The body is a JSON object with a `query` and optional `variables`.' },
+      { type: 'code', lang: 'json', code: '{\n  "query": "query($id: ID!) { user(id: $id) { name email } }",\n  "variables": { "id": "42" }\n}' },
+
+      { type: 'h3', text: 'MCP — call a tool' },
+      { type: 'p', text: 'Choose the **MCP** protocol, set the server URL, and pick a method such as `tools/list` or `tools/call`. Spi performs the `initialize` handshake for you. For `tools/call`, the params name the tool and its arguments:' },
+      { type: 'code', lang: 'json', code: '{\n  "name": "search_documents",\n  "arguments": {\n    "query": "quarterly revenue",\n    "limit": 5\n  }\n}' },
+      { type: 'p', text: 'Use `tools/list` with empty params (`{}`) to discover what a server exposes before calling anything.' },
+
+      { type: 'h3', text: 'A2A — send a message' },
+      { type: 'p', text: 'Choose **A2A** and use `agent-card` to fetch an agent’s capabilities, or `message/send` to talk to it:' },
+      { type: 'code', lang: 'json', code: '{\n  "message": {\n    "role": "user",\n    "parts": [\n      { "kind": "text", "text": "Summarise the latest incident report" }\n    ]\n  }\n}' },
+
+      { type: 'h3', text: 'gRPC — a unary call' },
+      { type: 'p', text: 'Set **host** (e.g. `grpc.example.com`), **port** (`443` with TLS on), and **service_method** (e.g. `helloworld.Greeter/SayHello`). Describe the request message as an array of field descriptors — no `.proto` compilation needed:' },
+      { type: 'code', lang: 'json', code: '[\n  { "field": 1, "type": "string", "value": "world" }\n]' },
+
+      { type: 'h3', text: 'MQTT — publish and subscribe' },
+      { type: 'p', text: 'Set the broker **host** and **port** (`1883`, or `8883` for TLS), choose an **action**, and give a **topic**. To publish, add a message and QoS:' },
+      { type: 'code', lang: 'json', code: '{\n  "action": "publish",\n  "topic": "sensors/kitchen/temperature",\n  "message": "{\\"celsius\\": 21.4}",\n  "qos": 1\n}' },
+      { type: 'p', text: 'To subscribe, give a topic filter (wildcards allowed) and bound the wait — Spi collects messages up to `max_messages` or until `timeout`:' },
+      { type: 'code', lang: 'json', code: '{\n  "action": "subscribe",\n  "topic": "sensors/#",\n  "max_messages": 5,\n  "timeout": 10\n}' },
+
+      { type: 'h3', text: 'AMQP — publish to a queue' },
+      { type: 'p', text: 'Set the RabbitMQ **host** and **port** (`5672`, or `5671` for TLS), then publish a message to a queue or consume one with `basic_get`:' },
+      { type: 'code', lang: 'json', code: '{\n  "action": "publish",\n  "queue": "jobs.email",\n  "message": "{\\"to\\": \\"ada@example.com\\", \\"template\\": \\"welcome\\"}"\n}' },
+
       { type: 'h2', text: 'Headers' },
       { type: 'p', text: 'Add request headers as name/value rows. For gRPC these become call **metadata**. Header names and values can both contain `{{variables}}`.' },
       { type: 'code', lang: 'http', code: 'Authorization: Bearer {{token}}\nContent-Type: application/json' },
       { type: 'h2', text: 'Query params' },
-      { type: 'p', text: 'For REST requests, add query parameters as rows; Spi appends them to the URL. You can also type them directly into the URL — either works.' },
+      { type: 'p', text: 'For REST requests, add query parameters as rows; Spi appends them to the URL. You can also type them directly into the URL — either works. These two are equivalent:' },
+      { type: 'code', lang: 'text', code: 'Rows:   status = active\n        page   = 2\n\nURL:    https://api.example.com/v1/orders?status=active&page=2' },
+      { type: 'p', text: 'Values can use `{{variables}}`, e.g. `api_key = {{api_key}}`.' },
       { type: 'h2', text: 'Request body' },
       { type: 'p', text: 'The body field is labelled to match the protocol — **Body** for REST, **Request** for gRPC, **Message** for MQTT and AMQP. For REST, send JSON, XML, form data, or plain text; set the matching `Content-Type` header.' },
+      { type: 'p', text: 'A JSON body with a variable pulled from the active environment:' },
+      { type: 'code', lang: 'json', code: '{\n  "order_id": "{{order_id}}",\n  "status": "shipped",\n  "tracking": { "carrier": "DHL", "code": "JD0002" }\n}' },
+      { type: 'p', text: 'A form-encoded body (set `Content-Type: application/x-www-form-urlencoded`):' },
+      { type: 'code', lang: 'text', code: 'grant_type=client_credentials&client_id={{client_id}}&client_secret={{client_secret}}' },
       { type: 'h2', text: 'Reading the response' },
       { type: 'p', text: 'Every response shows:' },
       { type: 'ul', items: [
