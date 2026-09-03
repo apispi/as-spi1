@@ -159,6 +159,7 @@ const adminNav = [
   { to: '/admin/users', label: 'Users', icon: 'user' },
   { to: '/admin/organisations', label: 'Organisations', icon: 'shield' },
   { to: '/admin/monitoring', label: 'Monitoring', icon: 'activity' },
+  { to: '/admin/logs', label: 'Logs', icon: 'report' },
   { to: '/catalog', label: 'Catalog', icon: 'layers' },
   { to: '/active', label: 'Active', icon: 'sliders' },
 ];

@@ -24,6 +24,7 @@ import Mocks from './views/Mocks.vue';
 import Collections from './views/Collections.vue';
 import AdminOrganisations from './views/AdminOrganisations.vue';
 import AdminMonitoring from './views/AdminMonitoring.vue';
+import AdminLogs from './views/AdminLogs.vue';
 import AdminUserDetail from './views/AdminUserDetail.vue';
 import AdminUsers from './views/AdminUsers.vue';
 import Terms from './views/Terms.vue';
@@ -190,6 +191,12 @@ const routes = [
         path: '/admin/monitoring',
         name: 'admin-monitoring',
         component: AdminMonitoring,
+        meta: { requiresAuth: true, requiresAdmin: true }
+    },
+    {
+        path: '/admin/logs',
+        name: 'admin-logs',
+        component: AdminLogs,
         meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
