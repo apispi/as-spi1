@@ -268,6 +268,38 @@
 
           <div class="up-card" style="margin-top: 1.5rem">
             <div class="up-card-header">
+              <h2 class="up-card-title">Monitoring</h2>
+              <p class="up-card-sub">Your scheduled monitors and their current status</p>
+            </div>
+            <div v-if="!monitors.length" class="up-empty">
+              You have no monitors yet. Create one from the <router-link to="/monitors" class="up-inline-link">Monitors</router-link> page to watch an endpoint or collection on a schedule.
+            </div>
+            <template v-else>
+              <div class="up-mon-summary">
+                <div class="up-mon-stat"><span class="up-mon-num" :class="{ bad: monitorSummary.failing }">{{ monitorSummary.failing }}</span><span class="up-mon-label">Failing</span></div>
+                <div class="up-mon-stat"><span class="up-mon-num">{{ monitorSummary.passing }}</span><span class="up-mon-label">Passing</span></div>
+                <div class="up-mon-stat"><span class="up-mon-num">{{ monitors.length }}</span><span class="up-mon-label">Total</span></div>
+                <div class="up-mon-stat"><span class="up-mon-num">{{ monitorSummary.disabled }}</span><span class="up-mon-label">Paused</span></div>
+              </div>
+              <div class="up-mon-list">
+                <div v-for="m in monitorsSorted" :key="m.id" class="up-mon-row">
+                  <span class="up-mon-dot" :class="m.last_status"></span>
+                  <span class="up-mon-name">{{ m.name }}</span>
+                  <span class="up-mon-meta">
+                    <span class="up-mon-pill" :class="m.last_status">{{ monitorStatusLabel(m.last_status) }}</span>
+                    <span v-if="!m.is_enabled" class="up-mon-pill">paused</span>
+                    <span v-if="m.uptime !== null"> · {{ m.uptime }}% uptime</span>
+                  </span>
+                </div>
+              </div>
+              <div class="up-api-key-actions" style="margin-top: 1rem">
+                <router-link to="/monitors" class="up-inline-link">Manage monitors →</router-link>
+              </div>
+            </template>
+          </div>
+
+          <div class="up-card" style="margin-top: 1.5rem">
+            <div class="up-card-header">
               <h2 class="up-card-title">Recent Activity</h2>
               <p class="up-card-sub">Your last 10 actions</p>
             </div>
@@ -400,6 +432,7 @@ onMounted(() => {
   loadStats();
   loadRecentActivity();
   loadSecurityLog();
+  loadMonitors();
   loadPreferences();
 });
 
@@ -448,6 +481,21 @@ const origin = typeof window !== 'undefined' ? window.location.origin : '';
 const stats = ref({});
 const recentActivity = ref([]);
 const securityLog = ref([]);
+const monitors = ref([]);
+
+const monitorSummary = computed(() => ({
+  failing: monitors.value.filter((m) => m.last_status === 'failing').length,
+  passing: monitors.value.filter((m) => m.last_status === 'passing').length,
+  disabled: monitors.value.filter((m) => !m.is_enabled).length,
+}));
+
+// Failing first, then by name, so problems surface at the top.
+const monitorsSorted = computed(() => [...monitors.value].sort((a, b) => {
+  const rank = (m) => (m.last_status === 'failing' ? 0 : m.last_status === 'passing' ? 2 : 1);
+  return rank(a) - rank(b) || a.name.localeCompare(b.name);
+}));
+
+const monitorStatusLabel = (s) => ({ passing: 'Passing', failing: 'Failing', unknown: 'Not run' }[s] || s || 'Not run');
 
 const scxApiKeyForm = ref('');
 const scxModelForm = ref('scx-ai');
@@ -491,6 +539,15 @@ const loadSecurityLog = async () => {
     securityLog.value = res.data || [];
   } catch {
     securityLog.value = [];
+  }
+};
+
+const loadMonitors = async () => {
+  try {
+    const res = await axios.get('/api/monitors');
+    monitors.value = res.data || [];
+  } catch {
+    monitors.value = [];
   }
 };
 
@@ -871,6 +928,23 @@ const deleteAccount = async () => {
 .up-activity-dot.blue  { background: var(--accent-color); }
 .up-activity-dot.red   { background: var(--error-color); }
 .up-activity-dot.grey  { background: var(--text-secondary); }
+
+/* Monitoring summary */
+.up-mon-summary { display: flex; gap: 1.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.up-mon-stat { display: flex; flex-direction: column; }
+.up-mon-num { font-size: 1.5rem; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.up-mon-num.bad { color: var(--error-color); }
+.up-mon-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); }
+.up-mon-list { display: flex; flex-direction: column; gap: 2px; }
+.up-mon-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border-color); font-size: 0.85rem; }
+.up-mon-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--text-secondary); }
+.up-mon-dot.passing { background: var(--success-color); }
+.up-mon-dot.failing { background: var(--error-color); }
+.up-mon-name { color: var(--text-primary); font-weight: 600; }
+.up-mon-meta { margin-left: auto; color: var(--text-secondary); font-size: 0.78rem; display: flex; align-items: center; gap: 6px; }
+.up-mon-pill { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; padding: 1px 7px; border-radius: 999px; background: rgba(127,127,127,.14); color: var(--text-secondary); }
+.up-mon-pill.passing { color: var(--success-color); background: rgba(35,134,54,.14); }
+.up-mon-pill.failing { color: var(--error-color); background: rgba(248,81,73,.14); }
 .up-activity-body { flex: 1; min-width: 0; }
 .up-activity-desc { font-size: 0.875rem; color: var(--text-primary); margin-bottom: 0.2rem; }
 .up-activity-meta { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }

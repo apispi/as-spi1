@@ -89,6 +89,7 @@
     <!-- Recent admin actions -->
     <div class="ad-section-head">
       <h2 class="ad-section">Recent admin actions</h2>
+      <router-link to="/admin/logs" class="ad-back">Application logs →</router-link>
     </div>
     <p v-if="!audit.length" class="ad-muted">No admin actions recorded yet.</p>
     <ul v-else class="ad-list">
