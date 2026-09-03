@@ -487,6 +487,15 @@ whose fields vanished are dropped with a stated reason, never silently. The
 tester's Heal button applies the proposal for review with one-click Undo;
 nothing is saved until the user saves. Runs on the caller's own SCX key.
 
+## Command palette (⌘K)
+
+A workspace-wide search at `GET /api/search?q=` powers a ⌘K/Ctrl-K palette in the
+SPA. It matches across saved requests (name/URL), collections, environments,
+monitors, alert channels, webhooks, recorders, mocks, status pages, and reports
+— all scoped by `SharedInWorkspace` so results stay within the caller's
+workspace. Selecting a saved request opens it in the tester; other results
+navigate to their section.
+
 ## Spi (AI assistant)
 
 `Spi` is the in-app assistant at `/chat`, backed by

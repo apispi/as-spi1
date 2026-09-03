@@ -13,6 +13,11 @@
           <span class="brand-name">Spi</span>
           <span class="brand-sub">apispi.com</span>
         </router-link>
+        <button class="cmdk" @click="paletteOpen = true" aria-label="Search">
+          <Icon name="send" :size="14" />
+          <span class="cmdk-label">Search</span>
+          <span class="cmdk-kbd">⌘K</span>
+        </button>
       </div>
 
       <!-- Profile dropdown (top right) -->
@@ -89,6 +94,8 @@
         <router-view />
       </main>
     </div>
+
+    <CommandPalette v-if="paletteOpen" @close="paletteOpen = false" />
   </div>
 
   <!-- Guest: simple top header -->
@@ -115,9 +122,11 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from './store/auth';
 import { useRouter, useRoute } from 'vue-router';
 import Icon from './components/Icon.vue';
+import CommandPalette from './components/CommandPalette.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
+const paletteOpen = ref(false);
 
 const workspaceNav = [
   { to: '/dashboard', label: 'Home', icon: 'home' },
@@ -167,7 +176,14 @@ const onAcctNav = () => {
 const onDocMousedown = (e) => {
   if (acctRoot.value && !acctRoot.value.contains(e.target)) acctOpen.value = false;
 };
-const onKeydown = (e) => { if (e.key === 'Escape') acctOpen.value = false; };
+const onKeydown = (e) => {
+  if (e.key === 'Escape') acctOpen.value = false;
+  // ⌘K / Ctrl-K opens the command palette from anywhere in the app.
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k' && authStore.isAuthenticated) {
+    e.preventDefault();
+    paletteOpen.value = true;
+  }
+};
 
 onMounted(() => {
   document.addEventListener('mousedown', onDocMousedown);
@@ -200,6 +216,10 @@ const handleLogout = async () => {
   position: relative; z-index: var(--z-topbar);
 }
 .topbar-left { display: flex; align-items: center; gap: 10px; }
+.cmdk { display: inline-flex; align-items: center; gap: 7px; margin-left: 6px; padding: 6px 10px; border-radius: 8px; background: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-secondary); cursor: pointer; font-size: 12.5px; }
+.cmdk:hover { border-color: var(--accent-color); color: var(--text-primary); }
+.cmdk-kbd { font-size: 11px; border: 1px solid var(--border-color); border-radius: 4px; padding: 0 5px; }
+@media (max-width: 640px) { .cmdk-label { display: none; } }
 .icon-btn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 38px; height: 38px; border-radius: 8px; border: none;

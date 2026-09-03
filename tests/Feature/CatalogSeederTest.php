@@ -24,9 +24,10 @@ class CatalogSeederTest extends TestCase
     {
         $this->seed(CatalogSeeder::class);
 
-        $scx = CatalogItem::where(['type' => 'connector', 'slug' => 'scx'])->first();
+        $scx = CatalogItem::where(['type' => 'connector', 'slug' => 'scx-ai'])->first();
 
         $this->assertNotNull($scx);
+        $this->assertSame('SCX AI', $scx->name);
         $this->assertSame('https://api.scx.ai/v1/chat/completions', $scx->metadata['endpoint']);
 
         // SCX is authenticated per user with their own stored key, so the

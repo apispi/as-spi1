@@ -98,7 +98,7 @@ class CatalogSeeder extends Seeder
                 ],
             ],
             [
-                'name' => 'SCX',
+                'name' => 'SCX AI',
                 'description' => 'SCX AI — the model provider behind Spi (the assistant) and the AI Lab authoring tools. Calls are billed to each user\'s own SCX API key, set in Profile.',
                 'version' => '1.0.0',
                 'provider' => 'scx.ai',
@@ -328,7 +328,7 @@ class CatalogSeeder extends Seeder
             ],
             [
                 'type' => 'tool',
-                'connector' => 'scx',
+                'connector' => 'scx-ai',
                 'name' => 'chat_completion',
                 'description' => 'Generate a chat completion with SCX. Billed to the calling user\'s own SCX API key.',
                 'is_active' => true,
@@ -406,7 +406,7 @@ class CatalogSeeder extends Seeder
             ],
             [
                 'type' => 'prompt',
-                'connector' => 'scx',
+                'connector' => 'scx-ai',
                 'name' => 'review_mcp_server',
                 'description' => 'Review an MCP server\'s tools and prompts for conformance and security concerns.',
                 'metadata' => [
