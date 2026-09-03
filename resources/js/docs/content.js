@@ -649,4 +649,46 @@ export const DOCS = [
       { type: 'note', text: 'Spi answers questions in chat; to have an AI actually draft a request, generate assertions, or scan MCP tools, use [AI Lab](/docs/ai-lab), which runs on the same SCX key.' },
     ],
   },
+
+  {
+    slug: 'usage-and-account-activity',
+    title: 'Usage & account activity',
+    category: 'workspace',
+    summary: 'See your usage stats, recent activity, and a security log of sign-ins and key changes.',
+    body: [
+      { type: 'p', text: 'Your [Profile](/profile) keeps a record of how you use Spi and of the security-relevant events on your account. Open Profile from the account menu (top right), then the tabs below.' },
+
+      { type: 'h2', text: 'Usage statistics' },
+      { type: 'p', text: 'The **Usage** tab summarises your activity at a glance:' },
+      { type: 'ul', items: [
+        '**API Requests** — the total number of requests you have sent through Spi, across every protocol.',
+        '**Saved Requests** — how many requests you have saved for reuse.',
+        '**Data Transferred** — the total response bandwidth your requests have moved.',
+        '**Active Days** — how many distinct days you have used Spi this month.',
+      ] },
+      { type: 'note', text: 'Usage counts come from your request history. Clearing history from the dashboard resets what these figures are calculated from.' },
+
+      { type: 'h2', text: 'Recent activity' },
+      { type: 'p', text: 'Below the stats, the **Recent Activity** feed lists your last actions — requests sent, items saved, runs started — each with a timestamp, so you can retrace what you did and when.' },
+
+      { type: 'h2', text: 'Security activity' },
+      { type: 'p', text: 'The same tab shows a **Security activity** log: an append-only record of the security-relevant events on your account. Each entry shows what happened, the IP address it came from, and when. Audited events include:' },
+      { type: 'ul', items: [
+        '**Signed in** and **Failed sign-in** — successful and rejected login attempts.',
+        '**Signed out**.',
+        '**Password changed**.',
+        '**API key created** and **API key revoked** — including which key, by name.',
+      ] },
+      { type: 'p', text: 'Review this log periodically. A **Failed sign-in** you do not recognise, or a sign-in from an unfamiliar IP, is a sign your password may be compromised — change it from **Profile → Account → Change Password** and revoke any [API keys](/docs/api-keys-and-programmatic-access) you no longer trust.' },
+      { type: 'note', text: 'Admins can review any user’s security events from the admin user-detail page. Platform operators also have separate views for system-wide usage, monitoring, and application logs.' },
+
+      { type: 'h2', text: 'Managing your data' },
+      { type: 'ul', items: [
+        'Update your display name and password on the **Account** tab.',
+        'Set testing defaults on the **Personalisation** tab, and replay the [product tour](/profile) from there.',
+        'Create and revoke [API keys](/docs/api-keys-and-programmatic-access) on the **API Keys** tab.',
+        'Delete your account, which erases your data, from the **Danger Zone** tab.',
+      ] },
+    ],
+  },
 ];
