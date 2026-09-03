@@ -127,6 +127,26 @@ class UserController extends Controller
         return array_merge(self::DEFAULT_PREFERENCES, $saved ?? []);
     }
 
+    /**
+     * The current user's own security audit log — their recent security-
+     * relevant events (sign-ins, key changes, password changes).
+     */
+    public function securityLog(Request $request)
+    {
+        $events = \App\Models\AuditEvent::where('user_id', $request->user()->id)
+            ->latest('id')
+            ->take(50)
+            ->get();
+
+        return response()->json($events->map(fn ($e) => [
+            'action' => $e->action,
+            'label' => $e->label(),
+            'ip' => $e->ip,
+            'metadata' => $e->metadata,
+            'created_at' => $e->created_at,
+        ]));
+    }
+
     public function deleteAccount(Request $request)
     {
         $user = $request->user();
@@ -137,6 +157,10 @@ class UserController extends Controller
                 'message' => 'Admin accounts cannot be self-deleted. Contact another admin.',
             ], 422);
         }
+
+        // Log that a self-deletion happened, but anonymously — the account is
+        // being erased per the Privacy Notice, so no identifying detail is kept.
+        \App\Models\AuditEvent::record('account.deleted', null, $request);
 
         Auth::logout();
         $request->session()->invalidate();

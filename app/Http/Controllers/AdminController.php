@@ -182,6 +182,14 @@ class AdminController extends Controller
                 ->with('collection:id,name')
                 ->orderBy('name')
                 ->get(['id', 'name', 'collection_id', 'last_status', 'last_run_at', 'is_enabled']),
+            'security_events' => \App\Models\AuditEvent::where('user_id', $user->id)
+                ->latest('id')->take(15)->get()
+                ->map(fn ($e) => [
+                    'action' => $e->action,
+                    'label' => $e->label(),
+                    'ip' => $e->ip,
+                    'created_at' => $e->created_at?->toDateTimeString(),
+                ]),
         ]);
     }
 

@@ -285,6 +285,29 @@
               </div>
             </div>
           </div>
+
+          <div class="up-card" style="margin-top: 1.5rem">
+            <div class="up-card-header">
+              <h2 class="up-card-title">Security activity</h2>
+              <p class="up-card-sub">Recent security events on your account</p>
+            </div>
+            <div v-if="!securityLog.length" class="up-empty">No security events recorded yet.</div>
+            <div v-else class="up-activity-list">
+              <div v-for="(item, i) in securityLog" :key="i" class="up-activity-row">
+                <div class="up-activity-dot" :class="item.action.startsWith('auth.login_failed') ? 'red' : (item.action.startsWith('api_key') ? 'amber' : 'blue')"></div>
+                <div class="up-activity-body">
+                  <div class="up-activity-desc">
+                    {{ item.label }}
+                    <span v-if="item.metadata?.name"> — {{ item.metadata.name }}</span>
+                  </div>
+                  <div class="up-activity-meta">
+                    <span v-if="item.ip" class="up-activity-action">{{ item.ip }}</span>
+                    <span class="up-activity-time">{{ formatActivityDate(item.created_at) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </template>
 
         <!-- ── Settings tab ── -->
@@ -376,6 +399,7 @@ onMounted(() => {
   loadScxKeyStatus();
   loadStats();
   loadRecentActivity();
+  loadSecurityLog();
   loadPreferences();
 });
 
@@ -423,6 +447,7 @@ const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
 const stats = ref({});
 const recentActivity = ref([]);
+const securityLog = ref([]);
 
 const scxApiKeyForm = ref('');
 const scxModelForm = ref('scx-ai');
@@ -457,6 +482,15 @@ const loadStats = async () => {
     stats.value = res.data;
   } catch (error) {
     stats.value = { requests: 0, saved: 0, bandwidth: 0, active_days: 0 };
+  }
+};
+
+const loadSecurityLog = async () => {
+  try {
+    const res = await axios.get('/api/user/security-log');
+    securityLog.value = res.data || [];
+  } catch {
+    securityLog.value = [];
   }
 };
 

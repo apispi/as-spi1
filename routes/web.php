@@ -107,6 +107,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/api/user/profile', [UserController::class, 'updateProfile']);
     Route::get('/api/user/stats', [UserController::class, 'stats']);
     Route::get('/api/user/activity', [UserController::class, 'activity']);
+    Route::get('/api/user/security-log', [UserController::class, 'securityLog']);
     Route::get('/api/user/api-keys', [\App\Http\Controllers\ApiKeyController::class, 'index']);
     Route::post('/api/user/api-keys', [\App\Http\Controllers\ApiKeyController::class, 'store']);
     Route::delete('/api/user/api-keys/{id}', [\App\Http\Controllers\ApiKeyController::class, 'destroy']);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Models\AuditEvent;
 use App\Models\User;
 
 class AuthController extends Controller
@@ -26,6 +27,8 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
+        AuditEvent::record('auth.register', $user, $request);
+
         return response()->json($user, 201);
     }
 
@@ -38,8 +41,12 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
+            AuditEvent::record('auth.login', Auth::user(), $request);
             return response()->json(Auth::user());
         }
+
+        // Record the failed attempt against the email tried (no user id).
+        AuditEvent::record('auth.login_failed', $credentials['email'], $request);
 
         return response()->json([
             'message' => 'The provided credentials do not match our records.'
@@ -48,6 +55,8 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        AuditEvent::record('auth.logout', $request->user(), $request);
+
         Auth::logout();
 
         $request->session()->invalidate();
@@ -81,6 +90,8 @@ class AuthController extends Controller
 
         // Keep the current session valid but rotate its id.
         $request->session()->regenerate();
+
+        AuditEvent::record('auth.password_changed', $user, $request);
 
         return response()->json(['message' => 'Password updated successfully.']);
     }

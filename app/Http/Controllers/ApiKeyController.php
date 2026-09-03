@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ApiKey;
+use App\Models\AuditEvent;
 use Illuminate\Http\Request;
 
 /**
@@ -38,6 +39,8 @@ class ApiKeyController extends Controller
             isset($validated['expires_at']) ? new \DateTimeImmutable($validated['expires_at']) : null
         );
 
+        AuditEvent::record('api_key.created', $user, $request, ['name' => $key->name, 'last_four' => $key->last_four]);
+
         // The plaintext is shown exactly once.
         return response()->json($key->toClientArray() + ['plaintext' => $plain], 201);
     }
@@ -48,6 +51,8 @@ class ApiKeyController extends Controller
 
         // Revoke rather than delete, so its last-used history and audit remain.
         $key->forceFill(['revoked_at' => now()])->save();
+
+        AuditEvent::record('api_key.revoked', $request->user(), $request, ['name' => $key->name, 'last_four' => $key->last_four]);
 
         return response()->json(['message' => 'Key revoked.']);
     }
