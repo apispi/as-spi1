@@ -163,6 +163,21 @@ class CollectionController extends Controller
         return response()->json($parity + ['report_id' => $report->id], $parity['in_parity'] ? 200 : 422);
     }
 
+    /**
+     * Export the collection as a Postman Collection v2.1 document, with each
+     * step's assertions compiled into Postman test scripts.
+     */
+    public function export(Request $request, \App\Services\Export\PostmanExporter $exporter, int $id)
+    {
+        $collection = Collection::inWorkspaceOf($request->user())->findOrFail($id);
+
+        $document = $exporter->export($collection);
+        $filename = \Illuminate\Support\Str::slug($collection->name ?: 'collection').'.postman_collection.json';
+
+        return response()->json($document)
+            ->header('Content-Disposition', 'attachment; filename="'.$filename.'"');
+    }
+
     /** Rows per dataset run; bounded so a synchronous run stays responsive. */
     public const MAX_DATASET_ROWS = 50;
 

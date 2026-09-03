@@ -487,6 +487,16 @@ whose fields vanished are dropped with a stated reason, never silently. The
 tester's Heal button applies the proposal for review with one-click Undo;
 nothing is saved until the user saves. Runs on the caller's own SCX key.
 
+## Export a collection to Postman
+
+`GET /api/collections/{id}/export` downloads a collection as a **Postman
+Collection v2.1** document. The fit is clean because Postman uses the same
+`{{variable}}` syntax, so environments carry across untouched. The extra mile:
+`App\Services\Export\PostmanExporter` compiles each step's assertions into
+Postman **test scripts** (`pm.test(...)`), so a Spi suite arrives in Postman
+already asserting, not just as bare requests. Launched from a collection's
+**Export** button. Complements the cURL/OpenAPI import — closing the round-trip.
+
 ## Command palette (⌘K)
 
 A workspace-wide search at `GET /api/search?q=` powers a ⌘K/Ctrl-K palette in the

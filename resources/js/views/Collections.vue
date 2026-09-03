@@ -113,6 +113,8 @@
                     title="Run against two environments and diff the responses">Compare envs</button>
             <button class="col-btn" @click="openDataset(c)" :disabled="!c.steps.length"
                     title="Run once per row of a dataset">With data</button>
+            <button class="col-btn" @click="exportCollection(c)" :disabled="!c.steps.length"
+                    title="Download as a Postman collection">Export</button>
             <button class="col-btn" @click="showManager = true">Edit</button>
           </div>
         </li>
@@ -340,6 +342,20 @@ const fuzz = async (req) => {
     else alert(e.response?.data?.message || 'Fuzzing failed.');
   } finally {
     fuzzing.value = null;
+  }
+};
+
+const exportCollection = async (c) => {
+  try {
+    const res = await axios.get(`/api/collections/${c.id}/export`);
+    const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${c.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.postman_collection.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch {
+    alert('Export failed.');
   }
 };
 
