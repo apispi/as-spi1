@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Assertions · Spi docs</title>
+<meta name="description" content="The closed operator vocabulary, how assertions pass and fail, and examples.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/docs/styles.css">
+<script>
+  // Resolve theme before first paint (mirrors the app's spi-theme key).
+  (function(){try{var t=localStorage.getItem('spi-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/docs/">
+    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <span>Spi docs</span>
+  </a>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs…" autocomplete="off" aria-label="Search"><div id="results" class="results" hidden></div></div>
+  <div class="topbar-right">
+    <button id="theme" class="icon-btn" type="button" aria-label="Toggle theme">◐</button>
+    <a class="topbar-link" href="/">Open app →</a>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav><div class="nav-group"><div class="nav-cat">Getting started</div><a href="/docs/introduction/" class="nav-link">What is Spi?</a><a href="/docs/quickstart/" class="nav-link">Quickstart</a></div><div class="nav-group"><div class="nav-cat">Testing &amp; assertions</div><a href="/docs/sending-requests/" class="nav-link">Sending requests</a><a href="/docs/environments-and-variables/" class="nav-link">Environments and variables</a><a href="/docs/assertions/" class="nav-link active">Assertions</a><a href="/docs/response-contracts/" class="nav-link">Response contracts</a></div><div class="nav-group"><div class="nav-cat">Automation &amp; monitoring</div><a href="/docs/collections/" class="nav-link">Collections</a><a href="/docs/monitors-and-alerts/" class="nav-link">Monitors and alerts</a><a href="/docs/webhooks/" class="nav-link">Webhooks, datasets, and profiling</a></div><div class="nav-group"><div class="nav-cat">MCP &amp; agents</div><a href="/docs/mcp-testing/" class="nav-link">MCP testing</a></div><div class="nav-group"><div class="nav-cat">Sharing &amp; reporting</div><a href="/docs/reports-and-sharing/" class="nav-link">Reports and sharing</a></div><div class="nav-group"><div class="nav-cat">Developer &amp; API</div><a href="/docs/api-keys-and-programmatic-access/" class="nav-link">API keys and programmatic access</a></div><div class="nav-group"><div class="nav-cat">Workspace guide</div><a href="/docs/navigating-spi/" class="nav-link">Navigating Spi</a><a href="/docs/home-dashboard/" class="nav-link">Home</a><a href="/docs/ai-lab/" class="nav-link">AI Lab</a><a href="/docs/explorer/" class="nav-link">Explorer</a><a href="/docs/recorder/" class="nav-link">Recorder</a><a href="/docs/mocks/" class="nav-link">Mocks</a><a href="/docs/spi-assistant/" class="nav-link">Spi assistant</a><a href="/docs/usage-and-account-activity/" class="nav-link">Usage &amp; account activity</a></div></nav></aside>
+  <main class="content">
+    <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Testing &amp; assertions</span></div>
+    <h1>Assertions</h1>
+    <p class="lead">The closed operator vocabulary, how assertions pass and fail, and examples.</p>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#what-a-path-can-point-at">What a path can point at</a><a href="#the-operator-vocabulary">The operator vocabulary</a><a href="#how-pass-and-fail-work">How pass and fail work</a><a href="#examples">Examples</a></nav>
+    <article><p>An assertion is a single automated check against a response: pick a <strong>path</strong> into the response, an <strong>operator</strong>, and (for most operators) an <strong>expected</strong> value. A saved request can carry a list of assertions; when it runs, every assertion is evaluated and the request passes only if all of them pass.</p>
+<h2 id="what-a-path-can-point-at">What a path can point at</h2>
+<p>A path names the value to check:</p>
+<ul><li><code>status</code> — the response status code.</li><li><code>time_ms</code> — the elapsed time in milliseconds.</li><li><code>header.&lt;name&gt;</code> — a response header, matched case-insensitively (e.g. <code>header.content-type</code>).</li><li>A dot path into the decoded JSON body, e.g. <code>data.items.0.id</code>. A leading <code>$.</code> is optional and array indices may be written <code>items[0]</code> or <code>items.0</code>.</li><li><code>$</code> (or an empty path) — the decoded body itself, for asserting on the shape of a top-level array or object.</li><li><code>body</code> — the raw body as a whole, useful when the response is not JSON.</li></ul>
+<h2 id="the-operator-vocabulary">The operator vocabulary</h2>
+<p>The set of operators is <strong>closed</strong> and deliberately small — an open vocabulary where "contains", "includes", and "has" all mean the same thing is something no evaluator can act on. These are the only operators:</p>
+<ul><li><code>equals</code> / <code>not_equals</code> — equality. Comparison is loose on purpose, so an expected <code>"200"</code> matches an integer status of <code>200</code>.</li><li><code>contains</code> / <code>not_contains</code> — substring (or JSON-encoded substring) test.</li><li><code>matches</code> — a regular expression. Delimiters are optional: both <code>/foo/i</code> and a bare <code>foo</code> work.</li><li><code>exists</code> / <code>not_exists</code> — whether a value is present at the path. These take no expected value.</li><li><code>greater_than</code> / <code>greater_or_equal</code> / <code>less_than</code> / <code>less_or_equal</code> — numeric comparison.</li><li><code>is_type</code> — the JSON type of the value; expected is one of <code>string</code>, <code>number</code>, <code>boolean</code>, <code>array</code>, <code>object</code>, <code>null</code>.</li><li><code>has_length</code> — the length of a string, or the element count of an array or object.</li></ul>
+<div class="note">Every operator except <code>exists</code> and <code>not_exists</code> needs an expected value. <code>exists</code> and <code>not_exists</code> are the only ones that treat a missing value as anything other than a failure.</div>
+<h2 id="how-pass-and-fail-work">How pass and fail work</h2>
+<p>Each assertion reports its own result — the actual value found, whether it passed, and an error reason when it could not be evaluated (an unknown operator, a missing value, an invalid regex). Evaluation never throws: one malformed assertion is reported, not allowed to explode the whole suite. The request passes only when every assertion passes.</p>
+<h2 id="examples">Examples</h2>
+<div class="code"><div class="code-head"><span>text</span><button class="copy" type="button">Copy</button></div><pre><code>status            equals            200
+header.content-type  contains       application/json
+data.items        is_type           array
+data.items        has_length        10
+data.items.0.id   exists
+time_ms           less_than         500
+email             matches           ^[^@]+@[^@]+$</code></pre></div>
+<p>Assertions are also enforced during a <a href="/docs/collections/">collection run</a> and are what a <a href="/docs/monitors-and-alerts/">monitor</a> checks on every scheduled run. For catching silent schema changes no assertion was written for, pair them with a <a href="/docs/response-contracts/">response contract</a>.</p></article>
+    <nav class="pager">
+      <a class="pager-link prev" href="/docs/environments-and-variables/"><span>← Previous</span><strong>Environments and variables</strong></a>
+      <a class="pager-link next" href="/docs/response-contracts/"><span>Next →</span><strong>Response contracts</strong></a>
+    </nav></main>
+</div>
+<footer class="foot"><p>© 2026 Spi · apispi.com · <a href="/developers">API reference</a> · <a href="/">Open the app</a></p></footer>
+<script src="/docs/app.js" defer></script>
+</body>
+</html>

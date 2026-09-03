@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spi assistant · Spi docs</title>
+<meta name="description" content="The built-in AI chat that helps you build requests, understand protocols, and debug failures.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/docs/styles.css">
+<script>
+  // Resolve theme before first paint (mirrors the app's spi-theme key).
+  (function(){try{var t=localStorage.getItem('spi-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/docs/">
+    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <span>Spi docs</span>
+  </a>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs…" autocomplete="off" aria-label="Search"><div id="results" class="results" hidden></div></div>
+  <div class="topbar-right">
+    <button id="theme" class="icon-btn" type="button" aria-label="Toggle theme">◐</button>
+    <a class="topbar-link" href="/">Open app →</a>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav><div class="nav-group"><div class="nav-cat">Getting started</div><a href="/docs/introduction/" class="nav-link">What is Spi?</a><a href="/docs/quickstart/" class="nav-link">Quickstart</a></div><div class="nav-group"><div class="nav-cat">Testing &amp; assertions</div><a href="/docs/sending-requests/" class="nav-link">Sending requests</a><a href="/docs/environments-and-variables/" class="nav-link">Environments and variables</a><a href="/docs/assertions/" class="nav-link">Assertions</a><a href="/docs/response-contracts/" class="nav-link">Response contracts</a></div><div class="nav-group"><div class="nav-cat">Automation &amp; monitoring</div><a href="/docs/collections/" class="nav-link">Collections</a><a href="/docs/monitors-and-alerts/" class="nav-link">Monitors and alerts</a><a href="/docs/webhooks/" class="nav-link">Webhooks, datasets, and profiling</a></div><div class="nav-group"><div class="nav-cat">MCP &amp; agents</div><a href="/docs/mcp-testing/" class="nav-link">MCP testing</a></div><div class="nav-group"><div class="nav-cat">Sharing &amp; reporting</div><a href="/docs/reports-and-sharing/" class="nav-link">Reports and sharing</a></div><div class="nav-group"><div class="nav-cat">Developer &amp; API</div><a href="/docs/api-keys-and-programmatic-access/" class="nav-link">API keys and programmatic access</a></div><div class="nav-group"><div class="nav-cat">Workspace guide</div><a href="/docs/navigating-spi/" class="nav-link">Navigating Spi</a><a href="/docs/home-dashboard/" class="nav-link">Home</a><a href="/docs/ai-lab/" class="nav-link">AI Lab</a><a href="/docs/explorer/" class="nav-link">Explorer</a><a href="/docs/recorder/" class="nav-link">Recorder</a><a href="/docs/mocks/" class="nav-link">Mocks</a><a href="/docs/spi-assistant/" class="nav-link active">Spi assistant</a><a href="/docs/usage-and-account-activity/" class="nav-link">Usage &amp; account activity</a></div></nav></aside>
+  <main class="content">
+    <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Workspace guide</span></div>
+    <h1>Spi assistant</h1>
+    <p class="lead">The built-in AI chat that helps you build requests, understand protocols, and debug failures.</p>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#setting-it-up">Setting it up</a><a href="#using-it">Using it</a></nav>
+    <article><p>Spi is the built-in AI assistant — your API testing companion. Ask it how to test something, what a protocol expects, or why a request is failing, and it answers in context. Open it at <a href="/chat">Spi</a>.</p>
+<h2 id="setting-it-up">Setting it up</h2>
+<p>The assistant runs on your own SCX account, so add your SCX API key before you start: go to <a href="/profile">Profile</a>, open the <strong>Settings</strong> tab, and under <strong>SCX AI Integration</strong> paste your <strong>SCX API Key</strong> and pick an <strong>AI Model</strong>. Until a key is saved, the chat shows a prompt to add one instead of the message box.</p>
+<h2 id="using-it">Using it</h2>
+<ol><li>Open <a href="/chat">Spi</a>.</li><li>Type a question, or click one of the starter suggestions.</li><li>Continue the conversation — the assistant keeps the thread's history for context.</li></ol>
+<p>The starter suggestions show the kinds of thing it is good at:</p>
+<ul><li>"How do I test an MCP server?"</li><li>"Set up environment variables for staging and prod."</li><li>"Why is my request returning 401?"</li><li>"Show me a gRPC request example."</li></ul>
+<div class="note">Spi answers questions in chat; to have an AI actually draft a request, generate assertions, or scan MCP tools, use <a href="/docs/ai-lab/">AI Lab</a>, which runs on the same SCX key.</div></article>
+    <nav class="pager">
+      <a class="pager-link prev" href="/docs/mocks/"><span>← Previous</span><strong>Mocks</strong></a>
+      <a class="pager-link next" href="/docs/usage-and-account-activity/"><span>Next →</span><strong>Usage &amp; account activity</strong></a>
+    </nav></main>
+</div>
+<footer class="foot"><p>© 2026 Spi · apispi.com · <a href="/developers">API reference</a> · <a href="/">Open the app</a></p></footer>
+<script src="/docs/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Usage &amp; account activity · Spi docs</title>
+<meta name="description" content="See your usage stats, recent activity, and a security log of sign-ins and key changes.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/docs/styles.css">
+<script>
+  // Resolve theme before first paint (mirrors the app's spi-theme key).
+  (function(){try{var t=localStorage.getItem('spi-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/docs/">
+    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <span>Spi docs</span>
+  </a>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs…" autocomplete="off" aria-label="Search"><div id="results" class="results" hidden></div></div>
+  <div class="topbar-right">
+    <button id="theme" class="icon-btn" type="button" aria-label="Toggle theme">◐</button>
+    <a class="topbar-link" href="/">Open app →</a>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav><div class="nav-group"><div class="nav-cat">Getting started</div><a href="/docs/introduction/" class="nav-link">What is Spi?</a><a href="/docs/quickstart/" class="nav-link">Quickstart</a></div><div class="nav-group"><div class="nav-cat">Testing &amp; assertions</div><a href="/docs/sending-requests/" class="nav-link">Sending requests</a><a href="/docs/environments-and-variables/" class="nav-link">Environments and variables</a><a href="/docs/assertions/" class="nav-link">Assertions</a><a href="/docs/response-contracts/" class="nav-link">Response contracts</a></div><div class="nav-group"><div class="nav-cat">Automation &amp; monitoring</div><a href="/docs/collections/" class="nav-link">Collections</a><a href="/docs/monitors-and-alerts/" class="nav-link">Monitors and alerts</a><a href="/docs/webhooks/" class="nav-link">Webhooks, datasets, and profiling</a></div><div class="nav-group"><div class="nav-cat">MCP &amp; agents</div><a href="/docs/mcp-testing/" class="nav-link">MCP testing</a></div><div class="nav-group"><div class="nav-cat">Sharing &amp; reporting</div><a href="/docs/reports-and-sharing/" class="nav-link">Reports and sharing</a></div><div class="nav-group"><div class="nav-cat">Developer &amp; API</div><a href="/docs/api-keys-and-programmatic-access/" class="nav-link">API keys and programmatic access</a></div><div class="nav-group"><div class="nav-cat">Workspace guide</div><a href="/docs/navigating-spi/" class="nav-link">Navigating Spi</a><a href="/docs/home-dashboard/" class="nav-link">Home</a><a href="/docs/ai-lab/" class="nav-link">AI Lab</a><a href="/docs/explorer/" class="nav-link">Explorer</a><a href="/docs/recorder/" class="nav-link">Recorder</a><a href="/docs/mocks/" class="nav-link">Mocks</a><a href="/docs/spi-assistant/" class="nav-link">Spi assistant</a><a href="/docs/usage-and-account-activity/" class="nav-link active">Usage &amp; account activity</a></div></nav></aside>
+  <main class="content">
+    <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Workspace guide</span></div>
+    <h1>Usage &amp; account activity</h1>
+    <p class="lead">See your usage stats, recent activity, and a security log of sign-ins and key changes.</p>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#usage-statistics">Usage statistics</a><a href="#recent-activity">Recent activity</a><a href="#security-activity">Security activity</a><a href="#managing-your-data">Managing your data</a></nav>
+    <article><p>Your <a href="/profile">Profile</a> keeps a record of how you use Spi and of the security-relevant events on your account. Open Profile from the account menu (top right), then the tabs below.</p>
+<h2 id="usage-statistics">Usage statistics</h2>
+<p>The <strong>Usage</strong> tab summarises your activity at a glance:</p>
+<ul><li><strong>API Requests</strong> — the total number of requests you have sent through Spi, across every protocol.</li><li><strong>Saved Requests</strong> — how many requests you have saved for reuse.</li><li><strong>Data Transferred</strong> — the total response bandwidth your requests have moved.</li><li><strong>Active Days</strong> — how many distinct days you have used Spi this month.</li></ul>
+<div class="note">Usage counts come from your request history. Clearing history from the dashboard resets what these figures are calculated from.</div>
+<h2 id="recent-activity">Recent activity</h2>
+<p>Below the stats, the <strong>Recent Activity</strong> feed lists your last actions — requests sent, items saved, runs started — each with a timestamp, so you can retrace what you did and when.</p>
+<h2 id="security-activity">Security activity</h2>
+<p>The same tab shows a <strong>Security activity</strong> log: an append-only record of the security-relevant events on your account. Each entry shows what happened, the IP address it came from, and when. Audited events include:</p>
+<ul><li><strong>Signed in</strong> and <strong>Failed sign-in</strong> — successful and rejected login attempts.</li><li><strong>Signed out</strong>.</li><li><strong>Password changed</strong>.</li><li><strong>API key created</strong> and <strong>API key revoked</strong> — including which key, by name.</li></ul>
+<p>Review this log periodically. A <strong>Failed sign-in</strong> you do not recognise, or a sign-in from an unfamiliar IP, is a sign your password may be compromised — change it from <strong>Profile → Account → Change Password</strong> and revoke any <a href="/docs/api-keys-and-programmatic-access/">API keys</a> you no longer trust.</p>
+<div class="note">Admins can review any user’s security events from the admin user-detail page. Platform operators also have separate views for system-wide usage, monitoring, and application logs.</div>
+<h2 id="managing-your-data">Managing your data</h2>
+<ul><li>Update your display name and password on the <strong>Account</strong> tab.</li><li>Set testing defaults on the <strong>Personalisation</strong> tab, and replay the <a href="/profile">product tour</a> from there.</li><li>Create and revoke <a href="/docs/api-keys-and-programmatic-access/">API keys</a> on the <strong>API Keys</strong> tab.</li><li>Delete your account, which erases your data, from the <strong>Danger Zone</strong> tab.</li></ul></article>
+    <nav class="pager">
+      <a class="pager-link prev" href="/docs/spi-assistant/"><span>← Previous</span><strong>Spi assistant</strong></a>
+      <span></span>
+    </nav></main>
+</div>
+<footer class="foot"><p>© 2026 Spi · apispi.com · <a href="/developers">API reference</a> · <a href="/">Open the app</a></p></footer>
+<script src="/docs/app.js" defer></script>
+</body>
+</html>

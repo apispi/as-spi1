@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sending requests · Spi docs</title>
+<meta name="description" content="The Tester in depth: protocols, headers, body, params, and reading responses.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/docs/styles.css">
+<script>
+  // Resolve theme before first paint (mirrors the app's spi-theme key).
+  (function(){try{var t=localStorage.getItem('spi-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/docs/">
+    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <span>Spi docs</span>
+  </a>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs…" autocomplete="off" aria-label="Search"><div id="results" class="results" hidden></div></div>
+  <div class="topbar-right">
+    <button id="theme" class="icon-btn" type="button" aria-label="Toggle theme">◐</button>
+    <a class="topbar-link" href="/">Open app →</a>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav><div class="nav-group"><div class="nav-cat">Getting started</div><a href="/docs/introduction/" class="nav-link">What is Spi?</a><a href="/docs/quickstart/" class="nav-link">Quickstart</a></div><div class="nav-group"><div class="nav-cat">Testing &amp; assertions</div><a href="/docs/sending-requests/" class="nav-link active">Sending requests</a><a href="/docs/environments-and-variables/" class="nav-link">Environments and variables</a><a href="/docs/assertions/" class="nav-link">Assertions</a><a href="/docs/response-contracts/" class="nav-link">Response contracts</a></div><div class="nav-group"><div class="nav-cat">Automation &amp; monitoring</div><a href="/docs/collections/" class="nav-link">Collections</a><a href="/docs/monitors-and-alerts/" class="nav-link">Monitors and alerts</a><a href="/docs/webhooks/" class="nav-link">Webhooks, datasets, and profiling</a></div><div class="nav-group"><div class="nav-cat">MCP &amp; agents</div><a href="/docs/mcp-testing/" class="nav-link">MCP testing</a></div><div class="nav-group"><div class="nav-cat">Sharing &amp; reporting</div><a href="/docs/reports-and-sharing/" class="nav-link">Reports and sharing</a></div><div class="nav-group"><div class="nav-cat">Developer &amp; API</div><a href="/docs/api-keys-and-programmatic-access/" class="nav-link">API keys and programmatic access</a></div><div class="nav-group"><div class="nav-cat">Workspace guide</div><a href="/docs/navigating-spi/" class="nav-link">Navigating Spi</a><a href="/docs/home-dashboard/" class="nav-link">Home</a><a href="/docs/ai-lab/" class="nav-link">AI Lab</a><a href="/docs/explorer/" class="nav-link">Explorer</a><a href="/docs/recorder/" class="nav-link">Recorder</a><a href="/docs/mocks/" class="nav-link">Mocks</a><a href="/docs/spi-assistant/" class="nav-link">Spi assistant</a><a href="/docs/usage-and-account-activity/" class="nav-link">Usage &amp; account activity</a></div></nav></aside>
+  <main class="content">
+    <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Testing &amp; assertions</span></div>
+    <h1>Sending requests</h1>
+    <p class="lead">The Tester in depth: protocols, headers, body, params, and reading responses.</p>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#choosing-a-protocol">Choosing a protocol</a><a href="#worked-examples-by-protocol">Worked examples by protocol</a><a href="#headers">Headers</a><a href="#query-params">Query params</a><a href="#request-body">Request body</a><a href="#reading-the-response">Reading the response</a></nav>
+    <article><p>The <a href="/tester">Tester</a> is where you compose and send a single request over any supported protocol and inspect exactly what came back. This article covers each part of the request panel.</p>
+<h2 id="choosing-a-protocol">Choosing a protocol</h2>
+<p>The protocol selector changes what the rest of the panel offers. Spi supports these protocols directly:</p>
+<ul><li><strong>REST</strong> — pick a method (<code>GET</code>, <code>POST</code>, <code>PUT</code>, <code>PATCH</code>, <code>DELETE</code>, and so on), set a URL, and optionally add headers, query params, and a body.</li><li><strong>MCP</strong> — point at an MCP server endpoint (Streamable HTTP) and call its tools, prompts, and resources.</li><li><strong>A2A</strong> — call an Agent-to-Agent endpoint, or fetch its <code>agent-card</code>.</li><li><strong>gRPC</strong> — a unary call over HTTP/2. Describe the request message as a JSON array of fields, e.g. <code>[{"field":1,"type":"string","value":"world"}]</code>. Toggle TLS for HTTP/2 over TLS.</li><li><strong>MQTT</strong> — publish or subscribe against a broker, with a topic and message.</li><li><strong>AMQP</strong> — publish or consume against a broker, with a queue or exchange and a message.</li></ul>
+<div class="note">There is no separate GraphQL or SOAP protocol: a GraphQL request is a REST <code>POST</code> with a JSON body (<code>{"query": "..."}</code>), and SOAP is a REST <code>POST</code> with an XML body and the appropriate content-type header.</div>
+<h2 id="worked-examples-by-protocol">Worked examples by protocol</h2>
+<p>Concrete values you can adapt. Replace the example hosts with your own, and prefer <code>{{variables}}</code> from an <a href="/docs/environments-and-variables/">environment</a> for anything secret.</p>
+<h3 id="rest-get-with-query-params">REST — GET with query params</h3>
+<p>Fetch a filtered list. The query string can live in the URL or in query-param rows — both produce the same request.</p>
+<div class="code"><div class="code-head"><span>http</span><button class="copy" type="button">Copy</button></div><pre><code>GET https://api.example.com/v1/users?role=admin&amp;limit=25
+Authorization: Bearer {{token}}
+Accept: application/json</code></pre></div>
+<h3 id="rest-post-with-a-json-body">REST — POST with a JSON body</h3>
+<p>Create a resource. Set <code>Content-Type: application/json</code> and put the JSON in the Body field.</p>
+<div class="code"><div class="code-head"><span>http</span><button class="copy" type="button">Copy</button></div><pre><code>POST https://api.example.com/v1/users
+Authorization: Bearer {{token}}
+Content-Type: application/json</code></pre></div>
+<div class="code"><div class="code-head"><span>json</span><button class="copy" type="button">Copy</button></div><pre><code>{
+  "name": "Ada Lovelace",
+  "email": "ada@example.com",
+  "role": "admin"
+}</code></pre></div>
+<h3 id="graphql-a-rest-post">GraphQL — a REST POST</h3>
+<p>Send to your GraphQL endpoint as a <code>POST</code>. The body is a JSON object with a <code>query</code> and optional <code>variables</code>.</p>
+<div class="code"><div class="code-head"><span>json</span><button class="copy" type="button">Copy</button></div><pre><code>{
+  "query": "query($id: ID!) { user(id: $id) { name email } }",
+  "variables": { "id": "42" }
+}</code></pre></div>
+<h3 id="mcp-call-a-tool">MCP — call a tool</h3>
+<p>Choose the <strong>MCP</strong> protocol, set the server URL, and pick a method such as <code>tools/list</code> or <code>tools/call</code>. Spi performs the <code>initialize</code> handshake for you. For <code>tools/call</code>, the params name the tool and its arguments:</p>
+<div class="code"><div class="code-head"><span>json</span><button class="copy" type="button">Copy</button></div><pre><code>{
+  "name": "search_documents",
+  "arguments": {
+    "query": "quarterly revenue",
+    "limit": 5
+  }
+}</code></pre></div>
+<p>Use <code>tools/list</code> with empty params (<code>{}</code>) to discover what a server exposes before calling anything.</p>
+<h3 id="a2a-send-a-message">A2A — send a message</h3>
+<p>Choose <strong>A2A</strong> and use <code>agent-card</code> to fetch an agent’s capabilities, or <code>message/send</code> to talk to it:</p>
+<div class="code"><div class="code-head"><span>json</span><button class="copy" type="button">Copy</button></div><pre><code>{
+  "message": {
+    "role": "user",
+    "parts": [
+      { "kind": "text", "text": "Summarise the latest incident report" }
+    ]
+  }
+}</code></pre></div>
+<h3 id="grpc-a-unary-call">gRPC — a unary call</h3>
+<p>Set <strong>host</strong> (e.g. <code>grpc.example.com</code>), <strong>port</strong> (<code>443</code> with TLS on), and <strong>service_method</strong> (e.g. <code>helloworld.Greeter/SayHello</code>). Describe the request message as an array of field descriptors — no <code>.proto</code> compilation needed:</p>
+<div class="code"><div class="code-head"><span>json</span><button class="copy" type="button">Copy</button></div><pre><code>[
+  { "field": 1, "type": "string", "value": "world" }
+]</code></pre></div>
+<h3 id="mqtt-publish-and-subscribe">MQTT — publish and subscribe</h3>
+<p>Set the broker <strong>host</strong> and <strong>port</strong> (<code>1883</code>, or <code>8883</code> for TLS), choose an <strong>action</strong>, and give a <strong>topic</strong>. To publish, add a message and QoS:</p>
+<div class="code"><div class="code-head"><span>json</span><button class="copy" type="button">Copy</button></div><pre><code>{
+  "action": "publish",
+  "topic": "sensors/kitchen/temperature",
+  "message": "{\"celsius\": 21.4}",
+  "qos": 1
+}</code></pre></div>
+<p>To subscribe, give a topic filter (wildcards allowed) and bound the wait — Spi collects messages up to <code>max_messages</code> or until <code>timeout</code>:</p>
+<div class="code"><div class="code-head"><span>json</span><button class="copy" type="button">Copy</button></div><pre><code>{
+  "action": "subscribe",
+  "topic": "sensors/#",
+  "max_messages": 5,
+  "timeout": 10
+}</code></pre></div>
+<h3 id="amqp-publish-to-a-queue">AMQP — publish to a queue</h3>
+<p>Set the RabbitMQ <strong>host</strong> and <strong>port</strong> (<code>5672</code>, or <code>5671</code> for TLS), then publish a message to a queue or consume one with <code>basic_get</code>:</p>
+<div class="code"><div class="code-head"><span>json</span><button class="copy" type="button">Copy</button></div><pre><code>{
+  "action": "publish",
+  "queue": "jobs.email",
+  "message": "{\"to\": \"ada@example.com\", \"template\": \"welcome\"}"
+}</code></pre></div>
+<h2 id="headers">Headers</h2>
+<p>Add request headers as name/value rows. For gRPC these become call <strong>metadata</strong>. Header names and values can both contain <code>{{variables}}</code>.</p>
+<div class="code"><div class="code-head"><span>http</span><button class="copy" type="button">Copy</button></div><pre><code>Authorization: Bearer {{token}}
+Content-Type: application/json</code></pre></div>
+<h2 id="query-params">Query params</h2>
+<p>For REST requests, add query parameters as rows; Spi appends them to the URL. You can also type them directly into the URL — either works. These two are equivalent:</p>
+<div class="code"><div class="code-head"><span>text</span><button class="copy" type="button">Copy</button></div><pre><code>Rows:   status = active
+        page   = 2
+
+URL:    https://api.example.com/v1/orders?status=active&amp;page=2</code></pre></div>
+<p>Values can use <code>{{variables}}</code>, e.g. <code>api_key = {{api_key}}</code>.</p>
+<h2 id="request-body">Request body</h2>
+<p>The body field is labelled to match the protocol — <strong>Body</strong> for REST, <strong>Request</strong> for gRPC, <strong>Message</strong> for MQTT and AMQP. For REST, send JSON, XML, form data, or plain text; set the matching <code>Content-Type</code> header.</p>
+<p>A JSON body with a variable pulled from the active environment:</p>
+<div class="code"><div class="code-head"><span>json</span><button class="copy" type="button">Copy</button></div><pre><code>{
+  "order_id": "{{order_id}}",
+  "status": "shipped",
+  "tracking": { "carrier": "DHL", "code": "JD0002" }
+}</code></pre></div>
+<p>A form-encoded body (set <code>Content-Type: application/x-www-form-urlencoded</code>):</p>
+<div class="code"><div class="code-head"><span>text</span><button class="copy" type="button">Copy</button></div><pre><code>grant_type=client_credentials&amp;client_id={{client_id}}&amp;client_secret={{client_secret}}</code></pre></div>
+<h2 id="reading-the-response">Reading the response</h2>
+<p>Every response shows:</p>
+<ul><li><strong>Status</strong> — the HTTP status code (or protocol-specific outcome).</li><li><strong>Time</strong> — how long the request took, in milliseconds.</li><li><strong>Headers</strong> — the response headers.</li><li><strong>Body</strong> — the response payload, pretty-printed when it is JSON.</li></ul>
+<p>Requests you send are kept in your history so you can revisit them. When you are happy with a request, save it — saved requests can carry <a href="/docs/assertions/">assertions</a> and a <a href="/docs/response-contracts/">response contract</a>, and can be added to <a href="/docs/collections/">collections</a>.</p>
+<div class="note">Spi guards outbound requests against SSRF, so requests to internal or loopback addresses may be refused. This protects the shared infrastructure the Tester runs on.</div></article>
+    <nav class="pager">
+      <a class="pager-link prev" href="/docs/quickstart/"><span>← Previous</span><strong>Quickstart</strong></a>
+      <a class="pager-link next" href="/docs/environments-and-variables/"><span>Next →</span><strong>Environments and variables</strong></a>
+    </nav></main>
+</div>
+<footer class="foot"><p>© 2026 Spi · apispi.com · <a href="/developers">API reference</a> · <a href="/">Open the app</a></p></footer>
+<script src="/docs/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+# Generated — serve this documentation directory as static files.
+# The app's front controller (parent .htaccess) otherwise rewrites every path
+# to index.php; turn that off here and index on the static landing page.
+<IfModule mod_rewrite.c>
+    RewriteEngine Off
+</IfModule>
+<IfModule mod_dir.c>
+    DirectoryIndex index.html
+</IfModule>
+Options -MultiViews

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monitors and alerts · Spi docs</title>
+<meta name="description" content="Schedule a collection, track uptime, and get alerted when status changes.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/docs/styles.css">
+<script>
+  // Resolve theme before first paint (mirrors the app's spi-theme key).
+  (function(){try{var t=localStorage.getItem('spi-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/docs/">
+    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <span>Spi docs</span>
+  </a>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs…" autocomplete="off" aria-label="Search"><div id="results" class="results" hidden></div></div>
+  <div class="topbar-right">
+    <button id="theme" class="icon-btn" type="button" aria-label="Toggle theme">◐</button>
+    <a class="topbar-link" href="/">Open app →</a>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav><div class="nav-group"><div class="nav-cat">Getting started</div><a href="/docs/introduction/" class="nav-link">What is Spi?</a><a href="/docs/quickstart/" class="nav-link">Quickstart</a></div><div class="nav-group"><div class="nav-cat">Testing &amp; assertions</div><a href="/docs/sending-requests/" class="nav-link">Sending requests</a><a href="/docs/environments-and-variables/" class="nav-link">Environments and variables</a><a href="/docs/assertions/" class="nav-link">Assertions</a><a href="/docs/response-contracts/" class="nav-link">Response contracts</a></div><div class="nav-group"><div class="nav-cat">Automation &amp; monitoring</div><a href="/docs/collections/" class="nav-link">Collections</a><a href="/docs/monitors-and-alerts/" class="nav-link active">Monitors and alerts</a><a href="/docs/webhooks/" class="nav-link">Webhooks, datasets, and profiling</a></div><div class="nav-group"><div class="nav-cat">MCP &amp; agents</div><a href="/docs/mcp-testing/" class="nav-link">MCP testing</a></div><div class="nav-group"><div class="nav-cat">Sharing &amp; reporting</div><a href="/docs/reports-and-sharing/" class="nav-link">Reports and sharing</a></div><div class="nav-group"><div class="nav-cat">Developer &amp; API</div><a href="/docs/api-keys-and-programmatic-access/" class="nav-link">API keys and programmatic access</a></div><div class="nav-group"><div class="nav-cat">Workspace guide</div><a href="/docs/navigating-spi/" class="nav-link">Navigating Spi</a><a href="/docs/home-dashboard/" class="nav-link">Home</a><a href="/docs/ai-lab/" class="nav-link">AI Lab</a><a href="/docs/explorer/" class="nav-link">Explorer</a><a href="/docs/recorder/" class="nav-link">Recorder</a><a href="/docs/mocks/" class="nav-link">Mocks</a><a href="/docs/spi-assistant/" class="nav-link">Spi assistant</a><a href="/docs/usage-and-account-activity/" class="nav-link">Usage &amp; account activity</a></div></nav></aside>
+  <main class="content">
+    <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Automation &amp; monitoring</span></div>
+    <h1>Monitors and alerts</h1>
+    <p class="lead">Schedule a collection, track uptime, and get alerted when status changes.</p>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#setting-up-a-monitor">Setting up a monitor</a><a href="#alert-on-transition-not-on-repeat">Alert on transition, not on repeat</a><a href="#alert-channels">Alert channels</a><a href="#mcp-drift-monitors">MCP drift monitors</a><a href="#uptime-and-status">Uptime and status</a></nav>
+    <article><p>A monitor runs a <a href="/docs/collections/">collection</a> on a schedule, records each run as a history point, and alerts you when its pass/fail status changes. It is how you turn a suite of checks into continuous confidence that an API is healthy. Manage monitors in <a href="/monitors">Monitors</a>.</p>
+<h2 id="setting-up-a-monitor">Setting up a monitor</h2>
+<ol><li>Pick the collection to run and the environment to run it against.</li><li>Choose how often it should run.</li><li>Enable alerts and choose the channels to notify.</li></ol>
+<p>Each run is stored as an inspection report and a lightweight history entry (passed/failed, timing, and how many steps passed). Older history is trimmed automatically so a monitor keeps a rolling window rather than growing forever.</p>
+<h2 id="alert-on-transition-not-on-repeat">Alert on transition, not on repeat</h2>
+<p>Alerts fire only when the status <strong>changes</strong> — passing to failing, and failing back to passing. A monitor that emailed every five minutes while an API was down would get muted, and then it would not be a monitor any more. The first run establishes a baseline and does not announce an outage or a recovery.</p>
+<h2 id="alert-channels">Alert channels</h2>
+<p>Alerts go to your email plus any enabled alert channels. A channel is a reusable destination, shared across all your monitors. Supported channel types:</p>
+<ul><li><strong>Slack</strong> — an incoming-webhook URL; the alert is posted as a message.</li><li><strong>Discord</strong> — an incoming-webhook URL; the alert is posted as a message.</li><li><strong>Webhook</strong> — a generic URL that receives a structured JSON payload describing the event.</li></ul>
+<div class="note">Webhook, Slack, and Discord channels work with no SMTP configured at all, and one failing destination never stops the others. Channel URLs are credentials — anyone holding one can post to your channel — so they are treated as secrets.</div>
+<h2 id="mcp-drift-monitors">MCP drift monitors</h2>
+<p>A monitor can instead watch an MCP server for <strong>drift</strong>: it snapshots the server's tool list and compares each run against the previous snapshot. When the surface changes it records a failing result and alerts once; the new shape then becomes the baseline, so it does not re-alert forever or send a misleading "recovered" message. See <a href="/docs/mcp-testing/">MCP testing</a>.</p>
+<h2 id="uptime-and-status">Uptime and status</h2>
+<p>A monitor's history is the raw material for a public <a href="/docs/reports-and-sharing/">status page</a>, which renders current status and recent uptime from these results at a shareable URL.</p></article>
+    <nav class="pager">
+      <a class="pager-link prev" href="/docs/collections/"><span>← Previous</span><strong>Collections</strong></a>
+      <a class="pager-link next" href="/docs/webhooks/"><span>Next →</span><strong>Webhooks, datasets, and profiling</strong></a>
+    </nav></main>
+</div>
+<footer class="foot"><p>© 2026 Spi · apispi.com · <a href="/developers">API reference</a> · <a href="/">Open the app</a></p></footer>
+<script src="/docs/app.js" defer></script>
+</body>
+</html>

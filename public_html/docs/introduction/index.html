@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What is Spi? · Spi docs</title>
+<meta name="description" content="A multi-protocol API testing and monitoring platform for humans and agents.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/docs/styles.css">
+<script>
+  // Resolve theme before first paint (mirrors the app's spi-theme key).
+  (function(){try{var t=localStorage.getItem('spi-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/docs/">
+    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <span>Spi docs</span>
+  </a>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs…" autocomplete="off" aria-label="Search"><div id="results" class="results" hidden></div></div>
+  <div class="topbar-right">
+    <button id="theme" class="icon-btn" type="button" aria-label="Toggle theme">◐</button>
+    <a class="topbar-link" href="/">Open app →</a>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav><div class="nav-group"><div class="nav-cat">Getting started</div><a href="/docs/introduction/" class="nav-link active">What is Spi?</a><a href="/docs/quickstart/" class="nav-link">Quickstart</a></div><div class="nav-group"><div class="nav-cat">Testing &amp; assertions</div><a href="/docs/sending-requests/" class="nav-link">Sending requests</a><a href="/docs/environments-and-variables/" class="nav-link">Environments and variables</a><a href="/docs/assertions/" class="nav-link">Assertions</a><a href="/docs/response-contracts/" class="nav-link">Response contracts</a></div><div class="nav-group"><div class="nav-cat">Automation &amp; monitoring</div><a href="/docs/collections/" class="nav-link">Collections</a><a href="/docs/monitors-and-alerts/" class="nav-link">Monitors and alerts</a><a href="/docs/webhooks/" class="nav-link">Webhooks, datasets, and profiling</a></div><div class="nav-group"><div class="nav-cat">MCP &amp; agents</div><a href="/docs/mcp-testing/" class="nav-link">MCP testing</a></div><div class="nav-group"><div class="nav-cat">Sharing &amp; reporting</div><a href="/docs/reports-and-sharing/" class="nav-link">Reports and sharing</a></div><div class="nav-group"><div class="nav-cat">Developer &amp; API</div><a href="/docs/api-keys-and-programmatic-access/" class="nav-link">API keys and programmatic access</a></div><div class="nav-group"><div class="nav-cat">Workspace guide</div><a href="/docs/navigating-spi/" class="nav-link">Navigating Spi</a><a href="/docs/home-dashboard/" class="nav-link">Home</a><a href="/docs/ai-lab/" class="nav-link">AI Lab</a><a href="/docs/explorer/" class="nav-link">Explorer</a><a href="/docs/recorder/" class="nav-link">Recorder</a><a href="/docs/mocks/" class="nav-link">Mocks</a><a href="/docs/spi-assistant/" class="nav-link">Spi assistant</a><a href="/docs/usage-and-account-activity/" class="nav-link">Usage &amp; account activity</a></div></nav></aside>
+  <main class="content">
+    <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Getting started</span></div>
+    <h1>What is Spi?</h1>
+    <p class="lead">A multi-protocol API testing and monitoring platform for humans and agents.</p>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#protocols-it-covers">Protocols it covers</a><a href="#who-it-is-for">Who it is for</a></nav>
+    <article><p>Spi is a multi-protocol API testing and monitoring platform. You send requests, assert on the responses, chain requests into collections, schedule those collections as monitors, and share the results — all from one place, and all without leaving the browser.</p>
+<p>What sets Spi apart is breadth. Most tools speak plain HTTP; Spi also speaks the protocols agents and back-ends actually use, and it treats the Model Context Protocol (MCP) as a first-class citizen rather than an afterthought.</p>
+<h2 id="protocols-it-covers">Protocols it covers</h2>
+<p>The <a href="/tester">Tester</a> sends requests over these protocols directly:</p>
+<ul><li><strong>REST / HTTP</strong> — any method, headers, query params, and a request body. GraphQL and SOAP are sent this way too: a GraphQL query is a <code>POST</code> with a JSON body, and SOAP is a <code>POST</code> with an XML body.</li><li><strong>MCP</strong> — the Model Context Protocol, over Streamable HTTP.</li><li><strong>A2A</strong> — Agent-to-Agent, including fetching an agent card.</li><li><strong>gRPC</strong> — unary calls over HTTP/2, with the request message described as JSON.</li><li><strong>MQTT</strong> — publish and subscribe against a broker.</li><li><strong>AMQP</strong> — publish and consume against a broker such as RabbitMQ.</li></ul>
+<p>Beyond the Tester, Spi captures <strong>inbound webhooks</strong> at a public URL and runs a full <strong>MCP testing suite</strong> — a gateway, a flight recorder, a mock server, replay, and a policy firewall. See <a href="/docs/mcp-testing/">MCP testing</a>.</p>
+<h2 id="who-it-is-for">Who it is for</h2>
+<ul><li>Developers who want a fast, scriptable way to exercise an endpoint and pin down its behaviour.</li><li>Teams running scheduled monitors and status pages against production and staging.</li><li>Anyone building or integrating AI agents who needs to test, record, mock, and guard MCP servers.</li></ul>
+<p>New here? Start with the <a href="/docs/quickstart/">quickstart</a>, then learn about <a href="/docs/environments-and-variables/">environments and variables</a> and <a href="/docs/assertions/">assertions</a>.</p>
+<div class="note">Everything you can do in the UI you can also do from a script: see <a href="/docs/api-keys-and-programmatic-access/">Programmatic access</a> and the full <a href="/developers">Developer API</a>.</div></article>
+    <nav class="pager">
+      <span></span>
+      <a class="pager-link next" href="/docs/quickstart/"><span>Next →</span><strong>Quickstart</strong></a>
+    </nav></main>
+</div>
+<footer class="foot"><p>© 2026 Spi · apispi.com · <a href="/developers">API reference</a> · <a href="/">Open the app</a></p></footer>
+<script src="/docs/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Collections · Spi docs</title>
+<meta name="description" content="Chain saved requests into ordered steps, thread variables between them, and run the lot.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/docs/styles.css">
+<script>
+  // Resolve theme before first paint (mirrors the app's spi-theme key).
+  (function(){try{var t=localStorage.getItem('spi-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/docs/">
+    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <span>Spi docs</span>
+  </a>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs…" autocomplete="off" aria-label="Search"><div id="results" class="results" hidden></div></div>
+  <div class="topbar-right">
+    <button id="theme" class="icon-btn" type="button" aria-label="Toggle theme">◐</button>
+    <a class="topbar-link" href="/">Open app →</a>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav><div class="nav-group"><div class="nav-cat">Getting started</div><a href="/docs/introduction/" class="nav-link">What is Spi?</a><a href="/docs/quickstart/" class="nav-link">Quickstart</a></div><div class="nav-group"><div class="nav-cat">Testing &amp; assertions</div><a href="/docs/sending-requests/" class="nav-link">Sending requests</a><a href="/docs/environments-and-variables/" class="nav-link">Environments and variables</a><a href="/docs/assertions/" class="nav-link">Assertions</a><a href="/docs/response-contracts/" class="nav-link">Response contracts</a></div><div class="nav-group"><div class="nav-cat">Automation &amp; monitoring</div><a href="/docs/collections/" class="nav-link active">Collections</a><a href="/docs/monitors-and-alerts/" class="nav-link">Monitors and alerts</a><a href="/docs/webhooks/" class="nav-link">Webhooks, datasets, and profiling</a></div><div class="nav-group"><div class="nav-cat">MCP &amp; agents</div><a href="/docs/mcp-testing/" class="nav-link">MCP testing</a></div><div class="nav-group"><div class="nav-cat">Sharing &amp; reporting</div><a href="/docs/reports-and-sharing/" class="nav-link">Reports and sharing</a></div><div class="nav-group"><div class="nav-cat">Developer &amp; API</div><a href="/docs/api-keys-and-programmatic-access/" class="nav-link">API keys and programmatic access</a></div><div class="nav-group"><div class="nav-cat">Workspace guide</div><a href="/docs/navigating-spi/" class="nav-link">Navigating Spi</a><a href="/docs/home-dashboard/" class="nav-link">Home</a><a href="/docs/ai-lab/" class="nav-link">AI Lab</a><a href="/docs/explorer/" class="nav-link">Explorer</a><a href="/docs/recorder/" class="nav-link">Recorder</a><a href="/docs/mocks/" class="nav-link">Mocks</a><a href="/docs/spi-assistant/" class="nav-link">Spi assistant</a><a href="/docs/usage-and-account-activity/" class="nav-link">Usage &amp; account activity</a></div></nav></aside>
+  <main class="content">
+    <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Automation &amp; monitoring</span></div>
+    <h1>Collections</h1>
+    <p class="lead">Chain saved requests into ordered steps, thread variables between them, and run the lot.</p>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#steps-and-ordering">Steps and ordering</a><a href="#the-variable-pool-and-extraction">The variable pool and extraction</a><a href="#assertions-and-contracts-per-step">Assertions and contracts per step</a><a href="#continue-on-failure">Continue on failure</a><a href="#running-a-collection">Running a collection</a></nav>
+    <article><p>A collection is an ordered sequence of saved requests, run start to finish against one environment. It is how you model a real flow — log in, create a record, fetch it, delete it — and get a single pass/fail for the whole thing. Manage them in <a href="/collections">Collections</a>.</p>
+<h2 id="steps-and-ordering">Steps and ordering</h2>
+<p>Each step wraps a saved request. Steps run in order, top to bottom, so you can arrange them into a dependency chain. The request that each step sends is resolved against the current variable pool immediately before it is sent — which is what makes variable threading (below) work.</p>
+<h2 id="the-variable-pool-and-extraction">The variable pool and extraction</h2>
+<p>A run starts with the selected environment's variables as its pool. A step can then <strong>extract</strong> values from its response and add them to the pool, so a later step can use them. That is how a login step hands a token to every step after it.</p>
+<p>An extraction rule is a <strong>name</strong> plus a <strong>path</strong> into the response — the same path forms assertions use: a dot path into the JSON body, or <code>status</code>, <code>time_ms</code>, or <code>header.&lt;name&gt;</code>. The value is stored under the name and becomes available as <code>{{name}}</code> in subsequent steps.</p>
+<div class="code"><div class="code-head"><span>text</span><button class="copy" type="button">Copy</button></div><pre><code>Step 1  POST /login       extract  token  &lt;-  data.access_token
+Step 2  GET  /me           header   Authorization: Bearer {{token}}</code></pre></div>
+<div class="note">Only scalar values (strings, numbers, booleans) can be extracted, because only a scalar can be substituted back into a later request. A path that resolves to an object or array is skipped.</div>
+<h2 id="assertions-and-contracts-per-step">Assertions and contracts per step</h2>
+<p>Each step is evaluated with the <a href="/docs/assertions/">assertions</a> and <a href="/docs/response-contracts/">response contract</a> attached to its saved request. A step passes when the response is OK, its assertions all pass, and there is no breaking contract drift.</p>
+<h2 id="continue-on-failure">Continue on failure</h2>
+<p>By default a collection <strong>stops</strong> at the first failing step, and the remaining steps are reported as skipped rather than silently dropped. Turn on <strong>continue on failure</strong> to run every step regardless — useful for an independent suite of checks where one failure should not hide the others.</p>
+<h2 id="running-a-collection">Running a collection</h2>
+<p>Run a collection from the UI and you get a full report: total, passed, failed, and skipped counts, the elapsed time, and per-step detail including the resolved URL (with secrets masked), status, timing, assertion results, contract drift, and which variables it extracted.</p>
+<div class="note">A collection with no steps is reported as a failure, not a pass — a monitor running an empty collection should not report green while checking nothing.</div>
+<p>Collections can be run automatically by a <a href="/docs/monitors-and-alerts/">monitor</a>, triggered by an inbound <a href="/docs/webhooks/">webhook</a>, run over a <a href="/docs/webhooks/">dataset</a>, or run from CI over the <a href="/docs/api-keys-and-programmatic-access/">programmatic API</a>. They can also be exported to Postman or OpenAPI — see <a href="/docs/reports-and-sharing/">Reports and sharing</a>.</p></article>
+    <nav class="pager">
+      <a class="pager-link prev" href="/docs/response-contracts/"><span>← Previous</span><strong>Response contracts</strong></a>
+      <a class="pager-link next" href="/docs/monitors-and-alerts/"><span>Next →</span><strong>Monitors and alerts</strong></a>
+    </nav></main>
+</div>
+<footer class="foot"><p>© 2026 Spi · apispi.com · <a href="/developers">API reference</a> · <a href="/">Open the app</a></p></footer>
+<script src="/docs/app.js" defer></script>
+</body>
+</html>

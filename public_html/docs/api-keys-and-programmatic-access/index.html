@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API keys and programmatic access · Spi docs</title>
+<meta name="description" content="Create named API keys and drive the /api/v1 endpoints from scripts and CI.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/docs/styles.css">
+<script>
+  // Resolve theme before first paint (mirrors the app's spi-theme key).
+  (function(){try{var t=localStorage.getItem('spi-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/docs/">
+    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <span>Spi docs</span>
+  </a>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs…" autocomplete="off" aria-label="Search"><div id="results" class="results" hidden></div></div>
+  <div class="topbar-right">
+    <button id="theme" class="icon-btn" type="button" aria-label="Toggle theme">◐</button>
+    <a class="topbar-link" href="/">Open app →</a>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav><div class="nav-group"><div class="nav-cat">Getting started</div><a href="/docs/introduction/" class="nav-link">What is Spi?</a><a href="/docs/quickstart/" class="nav-link">Quickstart</a></div><div class="nav-group"><div class="nav-cat">Testing &amp; assertions</div><a href="/docs/sending-requests/" class="nav-link">Sending requests</a><a href="/docs/environments-and-variables/" class="nav-link">Environments and variables</a><a href="/docs/assertions/" class="nav-link">Assertions</a><a href="/docs/response-contracts/" class="nav-link">Response contracts</a></div><div class="nav-group"><div class="nav-cat">Automation &amp; monitoring</div><a href="/docs/collections/" class="nav-link">Collections</a><a href="/docs/monitors-and-alerts/" class="nav-link">Monitors and alerts</a><a href="/docs/webhooks/" class="nav-link">Webhooks, datasets, and profiling</a></div><div class="nav-group"><div class="nav-cat">MCP &amp; agents</div><a href="/docs/mcp-testing/" class="nav-link">MCP testing</a></div><div class="nav-group"><div class="nav-cat">Sharing &amp; reporting</div><a href="/docs/reports-and-sharing/" class="nav-link">Reports and sharing</a></div><div class="nav-group"><div class="nav-cat">Developer &amp; API</div><a href="/docs/api-keys-and-programmatic-access/" class="nav-link active">API keys and programmatic access</a></div><div class="nav-group"><div class="nav-cat">Workspace guide</div><a href="/docs/navigating-spi/" class="nav-link">Navigating Spi</a><a href="/docs/home-dashboard/" class="nav-link">Home</a><a href="/docs/ai-lab/" class="nav-link">AI Lab</a><a href="/docs/explorer/" class="nav-link">Explorer</a><a href="/docs/recorder/" class="nav-link">Recorder</a><a href="/docs/mocks/" class="nav-link">Mocks</a><a href="/docs/spi-assistant/" class="nav-link">Spi assistant</a><a href="/docs/usage-and-account-activity/" class="nav-link">Usage &amp; account activity</a></div></nav></aside>
+  <main class="content">
+    <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Developer &amp; API</span></div>
+    <h1>API keys and programmatic access</h1>
+    <p class="lead">Create named API keys and drive the /api/v1 endpoints from scripts and CI.</p>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#named-api-keys">Named API keys</a><a href="#authenticating-requests">Authenticating requests</a><a href="#a-curl-example">A curl example</a><a href="#running-a-collection-from-ci">Running a collection from CI</a></nav>
+    <article><p>Everything you do in the UI you can also do from a script. The programmatic API lives under <code>/api/v1</code>, is stateless, and is authenticated with a personal API key sent as a bearer token. Manage your keys in <a href="/profile">Profile</a>.</p>
+<h2 id="named-api-keys">Named API keys</h2>
+<p>API keys are named personal credentials — you can hold several at once and name them for where they are used (for example, "CI" or "Local script").</p>
+<ul><li>Keys are prefixed <code>spi_</code> so they are recognisable in logs and config.</li><li>You can create <strong>multiple</strong> keys per user, up to a fixed limit — if you hit it, revoke one first.</li><li>A key can be given an optional <strong>expiry</strong> date, after which it stops working.</li><li>The full key value is shown <strong>exactly once</strong>, at creation — copy it then, because it cannot be retrieved later.</li><li>Keys are <strong>revoked</strong>, not deleted, so their last-used history and audit trail remain; a revoked key stops working immediately.</li></ul>
+<h2 id="authenticating-requests">Authenticating requests</h2>
+<p>Send the key as a bearer token on every request to <code>/api/v1</code>:</p>
+<div class="code"><div class="code-head"><span>http</span><button class="copy" type="button">Copy</button></div><pre><code>Authorization: Bearer spi_your_key_here</code></pre></div>
+<p>These routes are separate from the session-authenticated routes the web app uses: no cookies means no CSRF concern.</p>
+<h2 id="a-curl-example">A curl example</h2>
+<p>Send an HTTP request through Spi's guarded proxy:</p>
+<div class="code"><div class="code-head"><span>bash</span><button class="copy" type="button">Copy</button></div><pre><code>curl -X POST https://apispi.com/api/v1/proxy \
+  -H "Authorization: Bearer spi_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "method": "GET",
+    "url": "https://httpbin.org/get"
+  }'</code></pre></div>
+<h2 id="running-a-collection-from-ci">Running a collection from CI</h2>
+<p>Run a collection by id and gate on the status code alone — <code>200</code> when every step passed, <code>422</code> when any failed:</p>
+<div class="code"><div class="code-head"><span>bash</span><button class="copy" type="button">Copy</button></div><pre><code>curl -X POST https://apispi.com/api/v1/collections/{id}/run \
+  -H "Authorization: Bearer spi_your_key_here"</code></pre></div>
+<p>The same key also authenticates the <a href="/docs/mcp-testing/">MCP gateway</a>, so an agent driving Spi is scoped to your data.</p>
+<div class="note">The <code>/api/v1</code> surface covers the proxy, the per-protocol testers (MCP, A2A, gRPC, MQTT, AMQP), and collection runs. For the complete, always-current endpoint reference — every field and response shape — see the <a href="/developers">Developer API</a> page.</div></article>
+    <nav class="pager">
+      <a class="pager-link prev" href="/docs/reports-and-sharing/"><span>← Previous</span><strong>Reports and sharing</strong></a>
+      <a class="pager-link next" href="/docs/navigating-spi/"><span>Next →</span><strong>Navigating Spi</strong></a>
+    </nav></main>
+</div>
+<footer class="foot"><p>© 2026 Spi · apispi.com · <a href="/developers">API reference</a> · <a href="/">Open the app</a></p></footer>
+<script src="/docs/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Environments and variables · Spi docs</title>
+<meta name="description" content="Reuse values with {{variable}} placeholders, a default environment, and secret masking.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/docs/styles.css">
+<script>
+  // Resolve theme before first paint (mirrors the app's spi-theme key).
+  (function(){try{var t=localStorage.getItem('spi-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/docs/">
+    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <span>Spi docs</span>
+  </a>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs…" autocomplete="off" aria-label="Search"><div id="results" class="results" hidden></div></div>
+  <div class="topbar-right">
+    <button id="theme" class="icon-btn" type="button" aria-label="Toggle theme">◐</button>
+    <a class="topbar-link" href="/">Open app →</a>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav><div class="nav-group"><div class="nav-cat">Getting started</div><a href="/docs/introduction/" class="nav-link">What is Spi?</a><a href="/docs/quickstart/" class="nav-link">Quickstart</a></div><div class="nav-group"><div class="nav-cat">Testing &amp; assertions</div><a href="/docs/sending-requests/" class="nav-link">Sending requests</a><a href="/docs/environments-and-variables/" class="nav-link active">Environments and variables</a><a href="/docs/assertions/" class="nav-link">Assertions</a><a href="/docs/response-contracts/" class="nav-link">Response contracts</a></div><div class="nav-group"><div class="nav-cat">Automation &amp; monitoring</div><a href="/docs/collections/" class="nav-link">Collections</a><a href="/docs/monitors-and-alerts/" class="nav-link">Monitors and alerts</a><a href="/docs/webhooks/" class="nav-link">Webhooks, datasets, and profiling</a></div><div class="nav-group"><div class="nav-cat">MCP &amp; agents</div><a href="/docs/mcp-testing/" class="nav-link">MCP testing</a></div><div class="nav-group"><div class="nav-cat">Sharing &amp; reporting</div><a href="/docs/reports-and-sharing/" class="nav-link">Reports and sharing</a></div><div class="nav-group"><div class="nav-cat">Developer &amp; API</div><a href="/docs/api-keys-and-programmatic-access/" class="nav-link">API keys and programmatic access</a></div><div class="nav-group"><div class="nav-cat">Workspace guide</div><a href="/docs/navigating-spi/" class="nav-link">Navigating Spi</a><a href="/docs/home-dashboard/" class="nav-link">Home</a><a href="/docs/ai-lab/" class="nav-link">AI Lab</a><a href="/docs/explorer/" class="nav-link">Explorer</a><a href="/docs/recorder/" class="nav-link">Recorder</a><a href="/docs/mocks/" class="nav-link">Mocks</a><a href="/docs/spi-assistant/" class="nav-link">Spi assistant</a><a href="/docs/usage-and-account-activity/" class="nav-link">Usage &amp; account activity</a></div></nav></aside>
+  <main class="content">
+    <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Testing &amp; assertions</span></div>
+    <h1>Environments and variables</h1>
+    <p class="lead">Reuse values with {{variable}} placeholders, a default environment, and secret masking.</p>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#the-variable-syntax">The {{variable}} syntax</a><a href="#managing-environments">Managing environments</a><a href="#the-default-environment">The default environment</a><a href="#secrets-and-masking">Secrets and masking</a></nav>
+    <article><p>An environment is a named set of variables. Instead of hard-coding a base URL or a token into every request, you reference it as <code>{{name}}</code> and let the selected environment supply the value. Switching environments — say from staging to production — re-points every request at once.</p>
+<h2 id="the-variable-syntax">The {{variable}} syntax</h2>
+<p>Anywhere in a request — the URL, header names and values, query params, and the body — write <code>{{variable_name}}</code>. Just before the request is sent, Spi substitutes each placeholder with the value from the active environment.</p>
+<div class="code"><div class="code-head"><span>http</span><button class="copy" type="button">Copy</button></div><pre><code>GET {{base_url}}/users/{{user_id}}
+Authorization: Bearer {{token}}</code></pre></div>
+<p>Variable names may contain letters, digits, underscores, dots, and hyphens. A few rules keep substitution predictable:</p>
+<ul><li>Substitution is a <strong>single pass</strong> — a value that itself contains <code>{{...}}</code> is not expanded again.</li><li>An <strong>unknown</strong> placeholder is left in place and reported as unresolved, so a typo shows up as an obviously-broken request rather than a silently empty one.</li><li>Only <code>{{name}}</code> patterns are touched, so JSON bodies that legitimately contain braces are left alone.</li></ul>
+<h2 id="managing-environments">Managing environments</h2>
+<ol><li>Create an environment and give it a name (for example, "Staging").</li><li>Add variables as key/value pairs.</li><li>Select it as the active environment when you send requests or run collections.</li></ol>
+<h2 id="the-default-environment">The default environment</h2>
+<p>One environment can be flagged as the <strong>default</strong>. It is the one used when nothing else is chosen — for example the fallback for a new request. Marking a different environment as default moves that flag.</p>
+<h2 id="secrets-and-masking">Secrets and masking</h2>
+<p>Flag a variable as <strong>secret</strong> when its value is a credential. Secret handling is built in:</p>
+<ul><li>Secret values are <strong>never sent back</strong> to the browser by the API — the field returns empty, and the "secret" flag is preserved.</li><li>Wherever Spi persists or echoes a resolved request — request history, and any run that becomes a shareable report — the secret value is replaced with a mask (<code>••••••</code>).</li><li>Very short values (under four characters) are not masked, because blanking every "ok" or "1" in a response would destroy the output for no real protection.</li></ul>
+<div class="note">Because secrets are masked in <a href="/docs/reports-and-sharing/">shared reports</a>, you can share a collection run without leaking the token it used.</div></article>
+    <nav class="pager">
+      <a class="pager-link prev" href="/docs/sending-requests/"><span>← Previous</span><strong>Sending requests</strong></a>
+      <a class="pager-link next" href="/docs/assertions/"><span>Next →</span><strong>Assertions</strong></a>
+    </nav></main>
+</div>
+<footer class="foot"><p>© 2026 Spi · apispi.com · <a href="/developers">API reference</a> · <a href="/">Open the app</a></p></footer>
+<script src="/docs/app.js" defer></script>
+</body>
+</html>

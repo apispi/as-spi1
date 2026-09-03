@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explorer · Spi docs</title>
+<meta name="description" content="Point an autonomous agent at an MCP server with a goal; see the path it took and what it found.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/docs/styles.css">
+<script>
+  // Resolve theme before first paint (mirrors the app's spi-theme key).
+  (function(){try{var t=localStorage.getItem('spi-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/docs/">
+    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <span>Spi docs</span>
+  </a>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs…" autocomplete="off" aria-label="Search"><div id="results" class="results" hidden></div></div>
+  <div class="topbar-right">
+    <button id="theme" class="icon-btn" type="button" aria-label="Toggle theme">◐</button>
+    <a class="topbar-link" href="/">Open app →</a>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav><div class="nav-group"><div class="nav-cat">Getting started</div><a href="/docs/introduction/" class="nav-link">What is Spi?</a><a href="/docs/quickstart/" class="nav-link">Quickstart</a></div><div class="nav-group"><div class="nav-cat">Testing &amp; assertions</div><a href="/docs/sending-requests/" class="nav-link">Sending requests</a><a href="/docs/environments-and-variables/" class="nav-link">Environments and variables</a><a href="/docs/assertions/" class="nav-link">Assertions</a><a href="/docs/response-contracts/" class="nav-link">Response contracts</a></div><div class="nav-group"><div class="nav-cat">Automation &amp; monitoring</div><a href="/docs/collections/" class="nav-link">Collections</a><a href="/docs/monitors-and-alerts/" class="nav-link">Monitors and alerts</a><a href="/docs/webhooks/" class="nav-link">Webhooks, datasets, and profiling</a></div><div class="nav-group"><div class="nav-cat">MCP &amp; agents</div><a href="/docs/mcp-testing/" class="nav-link">MCP testing</a></div><div class="nav-group"><div class="nav-cat">Sharing &amp; reporting</div><a href="/docs/reports-and-sharing/" class="nav-link">Reports and sharing</a></div><div class="nav-group"><div class="nav-cat">Developer &amp; API</div><a href="/docs/api-keys-and-programmatic-access/" class="nav-link">API keys and programmatic access</a></div><div class="nav-group"><div class="nav-cat">Workspace guide</div><a href="/docs/navigating-spi/" class="nav-link">Navigating Spi</a><a href="/docs/home-dashboard/" class="nav-link">Home</a><a href="/docs/ai-lab/" class="nav-link">AI Lab</a><a href="/docs/explorer/" class="nav-link active">Explorer</a><a href="/docs/recorder/" class="nav-link">Recorder</a><a href="/docs/mocks/" class="nav-link">Mocks</a><a href="/docs/spi-assistant/" class="nav-link">Spi assistant</a><a href="/docs/usage-and-account-activity/" class="nav-link">Usage &amp; account activity</a></div></nav></aside>
+  <main class="content">
+    <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Workspace guide</span></div>
+    <h1>Explorer</h1>
+    <p class="lead">Point an autonomous agent at an MCP server with a goal; see the path it took and what it found.</p>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#running-an-exploration">Running an exploration</a><a href="#safe-mode">Safe mode</a><a href="#reading-the-result">Reading the result</a></nav>
+    <article><p>The Explorer (the Agent Explorer) turns the agent loop into a discovery and red-team instrument. You give it an MCP server and a goal; an AI model pursues that goal by calling the server's tools, and Spi records the path it took, the capabilities it found, and every destructive tool it reached for. Open it at <a href="/explore">Explorer</a>. It is part of Spi's <a href="/docs/mcp-testing/">MCP testing</a> suite.</p>
+<h2 id="running-an-exploration">Running an exploration</h2>
+<ol><li>Enter the <strong>MCP server URL</strong>, e.g. <code>https://mcp.example.com/mcp</code>.</li><li>Write a <strong>goal</strong> in plain English, e.g. "Find the current weather in Sydney".</li><li>Leave <strong>Safe mode</strong> on (the default) so the agent refuses side-effecting tools.</li><li>Pick <strong>Max steps</strong> (4–12) to bound how long the agent runs.</li><li>Press <strong>Explore</strong>.</li></ol>
+<h2 id="safe-mode">Safe mode</h2>
+<p>In safe mode the agent will not execute a tool that looks destructive — a blocked attempt is recorded as a <strong>finding</strong>, not carried out, so pointing the Explorer at a real server is safe. Turn safe mode off only against a throwaway target: the agent may then call tools that change or delete data.</p>
+<h2 id="reading-the-result">Reading the result</h2>
+<p>When the run finishes you get:</p>
+<ul><li>A <strong>verdict</strong> — goal met or incomplete — with the tool-call count and how many tools the server exposed.</li><li>The agent's <strong>final answer</strong>, if it reached one.</li><li><strong>Findings</strong> — blocked destructive attempts, injection-scanner hits on the discovered tools, and the list of side-effecting tools the server exposes, with an overall risk level for the surface.</li><li>The <strong>path</strong> — a step-by-step transcript of the agent's thinking, each tool call with its arguments, and the result returned (or why it was blocked).</li></ul>
+<div class="note">Explorer discovers a server's tool surface once. To catch changes to that surface over time, set up an <a href="/docs/monitors-and-alerts/">MCP drift monitor</a>; to record and firewall an agent's live traffic against a server, use the <a href="/docs/recorder/">Recorder</a>.</div></article>
+    <nav class="pager">
+      <a class="pager-link prev" href="/docs/ai-lab/"><span>← Previous</span><strong>AI Lab</strong></a>
+      <a class="pager-link next" href="/docs/recorder/"><span>Next →</span><strong>Recorder</strong></a>
+    </nav></main>
+</div>
+<footer class="foot"><p>© 2026 Spi · apispi.com · <a href="/developers">API reference</a> · <a href="/">Open the app</a></p></footer>
+<script src="/docs/app.js" defer></script>
+</body>
+</html>

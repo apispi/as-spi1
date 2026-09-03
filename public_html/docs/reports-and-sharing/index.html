@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reports and sharing · Spi docs</title>
+<meta name="description" content="Inspection reports, shareable links, public status pages, and Postman/OpenAPI export.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/docs/styles.css">
+<script>
+  // Resolve theme before first paint (mirrors the app's spi-theme key).
+  (function(){try{var t=localStorage.getItem('spi-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/docs/">
+    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <span>Spi docs</span>
+  </a>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs…" autocomplete="off" aria-label="Search"><div id="results" class="results" hidden></div></div>
+  <div class="topbar-right">
+    <button id="theme" class="icon-btn" type="button" aria-label="Toggle theme">◐</button>
+    <a class="topbar-link" href="/">Open app →</a>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav><div class="nav-group"><div class="nav-cat">Getting started</div><a href="/docs/introduction/" class="nav-link">What is Spi?</a><a href="/docs/quickstart/" class="nav-link">Quickstart</a></div><div class="nav-group"><div class="nav-cat">Testing &amp; assertions</div><a href="/docs/sending-requests/" class="nav-link">Sending requests</a><a href="/docs/environments-and-variables/" class="nav-link">Environments and variables</a><a href="/docs/assertions/" class="nav-link">Assertions</a><a href="/docs/response-contracts/" class="nav-link">Response contracts</a></div><div class="nav-group"><div class="nav-cat">Automation &amp; monitoring</div><a href="/docs/collections/" class="nav-link">Collections</a><a href="/docs/monitors-and-alerts/" class="nav-link">Monitors and alerts</a><a href="/docs/webhooks/" class="nav-link">Webhooks, datasets, and profiling</a></div><div class="nav-group"><div class="nav-cat">MCP &amp; agents</div><a href="/docs/mcp-testing/" class="nav-link">MCP testing</a></div><div class="nav-group"><div class="nav-cat">Sharing &amp; reporting</div><a href="/docs/reports-and-sharing/" class="nav-link active">Reports and sharing</a></div><div class="nav-group"><div class="nav-cat">Developer &amp; API</div><a href="/docs/api-keys-and-programmatic-access/" class="nav-link">API keys and programmatic access</a></div><div class="nav-group"><div class="nav-cat">Workspace guide</div><a href="/docs/navigating-spi/" class="nav-link">Navigating Spi</a><a href="/docs/home-dashboard/" class="nav-link">Home</a><a href="/docs/ai-lab/" class="nav-link">AI Lab</a><a href="/docs/explorer/" class="nav-link">Explorer</a><a href="/docs/recorder/" class="nav-link">Recorder</a><a href="/docs/mocks/" class="nav-link">Mocks</a><a href="/docs/spi-assistant/" class="nav-link">Spi assistant</a><a href="/docs/usage-and-account-activity/" class="nav-link">Usage &amp; account activity</a></div></nav></aside>
+  <main class="content">
+    <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Sharing &amp; reporting</span></div>
+    <h1>Reports and sharing</h1>
+    <p class="lead">Inspection reports, shareable links, public status pages, and Postman/OpenAPI export.</p>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#inspection-reports">Inspection reports</a><a href="#shareable-report-links">Shareable report links</a><a href="#public-status-pages">Public status pages</a><a href="#exporting-collections">Exporting collections</a></nav>
+    <article><p>Runs in Spi produce inspection reports you can keep, compare, and — when you choose — share publicly with an unguessable link. You can also publish a status page and export collections to other tools. Browse saved reports in <a href="/reports">Reports</a>.</p>
+<h2 id="inspection-reports">Inspection reports</h2>
+<p>A collection run, a monitor run, and other inspections are saved as reports with a summary and the full result data. You can list them, open one for detail, delete them, and compare two to see what changed between runs.</p>
+<h2 id="shareable-report-links">Shareable report links</h2>
+<p>Share a report and Spi mints an unguessable token, giving you a public, read-only URL:</p>
+<div class="code"><div class="code-head"><span>text</span><button class="copy" type="button">Copy</button></div><pre><code>https://apispi.com/r/{token}</code></pre></div>
+<p>Anyone with the link can view the report without an account. You can revoke sharing at any time, which invalidates the link. Because secrets are masked wherever a run is persisted, a shared report will not leak the tokens the run used — see <a href="/docs/environments-and-variables/">Environments and variables</a>.</p>
+<h2 id="public-status-pages">Public status pages</h2>
+<p>A status page publishes the health of one or more <a href="/docs/monitors-and-alerts/">monitors</a> at a public URL:</p>
+<div class="code"><div class="code-head"><span>text</span><button class="copy" type="button">Copy</button></div><pre><code>https://apispi.com/status/{token}</code></pre></div>
+<p>It is token-gated and unauthenticated, renders current status and recent uptime from monitor history, and can be enabled or disabled. It is the page you point customers or teammates at instead of answering "is it down?" by hand.</p>
+<h2 id="exporting-collections">Exporting collections</h2>
+<p>A <a href="/docs/collections/">collection</a> can be exported so it lives on outside Spi:</p>
+<ul><li><strong>Postman</strong> — export as a Postman collection to run or share it in Postman.</li><li><strong>OpenAPI 3.1</strong> — export the REST/HTTP requests as an OpenAPI 3.1 document. Spi's <code>{{var}}</code> templating maps to OpenAPI's single-brace <code>{var}</code> path/server variables, and attached response contracts become response schemas.</li></ul>
+<div class="note">OpenAPI export covers REST/HTTP requests, since the other protocols have no OpenAPI representation. Spi can also import: bring in a <code>curl</code> command or an OpenAPI document to create requests.</div></article>
+    <nav class="pager">
+      <a class="pager-link prev" href="/docs/mcp-testing/"><span>← Previous</span><strong>MCP testing</strong></a>
+      <a class="pager-link next" href="/docs/api-keys-and-programmatic-access/"><span>Next →</span><strong>API keys and programmatic access</strong></a>
+    </nav></main>
+</div>
+<footer class="foot"><p>© 2026 Spi · apispi.com · <a href="/developers">API reference</a> · <a href="/">Open the app</a></p></footer>
+<script src="/docs/app.js" defer></script>
+</body>
+</html>

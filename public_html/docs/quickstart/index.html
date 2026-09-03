@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quickstart · Spi docs</title>
+<meta name="description" content="Create an account, send your first request in the Tester, and save it.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/docs/styles.css">
+<script>
+  // Resolve theme before first paint (mirrors the app's spi-theme key).
+  (function(){try{var t=localStorage.getItem('spi-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/docs/">
+    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <span>Spi docs</span>
+  </a>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs…" autocomplete="off" aria-label="Search"><div id="results" class="results" hidden></div></div>
+  <div class="topbar-right">
+    <button id="theme" class="icon-btn" type="button" aria-label="Toggle theme">◐</button>
+    <a class="topbar-link" href="/">Open app →</a>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav><div class="nav-group"><div class="nav-cat">Getting started</div><a href="/docs/introduction/" class="nav-link">What is Spi?</a><a href="/docs/quickstart/" class="nav-link active">Quickstart</a></div><div class="nav-group"><div class="nav-cat">Testing &amp; assertions</div><a href="/docs/sending-requests/" class="nav-link">Sending requests</a><a href="/docs/environments-and-variables/" class="nav-link">Environments and variables</a><a href="/docs/assertions/" class="nav-link">Assertions</a><a href="/docs/response-contracts/" class="nav-link">Response contracts</a></div><div class="nav-group"><div class="nav-cat">Automation &amp; monitoring</div><a href="/docs/collections/" class="nav-link">Collections</a><a href="/docs/monitors-and-alerts/" class="nav-link">Monitors and alerts</a><a href="/docs/webhooks/" class="nav-link">Webhooks, datasets, and profiling</a></div><div class="nav-group"><div class="nav-cat">MCP &amp; agents</div><a href="/docs/mcp-testing/" class="nav-link">MCP testing</a></div><div class="nav-group"><div class="nav-cat">Sharing &amp; reporting</div><a href="/docs/reports-and-sharing/" class="nav-link">Reports and sharing</a></div><div class="nav-group"><div class="nav-cat">Developer &amp; API</div><a href="/docs/api-keys-and-programmatic-access/" class="nav-link">API keys and programmatic access</a></div><div class="nav-group"><div class="nav-cat">Workspace guide</div><a href="/docs/navigating-spi/" class="nav-link">Navigating Spi</a><a href="/docs/home-dashboard/" class="nav-link">Home</a><a href="/docs/ai-lab/" class="nav-link">AI Lab</a><a href="/docs/explorer/" class="nav-link">Explorer</a><a href="/docs/recorder/" class="nav-link">Recorder</a><a href="/docs/mocks/" class="nav-link">Mocks</a><a href="/docs/spi-assistant/" class="nav-link">Spi assistant</a><a href="/docs/usage-and-account-activity/" class="nav-link">Usage &amp; account activity</a></div></nav></aside>
+  <main class="content">
+    <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Getting started</span></div>
+    <h1>Quickstart</h1>
+    <p class="lead">Create an account, send your first request in the Tester, and save it.</p>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#1-create-an-account">1. Create an account</a><a href="#2-send-your-first-request">2. Send your first request</a><a href="#3-save-it">3. Save it</a><a href="#where-to-next">Where to next</a></nav>
+    <article><p>This guide takes you from a fresh account to a saved request in a few minutes. All you need is an API endpoint to call — a public one such as <code>https://httpbin.org/get</code> works fine.</p>
+<h2 id="1-create-an-account">1. Create an account</h2>
+<ol><li>Open the <a href="/register">registration page</a> and sign up with your email, or use Google sign-in.</li><li>Confirm your details to finish registration.</li><li>You will land on the <a href="/dashboard">dashboard</a>, which summarises your recent activity.</li></ol>
+<h2 id="2-send-your-first-request">2. Send your first request</h2>
+<ol><li>Open the <a href="/tester">Tester</a>.</li><li>Leave the protocol set to <strong>REST</strong> and the method set to <strong>GET</strong>.</li><li>Enter a URL, for example <code>https://httpbin.org/get</code>.</li><li>Press <strong>Send</strong>. The response — status, timing, headers, and body — appears alongside the request.</li></ol>
+<p>Try a request with a body next. Switch the method to <strong>POST</strong> and send some JSON:</p>
+<div class="code"><div class="code-head"><span>json</span><button class="copy" type="button">Copy</button></div><pre><code>{
+  "name": "Ada",
+  "role": "engineer"
+}</code></pre></div>
+<h2 id="3-save-it">3. Save it</h2>
+<p>Once a request does what you want, save it so you can re-run it, assert on it, or add it to a collection.</p>
+<ol><li>Give the request a name.</li><li>Save it. It now appears in your saved requests and is available to <a href="/collections">Collections</a>.</li></ol>
+<div class="note">Values you will reuse — a base URL, a token — belong in an environment as <code>{{variables}}</code>, not typed inline. See <a href="/docs/environments-and-variables/">Environments and variables</a>.</div>
+<h2 id="where-to-next">Where to next</h2>
+<ul><li>Add pass/fail checks with <a href="/docs/assertions/">assertions</a>.</li><li>Chain saved requests together with <a href="/docs/collections/">collections</a>.</li><li>Watch an endpoint over time with <a href="/docs/monitors-and-alerts/">monitors and alerts</a>.</li></ul></article>
+    <nav class="pager">
+      <a class="pager-link prev" href="/docs/introduction/"><span>← Previous</span><strong>What is Spi?</strong></a>
+      <a class="pager-link next" href="/docs/sending-requests/"><span>Next →</span><strong>Sending requests</strong></a>
+    </nav></main>
+</div>
+<footer class="foot"><p>© 2026 Spi · apispi.com · <a href="/developers">API reference</a> · <a href="/">Open the app</a></p></footer>
+<script src="/docs/app.js" defer></script>
+</body>
+</html>

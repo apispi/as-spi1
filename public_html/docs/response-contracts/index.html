@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Response contracts · Spi docs</title>
+<meta name="description" content="Capture an inferred response schema and catch breaking vs additive drift automatically.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/docs/styles.css">
+<script>
+  // Resolve theme before first paint (mirrors the app's spi-theme key).
+  (function(){try{var t=localStorage.getItem('spi-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/docs/">
+    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <span>Spi docs</span>
+  </a>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs…" autocomplete="off" aria-label="Search"><div id="results" class="results" hidden></div></div>
+  <div class="topbar-right">
+    <button id="theme" class="icon-btn" type="button" aria-label="Toggle theme">◐</button>
+    <a class="topbar-link" href="/">Open app →</a>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav><div class="nav-group"><div class="nav-cat">Getting started</div><a href="/docs/introduction/" class="nav-link">What is Spi?</a><a href="/docs/quickstart/" class="nav-link">Quickstart</a></div><div class="nav-group"><div class="nav-cat">Testing &amp; assertions</div><a href="/docs/sending-requests/" class="nav-link">Sending requests</a><a href="/docs/environments-and-variables/" class="nav-link">Environments and variables</a><a href="/docs/assertions/" class="nav-link">Assertions</a><a href="/docs/response-contracts/" class="nav-link active">Response contracts</a></div><div class="nav-group"><div class="nav-cat">Automation &amp; monitoring</div><a href="/docs/collections/" class="nav-link">Collections</a><a href="/docs/monitors-and-alerts/" class="nav-link">Monitors and alerts</a><a href="/docs/webhooks/" class="nav-link">Webhooks, datasets, and profiling</a></div><div class="nav-group"><div class="nav-cat">MCP &amp; agents</div><a href="/docs/mcp-testing/" class="nav-link">MCP testing</a></div><div class="nav-group"><div class="nav-cat">Sharing &amp; reporting</div><a href="/docs/reports-and-sharing/" class="nav-link">Reports and sharing</a></div><div class="nav-group"><div class="nav-cat">Developer &amp; API</div><a href="/docs/api-keys-and-programmatic-access/" class="nav-link">API keys and programmatic access</a></div><div class="nav-group"><div class="nav-cat">Workspace guide</div><a href="/docs/navigating-spi/" class="nav-link">Navigating Spi</a><a href="/docs/home-dashboard/" class="nav-link">Home</a><a href="/docs/ai-lab/" class="nav-link">AI Lab</a><a href="/docs/explorer/" class="nav-link">Explorer</a><a href="/docs/recorder/" class="nav-link">Recorder</a><a href="/docs/mocks/" class="nav-link">Mocks</a><a href="/docs/spi-assistant/" class="nav-link">Spi assistant</a><a href="/docs/usage-and-account-activity/" class="nav-link">Usage &amp; account activity</a></div></nav></aside>
+  <main class="content">
+    <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Testing &amp; assertions</span></div>
+    <h1>Response contracts</h1>
+    <p class="lead">Capture an inferred response schema and catch breaking vs additive drift automatically.</p>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#what-the-contract-captures">What the contract captures</a><a href="#breaking-vs-additive-drift">Breaking vs additive drift</a><a href="#capturing-and-checking-a-contract">Capturing and checking a contract</a></nav>
+    <article><p>A response contract catches the changes assertions miss. You never write the schema — Spi infers a compact structural description from a known-good response, stores it on the saved request, and checks later responses against it. A silently dropped field or a number that became a string is caught even when the status stays <code>200</code>.</p>
+<h2 id="what-the-contract-captures">What the contract captures</h2>
+<p>From a decoded JSON response, Spi records:</p>
+<ul><li>The <strong>type</strong> of every value (<code>string</code>, <code>integer</code>, <code>number</code>, <code>boolean</code>, <code>object</code>, <code>array</code>, <code>null</code>).</li><li>For objects, the <strong>properties</strong> and which of them were <strong>required</strong> (present in the sample).</li><li>For arrays, a single merged <strong>item schema</strong> describing the element shape.</li><li>A recognisable <strong>format</strong> on strings — <code>date-time</code>, <code>email</code>, <code>uri</code>, or <code>uuid</code> — because a date field that stops being a date is a real break.</li></ul>
+<h2 id="breaking-vs-additive-drift">Breaking vs additive drift</h2>
+<p>When a live response is checked against the contract, Spi classifies each difference into three kinds — and only two of them break a consumer:</p>
+<ul><li><strong>Removed</strong> (breaking) — a field the contract marked required is gone.</li><li><strong>Type changed</strong> (breaking) — a field is no longer the type the contract recorded. Note that an <code>integer</code> still satisfies a <code>number</code>.</li><li><strong>Added</strong> (additive) — a field appeared that the contract never described. This is reported but does not break anything.</li></ul>
+<p>Every difference is reported with a dotted path (e.g. <code>$.data.items[0].id</code>) so a drift report points at the exact field. A response conforms only when there is no breaking drift and nothing was added.</p>
+<h2 id="capturing-and-checking-a-contract">Capturing and checking a contract</h2>
+<ol><li>Send the request in the <a href="/tester">Tester</a> until you get a representative, known-good JSON response.</li><li>Infer and attach the contract to the saved request — Spi walks the response into a schema for you.</li><li>Later, check a fresh response against the stored contract to see what drifted.</li></ol>
+<div class="note">During a <a href="/docs/collections/">collection run</a>, a step with a contract attached is checked automatically: <strong>breaking</strong> drift fails the step (catching silent breaks no assertion covered), while <strong>additive</strong> drift is reported without failing. A <a href="/docs/monitors-and-alerts/">monitor</a> therefore alerts you the moment an endpoint breaks its shape.</div></article>
+    <nav class="pager">
+      <a class="pager-link prev" href="/docs/assertions/"><span>← Previous</span><strong>Assertions</strong></a>
+      <a class="pager-link next" href="/docs/collections/"><span>Next →</span><strong>Collections</strong></a>
+    </nav></main>
+</div>
+<footer class="foot"><p>© 2026 Spi · apispi.com · <a href="/developers">API reference</a> · <a href="/">Open the app</a></p></footer>
+<script src="/docs/app.js" defer></script>
+</body>
+</html>

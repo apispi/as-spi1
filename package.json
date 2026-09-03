@@ -3,7 +3,8 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build",
+        "build": "vite build && node scripts/build-docs.mjs",
+        "build:docs": "node scripts/build-docs.mjs",
         "dev": "vite"
     },
     "devDependencies": {

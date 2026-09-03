@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home · Spi docs</title>
+<meta name="description" content="The dashboard you land on: shortcuts to every area and your recent reports.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/docs/styles.css">
+<script>
+  // Resolve theme before first paint (mirrors the app's spi-theme key).
+  (function(){try{var t=localStorage.getItem('spi-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/docs/">
+    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <span>Spi docs</span>
+  </a>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs…" autocomplete="off" aria-label="Search"><div id="results" class="results" hidden></div></div>
+  <div class="topbar-right">
+    <button id="theme" class="icon-btn" type="button" aria-label="Toggle theme">◐</button>
+    <a class="topbar-link" href="/">Open app →</a>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav><div class="nav-group"><div class="nav-cat">Getting started</div><a href="/docs/introduction/" class="nav-link">What is Spi?</a><a href="/docs/quickstart/" class="nav-link">Quickstart</a></div><div class="nav-group"><div class="nav-cat">Testing &amp; assertions</div><a href="/docs/sending-requests/" class="nav-link">Sending requests</a><a href="/docs/environments-and-variables/" class="nav-link">Environments and variables</a><a href="/docs/assertions/" class="nav-link">Assertions</a><a href="/docs/response-contracts/" class="nav-link">Response contracts</a></div><div class="nav-group"><div class="nav-cat">Automation &amp; monitoring</div><a href="/docs/collections/" class="nav-link">Collections</a><a href="/docs/monitors-and-alerts/" class="nav-link">Monitors and alerts</a><a href="/docs/webhooks/" class="nav-link">Webhooks, datasets, and profiling</a></div><div class="nav-group"><div class="nav-cat">MCP &amp; agents</div><a href="/docs/mcp-testing/" class="nav-link">MCP testing</a></div><div class="nav-group"><div class="nav-cat">Sharing &amp; reporting</div><a href="/docs/reports-and-sharing/" class="nav-link">Reports and sharing</a></div><div class="nav-group"><div class="nav-cat">Developer &amp; API</div><a href="/docs/api-keys-and-programmatic-access/" class="nav-link">API keys and programmatic access</a></div><div class="nav-group"><div class="nav-cat">Workspace guide</div><a href="/docs/navigating-spi/" class="nav-link">Navigating Spi</a><a href="/docs/home-dashboard/" class="nav-link active">Home</a><a href="/docs/ai-lab/" class="nav-link">AI Lab</a><a href="/docs/explorer/" class="nav-link">Explorer</a><a href="/docs/recorder/" class="nav-link">Recorder</a><a href="/docs/mocks/" class="nav-link">Mocks</a><a href="/docs/spi-assistant/" class="nav-link">Spi assistant</a><a href="/docs/usage-and-account-activity/" class="nav-link">Usage &amp; account activity</a></div></nav></aside>
+  <main class="content">
+    <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Workspace guide</span></div>
+    <h1>Home</h1>
+    <p class="lead">The dashboard you land on: shortcuts to every area and your recent reports.</p>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#the-shortcut-grid">The shortcut grid</a><a href="#recent-reports">Recent reports</a></nav>
+    <article><p>Home is the <a href="/dashboard">dashboard</a> you land on after signing in. It is a launchpad: a greeting, a grid of shortcuts to the main areas of the app, and a list of the reports you generated most recently.</p>
+<h2 id="the-shortcut-grid">The shortcut grid</h2>
+<p>The cards near the top jump straight to the areas you use most:</p>
+<ul><li><a href="/docs/collections/">Collections</a> — your saved requests and the collections that run them in order.</li><li><a href="/docs/sending-requests/">Tester</a> — send REST, MCP, A2A, gRPC, MQTT, and AMQP requests, with environments for reusable <code>{{variables}}</code>.</li><li><a href="/docs/ai-lab/">AI Lab</a> — author requests from plain English, explain responses, generate assertions, and scan MCP tools for prompt-injection.</li><li><a href="/docs/monitors-and-alerts/">Monitors</a> — run a collection on a schedule and get alerted when it starts failing.</li><li><a href="/docs/reports-and-sharing/">Reports</a> — saved conformance grades, security scans, and agent runs.</li><li><a href="/docs/spi-assistant/">Spi</a> — the built-in assistant for building requests and debugging failures.</li></ul>
+<h2 id="recent-reports">Recent reports</h2>
+<p>Below the grid, Home lists your five most recent reports — each with its type (conformance, security, agent run, collection run, MCP drift, and so on), the connector or target it ran against, a one-line summary, and how long ago it ran. Click any row to open <a href="/reports">Reports</a>; use <strong>View all</strong> to see the full history.</p>
+<p>When you have not run anything yet, this area is empty and points you at <a href="/docs/ai-lab/">AI Lab</a> to generate your first report.</p>
+<div class="note">New to Spi? The <a href="/docs/quickstart/">quickstart</a> takes you from a fresh account to a saved request in a few minutes.</div></article>
+    <nav class="pager">
+      <a class="pager-link prev" href="/docs/navigating-spi/"><span>← Previous</span><strong>Navigating Spi</strong></a>
+      <a class="pager-link next" href="/docs/ai-lab/"><span>Next →</span><strong>AI Lab</strong></a>
+    </nav></main>
+</div>
+<footer class="foot"><p>© 2026 Spi · apispi.com · <a href="/developers">API reference</a> · <a href="/">Open the app</a></p></footer>
+<script src="/docs/app.js" defer></script>
+</body>
+</html>
