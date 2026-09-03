@@ -113,8 +113,10 @@
                     title="Run against two environments and diff the responses">Compare envs</button>
             <button class="col-btn" @click="openDataset(c)" :disabled="!c.steps.length"
                     title="Run once per row of a dataset">With data</button>
-            <button class="col-btn" @click="exportCollection(c)" :disabled="!c.steps.length"
-                    title="Download as a Postman collection">Export</button>
+            <button class="col-btn" @click="exportCollection(c, 'postman')" :disabled="!c.steps.length"
+                    title="Download as a Postman collection">Export Postman</button>
+            <button class="col-btn" @click="exportCollection(c, 'openapi')" :disabled="!c.steps.length"
+                    title="Download as an OpenAPI 3.1 document">Export OpenAPI</button>
             <button class="col-btn" @click="showManager = true">Edit</button>
           </div>
         </li>
@@ -345,13 +347,18 @@ const fuzz = async (req) => {
   }
 };
 
-const exportCollection = async (c) => {
+const exportCollection = async (c, format = 'postman') => {
+  const isOpenApi = format === 'openapi';
   try {
-    const res = await axios.get(`/api/collections/${c.id}/export`);
+    const url = isOpenApi
+      ? `/api/collections/${c.id}/export/openapi`
+      : `/api/collections/${c.id}/export`;
+    const res = await axios.get(url);
     const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `${c.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.postman_collection.json`;
+    const slug = c.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+    a.download = isOpenApi ? `${slug}.openapi.json` : `${slug}.postman_collection.json`;
     a.click();
     URL.revokeObjectURL(a.href);
   } catch {

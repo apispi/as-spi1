@@ -178,6 +178,22 @@ class CollectionController extends Controller
             ->header('Content-Disposition', 'attachment; filename="'.$filename.'"');
     }
 
+    /**
+     * Export the collection as an OpenAPI 3.1 document. Inferred response
+     * contracts and JSON request bodies become schemas; Spi `{{variables}}`
+     * map to OpenAPI server variables and path parameters.
+     */
+    public function exportOpenApi(Request $request, \App\Services\Export\OpenApiExporter $exporter, int $id)
+    {
+        $collection = Collection::inWorkspaceOf($request->user())->findOrFail($id);
+
+        $document = $exporter->export($collection);
+        $filename = \Illuminate\Support\Str::slug($collection->name ?: 'collection').'.openapi.json';
+
+        return response()->json($document)
+            ->header('Content-Disposition', 'attachment; filename="'.$filename.'"');
+    }
+
     /** Rows per dataset run; bounded so a synchronous run stays responsive. */
     public const MAX_DATASET_ROWS = 50;
 
