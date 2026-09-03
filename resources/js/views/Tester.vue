@@ -49,6 +49,11 @@
             :savedRequestId="currentLoadedRequest?.id || null"
             :hasContractInitial="!!currentLoadedRequest?.contract"
           />
+          <SnapshotPanel
+            :response="responseData"
+            :savedRequestId="currentLoadedRequest?.id || null"
+            :hasSnapshotInitial="!!currentLoadedRequest?.snapshot_taken_at"
+          />
         </div>
       </main>
     </div>
@@ -66,6 +71,7 @@ import ResponsePanel from '../components/ResponsePanel.vue';
 import EnvironmentManager from '../components/EnvironmentManager.vue';
 import AssertionsPanel from '../components/AssertionsPanel.vue';
 import ContractPanel from '../components/ContractPanel.vue';
+import SnapshotPanel from '../components/SnapshotPanel.vue';
 import ImportDialog from '../components/ImportDialog.vue';
 import RunResults from '../components/RunResults.vue';
 import Icon from '../components/Icon.vue';

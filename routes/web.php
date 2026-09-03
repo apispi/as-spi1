@@ -119,6 +119,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/contract/infer', [\App\Http\Controllers\ContractController::class, 'infer']);
     Route::put('/api/saved-requests/{id}/contract', [\App\Http\Controllers\ContractController::class, 'update']);
     Route::post('/api/saved-requests/{id}/contract/check', [\App\Http\Controllers\ContractController::class, 'check']);
+    Route::get('/api/saved-requests/{id}/snapshot', [\App\Http\Controllers\SnapshotController::class, 'show']);
+    Route::put('/api/saved-requests/{id}/snapshot', [\App\Http\Controllers\SnapshotController::class, 'update']);
+    Route::post('/api/saved-requests/{id}/snapshot/check', [\App\Http\Controllers\SnapshotController::class, 'check']);
     Route::put('/api/saved-requests/{id}/assertions', [AssertionController::class, 'update']);
 
     Route::post('/api/import/curl', [ImportController::class, 'curl']);

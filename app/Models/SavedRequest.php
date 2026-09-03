@@ -20,6 +20,8 @@ class SavedRequest extends Model
         'params',
         'assertions',
         'contract',
+        'snapshot',
+        'snapshot_taken_at',
     ];
 
     protected $casts = [
@@ -27,7 +29,13 @@ class SavedRequest extends Model
         'params' => 'array',
         'assertions' => 'array',
         'contract' => 'array',
+        'snapshot' => 'array',
+        'snapshot_taken_at' => 'datetime',
     ];
+
+    // The golden body can be large; keep it out of API responses. The client
+    // only needs snapshot_taken_at (a separate column) to know one exists.
+    protected $hidden = ['snapshot'];
 
     public function user()
     {
