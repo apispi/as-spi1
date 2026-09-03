@@ -85,6 +85,14 @@ class User extends Authenticatable
 
     public static function findByApiKey(string $plain): ?self
     {
+        // Named keys (api_keys table) are the current model; the single legacy
+        // api_token column still resolves for keys issued before the change.
+        if ($key = \App\Models\ApiKey::resolve($plain)) {
+            $key->forceFill(['last_used_at' => now()])->save();
+
+            return $key->user;
+        }
+
         return static::where('api_token', self::hashApiKey($plain))->first();
     }
 
@@ -163,5 +171,10 @@ class User extends Authenticatable
     public function alertChannels()
     {
         return $this->hasMany(AlertChannel::class);
+    }
+
+    public function apiKeys()
+    {
+        return $this->hasMany(ApiKey::class);
     }
 }

@@ -158,25 +158,61 @@
 
           <div class="up-card">
             <div class="up-card-header">
-              <h2 class="up-card-title">Your API Key</h2>
-              <p class="up-card-sub">Authenticate programmatic requests to <code class="up-inline-code">/api/v1</code></p>
+              <h2 class="up-card-title">API Keys</h2>
+              <p class="up-card-sub">Named keys that authenticate programmatic requests to <code class="up-inline-code">/api/v1</code>. Create one per app or script so you can revoke them independently.</p>
             </div>
 
-            <div v-if="apiKeyInfo.has_key" class="up-api-key-row">
-              <div class="up-api-key-display">
-                <code>{{ apiKeyInfo.masked }}</code>
-                <span class="up-key-meta">created {{ formatMemberSince(apiKeyInfo.created_at) }}</span>
-              </div>
-              <p class="up-hint">For your security the full key is only shown once, when it is created.</p>
-            </div>
-            <div v-else class="up-empty">You don't have an API key yet.</div>
-
-            <div class="up-api-key-actions">
-              <button @click="regenerateApiKey" class="up-btn-save" :disabled="regenerating">
-                {{ regenerating ? 'Generating...' : (apiKeyInfo.has_key ? 'Regenerate Key' : 'Generate Key') }}
+            <form class="up-key-create" @submit.prevent="createKey">
+              <input
+                v-model="keyForm.name"
+                class="up-input"
+                type="text"
+                maxlength="60"
+                placeholder="Key name (e.g. CI pipeline)"
+                :disabled="creatingKey"
+              >
+              <input
+                v-model="keyForm.expires_at"
+                class="up-input up-key-expiry"
+                type="date"
+                :min="tomorrow"
+                :disabled="creatingKey"
+                title="Optional expiry date"
+              >
+              <button type="submit" class="up-btn-save" :disabled="creatingKey || !keyForm.name.trim()">
+                {{ creatingKey ? 'Creating…' : 'Create Key' }}
               </button>
-              <p class="up-hint" v-if="apiKeyInfo.has_key">Regenerating will immediately invalidate your old key</p>
+            </form>
+
+            <div v-if="apiKeys.length" class="up-key-table">
+              <div v-for="key in apiKeys" :key="key.id" class="up-key-item" :class="{ 'is-revoked': key.revoked, 'is-expired': key.expired }">
+                <div class="up-key-item-main">
+                  <div class="up-key-item-name">
+                    {{ key.name }}
+                    <span v-if="key.revoked" class="up-key-badge revoked">revoked</span>
+                    <span v-else-if="key.expired" class="up-key-badge expired">expired</span>
+                    <span v-else class="up-key-badge active">active</span>
+                  </div>
+                  <code class="up-key-item-mask">{{ key.masked }}</code>
+                </div>
+                <div class="up-key-item-meta">
+                  <span>created {{ formatMemberSince(key.created_at) }}</span>
+                  <span v-if="key.expires_at">· expires {{ formatMemberSince(key.expires_at) }}</span>
+                  <span v-if="key.last_used_at">· last used {{ formatMemberSince(key.last_used_at) }}</span>
+                  <span v-else>· never used</span>
+                </div>
+                <button
+                  v-if="!key.revoked"
+                  class="up-btn-danger-sm"
+                  :disabled="revokingId === key.id"
+                  @click="revokeKey(key)"
+                >
+                  {{ revokingId === key.id ? 'Revoking…' : 'Revoke' }}
+                </button>
+              </div>
             </div>
+            <div v-else class="up-empty">You don't have any API keys yet.</div>
+            <p class="up-hint">For your security the full key is shown only once, when it is created.</p>
           </div>
 
           <div class="up-card">
@@ -313,7 +349,7 @@ const authStore = useAuthStore();
 
 onMounted(() => {
   form.name = authStore.user?.name || '';
-  loadApiKey();
+  loadApiKeys();
   loadScxKeyStatus();
   loadStats();
   loadRecentActivity();
@@ -351,8 +387,11 @@ const timezones = (typeof Intl.supportedValuesOf === 'function')
   ? Intl.supportedValuesOf('timeZone')
   : ['UTC', 'America/New_York', 'Europe/London', 'Australia/Sydney', 'Asia/Singapore'];
 
-const apiKeyInfo = ref({ has_key: false, masked: null, created_at: null });
-const regenerating = ref(false);
+const apiKeys = ref([]);
+const keyForm = reactive({ name: '', expires_at: '' });
+const creatingKey = ref(false);
+const revokingId = ref(null);
+const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
 const newKey = ref('');
 const newKeyName = ref('');
 const showKeyBanner = ref(false);
@@ -380,12 +419,12 @@ const loadScxKeyStatus = async () => {
   }
 };
 
-const loadApiKey = async () => {
+const loadApiKeys = async () => {
   try {
-    const res = await axios.get('/api/user/api-key');
-    apiKeyInfo.value = res.data;
+    const res = await axios.get('/api/user/api-keys');
+    apiKeys.value = res.data || [];
   } catch (error) {
-    apiKeyInfo.value = { has_key: false, masked: null, created_at: null };
+    apiKeys.value = [];
   }
 };
 
@@ -477,21 +516,40 @@ const copyNewKey = async () => {
   }
 };
 
-const regenerateApiKey = async () => {
-  if (apiKeyInfo.value.has_key && !confirm('Are you sure? Your old API key will stop working immediately.')) return;
-  regenerating.value = true;
+const createKey = async () => {
+  if (!keyForm.name.trim()) return;
+  creatingKey.value = true;
   flashError.value = '';
   try {
-    const res = await axios.post('/api/user/api-key/regenerate');
+    const payload = { name: keyForm.name.trim() };
+    if (keyForm.expires_at) payload.expires_at = keyForm.expires_at;
+    const res = await axios.post('/api/user/api-keys', payload);
     // Plaintext is returned once only — surface it in the copy banner.
-    newKey.value = res.data.api_key;
-    newKeyName.value = 'Your new API key';
+    newKey.value = res.data.plaintext;
+    newKeyName.value = res.data.name;
     showKeyBanner.value = true;
-    await loadApiKey();
+    copiedKey.value = false;
+    keyForm.name = '';
+    keyForm.expires_at = '';
+    await loadApiKeys();
   } catch (error) {
-    flashError.value = 'Failed to generate key';
+    flashError.value = error.response?.data?.message || 'Failed to create key';
   } finally {
-    regenerating.value = false;
+    creatingKey.value = false;
+  }
+};
+
+const revokeKey = async (key) => {
+  if (!confirm(`Revoke "${key.name}"? Any request using it will stop working immediately.`)) return;
+  revokingId.value = key.id;
+  flashError.value = '';
+  try {
+    await axios.delete(`/api/user/api-keys/${key.id}`);
+    await loadApiKeys();
+  } catch (error) {
+    flashError.value = 'Failed to revoke key';
+  } finally {
+    revokingId.value = null;
   }
 };
 
@@ -679,6 +737,37 @@ const deleteAccount = async () => {
 .up-api-key-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
 .up-api-key-actions .up-hint { margin: 0; }
 .up-key-meta { font-size: 0.75rem; color: #4b5563; flex-shrink: 0; }
+
+/* Named API keys */
+.up-key-create { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.up-key-create .up-input { flex: 1; min-width: 180px; margin: 0; }
+.up-key-create .up-key-expiry { flex: 0 0 auto; max-width: 170px; }
+.up-key-create .up-btn-save { margin-top: 0; }
+.up-key-table { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 0.75rem; }
+.up-key-item {
+  display: grid; grid-template-columns: 1fr auto; align-items: center;
+  gap: 0.35rem 1rem;
+  background: rgba(10,8,5,0.6); border: 1px solid rgba(59,130,246,0.18);
+  border-radius: 0.625rem; padding: 0.75rem 1rem;
+}
+.up-key-item.is-revoked, .up-key-item.is-expired { opacity: 0.55; }
+.up-key-item-main { grid-column: 1; display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+.up-key-item-name { font-size: 0.9rem; font-weight: 600; color: #e5e7eb; display: flex; align-items: center; gap: 0.5rem; }
+.up-key-item-mask { font-family: 'Courier New', monospace; font-size: 0.8rem; color: #60A5FA; word-break: break-all; }
+.up-key-item-meta { grid-column: 1; font-size: 0.72rem; color: #4b5563; display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.up-key-badge { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.1rem 0.4rem; border-radius: 0.35rem; }
+.up-key-badge.active { color: #00d97e; background: rgba(0,217,126,0.12); }
+.up-key-badge.revoked { color: #f87171; background: rgba(248,113,113,0.12); }
+.up-key-badge.expired { color: #fbbf24; background: rgba(251,191,36,0.12); }
+.up-btn-danger-sm {
+  grid-column: 2; grid-row: 1 / span 2; align-self: center;
+  padding: 0.45rem 0.9rem; border-radius: 0.5rem;
+  background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.4);
+  color: #f87171; font-size: 0.8rem; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: all 0.18s; white-space: nowrap;
+}
+.up-btn-danger-sm:hover { background: rgba(248,113,113,0.22); }
+.up-btn-danger-sm:disabled { opacity: 0.6; cursor: not-allowed; }
 .up-inline-code {
   font-family: monospace; font-size: 0.85em; color: #60A5FA;
   background: rgba(0,0,0,0.3); padding: 0.1rem 0.35rem; border-radius: 0.25rem;
