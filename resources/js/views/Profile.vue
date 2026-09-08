@@ -88,6 +88,8 @@
               </div>
             </form>
           </div>
+
+          <TwoFactorSettings />
         </template>
 
         <!-- ── Personalisation tab ── -->
@@ -414,6 +416,7 @@ import { useAuthStore } from '../store/auth';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import { restartTour } from '../onboarding';
+import TwoFactorSettings from '../components/TwoFactorSettings.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();

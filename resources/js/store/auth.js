@@ -21,7 +21,15 @@ export const useAuthStore = defineStore('auth', {
             }
         },
         async login(credentials) {
-            await axios.post('/api/login', credentials);
+            const res = await axios.post('/api/login', credentials);
+            if (res.data && res.data.two_factor_required) {
+                return { twoFactorRequired: true };
+            }
+            await this.fetchUser();
+            return { twoFactorRequired: false };
+        },
+        async loginTwoFactor(code) {
+            await axios.post('/api/login/2fa', { code });
             await this.fetchUser();
         },
         async register(details) {

@@ -39,10 +39,23 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        if (Auth::attempt($credentials)) {
+        // Validate credentials WITHOUT establishing the session, so a
+        // two-factor user is not logged in before their second factor.
+        if (Auth::validate($credentials)) {
+            $user = User::where('email', $credentials['email'])->first();
+
+            if ($user && $user->hasTwoFactorEnabled()) {
+                // Stash a short-lived challenge; the code is verified next.
+                $request->session()->put('2fa:pending_user', $user->id);
+
+                return response()->json(['two_factor_required' => true]);
+            }
+
+            Auth::login($user);
             $request->session()->regenerate();
-            AuditEvent::record('auth.login', Auth::user(), $request);
-            return response()->json(Auth::user());
+            AuditEvent::record('auth.login', $user, $request);
+
+            return response()->json($user);
         }
 
         // Record the failed attempt against the email tried (no user id).
@@ -51,6 +64,38 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'The provided credentials do not match our records.'
         ], 401);
+    }
+
+    /**
+     * Second step of a two-factor login: verify the TOTP code (or a recovery
+     * code) for the user whose password already checked out this session.
+     */
+    public function loginTwoFactor(Request $request, \App\Services\Auth\Totp $totp)
+    {
+        $validated = $request->validate(['code' => 'required|string']);
+
+        $userId = $request->session()->get('2fa:pending_user');
+        $user = $userId ? User::find($userId) : null;
+
+        if (! $user || ! $user->hasTwoFactorEnabled()) {
+            return response()->json(['message' => 'No two-factor challenge in progress. Sign in again.'], 401);
+        }
+
+        $code = trim($validated['code']);
+        $ok = $totp->verify($user->two_factor_secret, $code) || $user->useRecoveryCode($code);
+
+        if (! $ok) {
+            AuditEvent::record('auth.2fa_failed', $user, $request);
+
+            return response()->json(['message' => 'That code is not valid.'], 422);
+        }
+
+        $request->session()->forget('2fa:pending_user');
+        Auth::login($user);
+        $request->session()->regenerate();
+        AuditEvent::record('auth.login', $user, $request, ['two_factor' => true]);
+
+        return response()->json($user);
     }
 
     public function logout(Request $request)

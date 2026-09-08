@@ -31,7 +31,7 @@ class User extends Authenticatable
     /**
      * @var list<string>
      */
-    protected $hidden = ['password', 'remember_token', 'scx_api_key', 'api_token', 'registration_token'];
+    protected $hidden = ['password', 'remember_token', 'scx_api_key', 'api_token', 'registration_token', 'two_factor_secret', 'two_factor_recovery_codes'];
 
     /**
      * Prefix on generated personal API keys, so they are recognisable.
@@ -53,7 +53,37 @@ class User extends Authenticatable
             'preferences' => 'array',
             'api_token_created_at' => 'datetime',
             'registration_token_expires_at' => 'datetime',
+            'two_factor_secret' => 'encrypted',
+            'two_factor_recovery_codes' => 'encrypted:array',
+            'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+
+    /** Whether the user has completed two-factor setup (secret verified). */
+    public function hasTwoFactorEnabled(): bool
+    {
+        return $this->two_factor_confirmed_at !== null && ! empty($this->two_factor_secret);
+    }
+
+    /**
+     * Consume a one-time recovery code if it matches an unused one. Returns
+     * true and marks it used; false if no match.
+     */
+    public function useRecoveryCode(string $code): bool
+    {
+        $codes = $this->two_factor_recovery_codes ?? [];
+        $normalized = strtolower(trim($code));
+
+        foreach ($codes as $i => $entry) {
+            if (($entry['used_at'] ?? null) === null && hash_equals(strtolower($entry['code']), $normalized)) {
+                $codes[$i]['used_at'] = now()->toIso8601String();
+                $this->forceFill(['two_factor_recovery_codes' => $codes])->save();
+
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -86,6 +86,7 @@ Route::post('/api/register', [AuthController::class, 'register'])->middleware('t
 Route::post('/api/register/start', [RegistrationController::class, 'start'])->middleware('throttle:auth-attempts');
 Route::post('/api/register/complete', [RegistrationController::class, 'complete'])->middleware('throttle:auth-attempts');
 Route::post('/api/login', [AuthController::class, 'login'])->middleware('throttle:auth-attempts');
+Route::post('/api/login/2fa', [AuthController::class, 'loginTwoFactor'])->middleware('throttle:auth-attempts');
 Route::post('/api/logout', [AuthController::class, 'logout'])->middleware('auth');
 Route::get('/api/user', [AuthController::class, 'user'])->middleware('auth');
 
@@ -108,6 +109,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/user/stats', [UserController::class, 'stats']);
     Route::get('/api/user/activity', [UserController::class, 'activity']);
     Route::get('/api/user/security-log', [UserController::class, 'securityLog']);
+    Route::get('/api/user/2fa', [\App\Http\Controllers\TwoFactorController::class, 'status']);
+    Route::post('/api/user/2fa/setup', [\App\Http\Controllers\TwoFactorController::class, 'setup']);
+    Route::post('/api/user/2fa/confirm', [\App\Http\Controllers\TwoFactorController::class, 'confirm']);
+    Route::get('/api/user/2fa/recovery', [\App\Http\Controllers\TwoFactorController::class, 'recoveryStatus']);
+    Route::delete('/api/user/2fa', [\App\Http\Controllers\TwoFactorController::class, 'disable']);
     Route::get('/api/user/api-keys', [\App\Http\Controllers\ApiKeyController::class, 'index']);
     Route::post('/api/user/api-keys', [\App\Http\Controllers\ApiKeyController::class, 'store']);
     Route::delete('/api/user/api-keys/{id}', [\App\Http\Controllers\ApiKeyController::class, 'destroy']);

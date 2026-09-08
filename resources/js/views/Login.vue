@@ -2,7 +2,9 @@
   <div class="auth-container">
     <div class="auth-box">
       <h2>Login to ApiSpi</h2>
-      <form @submit.prevent="handleLogin">
+
+      <!-- Step 1: email + password -->
+      <form v-if="!twoFactor" @submit.prevent="handleLogin">
         <div class="form-group">
           <label>Email</label>
           <input type="email" v-model="form.email" required class="input-field" />
@@ -16,11 +18,27 @@
           {{ isLoading ? 'Logging in...' : 'Login' }}
         </button>
       </form>
-      <GoogleButton />
 
-      <div class="auth-links mt-4 text-center text-sm text-secondary">
-        Don't have an account? <router-link to="/register" class="link">Register here</router-link>
-      </div>
+      <!-- Step 2: two-factor code -->
+      <form v-else @submit.prevent="handleTwoFactor">
+        <p class="tfa-lead">Enter the 6-digit code from your authenticator app, or a recovery code.</p>
+        <div class="form-group">
+          <label>Authentication code</label>
+          <input v-model="code" inputmode="text" autocomplete="one-time-code" autofocus class="input-field" placeholder="123456 or a recovery code" />
+        </div>
+        <div v-if="error" class="error-msg">{{ error }}</div>
+        <button type="submit" class="btn btn-primary w-full mt-4" :disabled="isLoading || !code">
+          {{ isLoading ? 'Verifying...' : 'Verify' }}
+        </button>
+        <button type="button" class="btn btn-secondary w-full mt-2" @click="cancelTwoFactor">Back</button>
+      </form>
+
+      <template v-if="!twoFactor">
+        <GoogleButton />
+        <div class="auth-links mt-4 text-center text-sm text-secondary">
+          Don't have an account? <router-link to="/register" class="link">Register here</router-link>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -42,6 +60,8 @@ const form = reactive({
 
 const error = ref('');
 const isLoading = ref(false);
+const twoFactor = ref(false);
+const code = ref('');
 
 // Surface errors handed back from the Google OAuth redirect flow.
 const OAUTH_ERRORS = {
@@ -61,17 +81,37 @@ const handleLogin = async () => {
   error.value = '';
   isLoading.value = true;
   try {
-    await authStore.login(form);
+    const result = await authStore.login(form);
+    if (result.twoFactorRequired) {
+      twoFactor.value = true;   // switch to the code step
+      return;
+    }
     router.push('/');
   } catch (err) {
-    if (err.response && err.response.data && err.response.data.message) {
-      error.value = err.response.data.message;
-    } else {
-      error.value = "Failed to login. Please check your credentials.";
-    }
+    error.value = err.response?.data?.message || 'Failed to login. Please check your credentials.';
   } finally {
     isLoading.value = false;
   }
+};
+
+const handleTwoFactor = async () => {
+  error.value = '';
+  isLoading.value = true;
+  try {
+    await authStore.loginTwoFactor(code.value.trim());
+    router.push('/');
+  } catch (err) {
+    error.value = err.response?.data?.message || 'That code is not valid.';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const cancelTwoFactor = () => {
+  twoFactor.value = false;
+  code.value = '';
+  error.value = '';
+  form.password = '';
 };
 </script>
 
@@ -119,6 +159,9 @@ const handleLogin = async () => {
   font-size: 13px;
   margin-top: 8px;
 }
+.tfa-lead { font-size: 13px; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.5; }
+.btn-secondary { background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-primary); }
+.mt-2 { margin-top: 8px; }
 .btn {
   padding: 10px 16px;
   border-radius: 4px;
