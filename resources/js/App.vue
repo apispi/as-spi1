@@ -160,6 +160,7 @@ const adminNav = [
   { to: '/admin/organisations', label: 'Organisations', icon: 'shield' },
   { to: '/admin/monitoring', label: 'Monitoring', icon: 'activity' },
   { to: '/admin/logs', label: 'Logs', icon: 'report' },
+  { to: '/admin/security', label: 'Security', icon: 'shield' },
   { to: '/catalog', label: 'Catalog', icon: 'layers' },
   { to: '/active', label: 'Active', icon: 'sliders' },
 ];

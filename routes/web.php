@@ -230,6 +230,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::put('/api/admin/users/{id}/organisation', [AdminController::class, 'assignOrganisation']);
     Route::get('/api/admin/monitoring', [AdminController::class, 'monitoring']);
     Route::get('/api/admin/logs', [\App\Http\Controllers\AdminLogController::class, 'index']);
+    Route::get('/api/admin/security-events', [\App\Http\Controllers\AdminSecurityController::class, 'index']);
 
     Route::get('/api/admin/organisations', [OrganisationController::class, 'index']);
     Route::post('/api/admin/organisations', [OrganisationController::class, 'store']);
