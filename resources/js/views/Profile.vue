@@ -90,6 +90,7 @@
           </div>
 
           <TwoFactorSettings />
+          <SessionsSettings />
         </template>
 
         <!-- ── Personalisation tab ── -->
@@ -417,6 +418,7 @@ import { useRouter } from 'vue-router';
 import axios from 'axios';
 import { restartTour } from '../onboarding';
 import TwoFactorSettings from '../components/TwoFactorSettings.vue';
+import SessionsSettings from '../components/SessionsSettings.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();

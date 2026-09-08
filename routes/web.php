@@ -114,6 +114,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/user/2fa/confirm', [\App\Http\Controllers\TwoFactorController::class, 'confirm']);
     Route::get('/api/user/2fa/recovery', [\App\Http\Controllers\TwoFactorController::class, 'recoveryStatus']);
     Route::delete('/api/user/2fa', [\App\Http\Controllers\TwoFactorController::class, 'disable']);
+    Route::get('/api/user/sessions', [\App\Http\Controllers\SessionController::class, 'index']);
+    Route::delete('/api/user/sessions/others', [\App\Http\Controllers\SessionController::class, 'revokeOthers']);
+    Route::delete('/api/user/sessions/{handle}', [\App\Http\Controllers\SessionController::class, 'revoke']);
     Route::get('/api/user/api-keys', [\App\Http\Controllers\ApiKeyController::class, 'index']);
     Route::post('/api/user/api-keys', [\App\Http\Controllers\ApiKeyController::class, 'store']);
     Route::delete('/api/user/api-keys/{id}', [\App\Http\Controllers\ApiKeyController::class, 'destroy']);

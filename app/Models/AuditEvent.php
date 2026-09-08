@@ -38,6 +38,8 @@ class AuditEvent extends Model
         'two_factor.disabled',
         'api_key.created',
         'api_key.revoked',
+        'session.revoked',
+        'session.revoked_others',
         'account.deleted',
     ];
 
@@ -80,6 +82,8 @@ class AuditEvent extends Model
             'two_factor.disabled' => 'Two-factor disabled',
             'api_key.created' => 'API key created',
             'api_key.revoked' => 'API key revoked',
+            'session.revoked' => 'Signed out a device',
+            'session.revoked_others' => 'Signed out other devices',
             'account.deleted' => 'Account deleted',
         ][$this->action] ?? $this->action;
     }
