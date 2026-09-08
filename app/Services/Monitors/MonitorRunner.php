@@ -182,7 +182,22 @@ class MonitorRunner
         // "recovery" or a brand-new outage.
         $isTransition = $previous !== Monitor::STATUS_UNKNOWN && $previous !== $next;
 
-        if (! $isTransition || ! $monitor->alerts_enabled) {
+        if (! $isTransition) {
+            return;
+        }
+
+        // An in-app notification is recorded on every transition, independent
+        // of alert channels — so a failure is seen even with no email/webhook
+        // configured. External alerts remain gated on alerts_enabled below.
+        \App\Models\UserNotification::record(
+            $monitor->user_id,
+            $passed ? 'monitor_recovered' : 'monitor_failing',
+            $passed ? "Monitor recovered: {$monitor->name}" : "Monitor failing: {$monitor->name}",
+            $entry->summary,
+            '/reports',
+        );
+
+        if (! $monitor->alerts_enabled) {
             return;
         }
 

@@ -92,6 +92,10 @@ Route::get('/api/user', [AuthController::class, 'user'])->middleware('auth');
 
 Route::middleware('auth')->group(function () {
     Route::get('/api/search', [\App\Http\Controllers\SearchController::class, 'search']);
+    Route::get('/api/notifications', [\App\Http\Controllers\NotificationController::class, 'index']);
+    Route::get('/api/notifications/unread-count', [\App\Http\Controllers\NotificationController::class, 'unreadCount']);
+    Route::post('/api/notifications/read', [\App\Http\Controllers\NotificationController::class, 'markAllRead']);
+    Route::post('/api/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markRead']);
     Route::get('/api/saved-requests', [SavedRequestController::class, 'index']);
     Route::post('/api/saved-requests', [SavedRequestController::class, 'store']);
     Route::delete('/api/saved-requests/{id}', [SavedRequestController::class, 'destroy']);

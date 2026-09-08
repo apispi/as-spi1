@@ -21,6 +21,7 @@
       </div>
 
       <div class="topbar-right">
+        <NotificationsBell />
         <button class="icon-btn" data-tour="theme" @click="toggleTheme" :aria-label="theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'" :title="theme === 'light' ? 'Dark mode' : 'Light mode'">
           <Icon :name="theme === 'light' ? 'moon' : 'sun'" :size="18" />
         </button>
@@ -134,6 +135,7 @@ import { useRouter, useRoute } from 'vue-router';
 import Icon from './components/Icon.vue';
 import CommandPalette from './components/CommandPalette.vue';
 import OnboardingTour from './components/OnboardingTour.vue';
+import NotificationsBell from './components/NotificationsBell.vue';
 import { theme, toggleTheme } from './theme';
 import { maybeStartTour } from './onboarding';
 
