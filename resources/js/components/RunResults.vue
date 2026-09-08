@@ -48,6 +48,14 @@
             <span v-for="c in step.contract.added" :key="'a'+c.path" class="run-c-item warn">added <code>{{ c.path }}</code></span>
           </div>
 
+          <div v-if="step.snapshot && !step.snapshot.matches" class="run-contract">
+            <span class="run-c-head bad">Snapshot changed</span>
+            <span v-if="step.snapshot.status_changed" class="run-c-item bad">status {{ step.snapshot.status_from }}→{{ step.snapshot.status_to }}</span>
+            <span v-for="c in step.snapshot.changed" :key="'sc'+c.path" class="run-c-item bad"><code>{{ c.path }}</code> {{ fmt(c.from) }}→{{ fmt(c.to) }}</span>
+            <span v-for="c in step.snapshot.removed" :key="'sr'+c.path" class="run-c-item bad">removed <code>{{ c.path }}</code></span>
+            <span v-for="c in step.snapshot.added" :key="'sa'+c.path" class="run-c-item warn">added <code>{{ c.path }}</code></span>
+          </div>
+
           <p v-if="step.extracted && step.extracted.length" class="run-extracted">
             Extracted: <code v-for="n in step.extracted" :key="n">{{ n }}</code>
           </p>
@@ -64,6 +72,12 @@ defineProps({ run: { type: Object, required: true } });
 defineEmits(['close']);
 
 const stepClass = (step) => (step.skipped ? 'skip' : step.passed ? 'pass' : 'fail');
+
+const fmt = (v) => {
+  if (v === null || v === undefined) return 'null';
+  if (typeof v === 'string') return `"${v}"`;
+  return String(v);
+};
 const format = (v) => {
   if (v === null || v === undefined) return 'nothing';
   if (typeof v === 'object') return JSON.stringify(v);

@@ -405,4 +405,57 @@ class CollectionRunnerTest extends TestCase
 
         $this->assertSame('helloworld.Greeter/SayHello', $captured['service_method']);
     }
+
+    public function test_a_matching_snapshot_passes_the_run(): void
+    {
+        Http::fake(['api.example.com/one' => Http::response(['id' => 1, 'name' => 'Widget'], 200)]);
+
+        $user = User::factory()->create();
+        $a = $this->saved($user, [
+            'snapshot' => ['status' => 200, 'body' => '{"id":1,"name":"Widget"}'],
+            'snapshot_taken_at' => now(),
+        ]);
+        $collection = $this->collection($user, [['id' => $a->id]]);
+
+        $this->actingAs($user)->postJson("/api/collections/{$collection->id}/run")
+            ->assertStatus(200)
+            ->assertJsonPath('passed', true)
+            ->assertJsonPath('steps.0.snapshot.matches', true);
+    }
+
+    public function test_a_snapshot_regression_fails_the_run_and_is_reported(): void
+    {
+        // The endpoint now returns a different value than was captured.
+        Http::fake(['api.example.com/one' => Http::response(['id' => 2, 'name' => 'Widget'], 200)]);
+
+        $user = User::factory()->create();
+        $a = $this->saved($user, [
+            'snapshot' => ['status' => 200, 'body' => '{"id":1,"name":"Widget"}'],
+            'snapshot_taken_at' => now(),
+        ]);
+        $collection = $this->collection($user, [['id' => $a->id]]);
+
+        $res = $this->actingAs($user)->postJson("/api/collections/{$collection->id}/run")
+            ->assertStatus(422)
+            ->assertJsonPath('passed', false)
+            ->assertJsonPath('steps.0.passed', false)
+            ->assertJsonPath('steps.0.snapshot.matches', false);
+
+        $changed = collect($res->json('steps.0.snapshot.changed'));
+        $this->assertTrue($changed->contains(fn ($c) => $c['path'] === '$.id'));
+    }
+
+    public function test_a_request_without_a_snapshot_is_unaffected(): void
+    {
+        Http::fake(['api.example.com/one' => Http::response(['anything' => true], 200)]);
+
+        $user = User::factory()->create();
+        $a = $this->saved($user); // no snapshot
+        $collection = $this->collection($user, [['id' => $a->id]]);
+
+        $this->actingAs($user)->postJson("/api/collections/{$collection->id}/run")
+            ->assertStatus(200)
+            ->assertJsonPath('passed', true)
+            ->assertJsonPath('steps.0.snapshot', null);
+    }
 }

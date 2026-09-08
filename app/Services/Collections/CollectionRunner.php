@@ -6,6 +6,7 @@ use App\Models\Collection;
 use App\Models\Environment;
 use App\Services\Assertions\AssertionEvaluator;
 use App\Services\Contracts\ContractChecker;
+use App\Services\Snapshots\SnapshotDiffer;
 use App\Services\Variables\SecretMasker;
 use App\Services\Variables\VariableResolver;
 use Illuminate\Support\Arr;
@@ -25,6 +26,7 @@ class CollectionRunner
         private readonly AssertionEvaluator $evaluator,
         private readonly SecretMasker $masker,
         private readonly ContractChecker $contracts = new ContractChecker,
+        private readonly SnapshotDiffer $snapshots = new SnapshotDiffer,
     ) {
     }
 
@@ -116,9 +118,21 @@ class CollectionRunner
             ? $this->contracts->fromBody($saved->contract, is_string($response['body'] ?? null) ? $response['body'] : json_encode($response['body'] ?? null))
             : null;
 
+        // Golden snapshot: if a captured response is attached, diff the live
+        // one against it. Any value drift (a changed field, a moved total, a
+        // different status) is a regression and fails the step — the same
+        // "golden" semantic as in the Tester, now on every scheduled run.
+        $snapshot = ! empty($saved->snapshot) && $response['ok']
+            ? $this->snapshots->compare($saved->snapshot, [
+                'status' => $response['status'],
+                'body' => is_string($response['body'] ?? null) ? $response['body'] : json_encode($response['body'] ?? null),
+            ])
+            : null;
+
         $passed = $response['ok']
             && ($evaluation === null || $evaluation['passed'])
-            && ($contract === null || ! $contract['breaking']);
+            && ($contract === null || ! $contract['breaking'])
+            && ($snapshot === null || $snapshot['matches']);
 
         $extracted = [];
         if ($response['ok']) {
@@ -141,6 +155,7 @@ class CollectionRunner
                 'unresolved' => $resolver->unresolved(),
                 'assertions' => $evaluation ? $this->masker->mask($evaluation) : null,
                 'contract' => $contract,
+                'snapshot' => $snapshot ? $this->masker->mask($snapshot) : null,
                 'body' => $captureBodies ? $this->masker->mask(is_string($response['body'] ?? null) ? $response['body'] : json_encode($response['body'] ?? null)) : null,
                 'extracted' => array_keys($extracted),
                 'passed' => $passed,
