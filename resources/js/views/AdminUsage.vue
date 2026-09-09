@@ -2,18 +2,13 @@
   <div class="ad">
     <header class="ad-head">
       <div>
-        <h1 class="ad-title">Overview</h1>
-        <p class="ad-sub">Is anything wrong, and where. Each section links into its own page.</p>
+        <h1 class="ad-title">Usage</h1>
+        <p class="ad-sub">Platform-wide activity — accounts, requests, and protocol mix.</p>
       </div>
       <button class="ad-btn" @click="fetchAll" :disabled="loading">{{ loading ? 'Refreshing…' : 'Refresh' }}</button>
     </header>
 
-    <!-- Is anything wrong? -->
     <div class="ad-stats" v-if="stats">
-      <div class="ad-stat">
-        <div class="ad-stat-value" :class="monitoring.failing ? 'bad' : ''">{{ monitoring.failing ?? 0 }}</div>
-        <div class="ad-stat-label">Failing monitors</div>
-      </div>
       <div class="ad-stat">
         <div class="ad-stat-value">{{ stats.total_users }}</div>
         <div class="ad-stat-label">Users</div>
@@ -21,6 +16,10 @@
       <div class="ad-stat">
         <div class="ad-stat-value">{{ stats.new_users_this_week }}</div>
         <div class="ad-stat-label">New this week</div>
+      </div>
+      <div class="ad-stat">
+        <div class="ad-stat-value">{{ stats.total_saved_requests ?? 0 }}</div>
+        <div class="ad-stat-label">Saved requests</div>
       </div>
       <div class="ad-stat">
         <div class="ad-stat-value">{{ stats.total_requests ?? 0 }}</div>
@@ -32,28 +31,6 @@
       </div>
     </div>
 
-    <!-- Failing monitors, when any -->
-    <template v-if="failing.length">
-      <div class="ad-section-head">
-        <h2 class="ad-section">Failing monitors</h2>
-        <router-link to="/admin/monitoring" class="ad-back">All monitoring →</router-link>
-      </div>
-      <ul class="ad-list">
-        <li v-for="m in failing" :key="m.id" class="ad-row">
-          <span class="ad-dot failing"></span>
-          <div class="ad-row-main">
-            <span class="ad-row-name">{{ m.name }}</span>
-            <span class="ad-row-sub">
-              {{ m.owner?.email }} · {{ m.collection || '—' }}
-              <template v-if="m.consecutive_failures > 1"> · {{ m.consecutive_failures }} failures in a row</template>
-            </span>
-          </div>
-          <router-link v-if="m.owner" :to="`/admin/users/${m.owner.id}`" class="ad-btn">Owner</router-link>
-        </li>
-      </ul>
-    </template>
-
-    <!-- Protocol usage -->
     <template v-if="protocolRows.length">
       <h2 class="ad-section">Requests by protocol</h2>
       <div class="ad-proto ad-boxed-block">
@@ -65,7 +42,6 @@
       </div>
     </template>
 
-    <!-- Connectors -->
     <template v-if="connectors.length">
       <div class="ad-section-head">
         <h2 class="ad-section">Connectors</h2>
@@ -85,25 +61,6 @@
         </li>
       </ul>
     </template>
-
-    <!-- Recent admin actions -->
-    <div class="ad-section-head">
-      <h2 class="ad-section">Recent admin actions</h2>
-      <router-link to="/admin/logs" class="ad-back">Application logs →</router-link>
-    </div>
-    <p v-if="!audit.length" class="ad-muted">No admin actions recorded yet.</p>
-    <ul v-else class="ad-list">
-      <li v-for="entry in audit" :key="entry.id" class="ad-row">
-        <span class="ad-pill" :class="entry.action.includes('delete') ? 'failing' : 'unknown'">{{ actionLabel(entry.action) }}</span>
-        <div class="ad-row-main">
-          <span class="ad-row-sub">
-            <strong>{{ entry.admin?.name || entry.admin_email || 'Unknown' }}</strong>
-            → {{ entry.target_email || '—' }}
-          </span>
-        </div>
-        <span class="ad-row-sub">{{ when(entry.created_at) }}</span>
-      </li>
-    </ul>
   </div>
 </template>
 
@@ -112,26 +69,18 @@ import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 
 const stats = ref(null);
-const audit = ref([]);
 const connectors = ref([]);
-const monitoring = ref({});
-const failing = ref([]);
 const loading = ref(true);
 
 const fetchAll = async () => {
   loading.value = true;
   try {
-    const [statsRes, actionsRes, connectorsRes, monitoringRes] = await Promise.all([
+    const [statsRes, connectorsRes] = await Promise.all([
       axios.get('/api/admin/stats'),
-      axios.get('/api/admin/actions'),
       axios.get('/api/admin/catalog', { params: { type: 'connector' } }),
-      axios.get('/api/admin/monitoring'),
     ]);
     stats.value = statsRes.data;
-    audit.value = (actionsRes.data.data || []).slice(0, 8);
     connectors.value = connectorsRes.data;
-    monitoring.value = monitoringRes.data.summary;
-    failing.value = monitoringRes.data.monitors.filter((m) => m.last_status === 'failing').slice(0, 5);
   } finally {
     loading.value = false;
   }
@@ -149,17 +98,6 @@ const protocolRows = computed(() => {
     { key: 'a2a', label: 'A2A', count: b.a2a },
   ].map((p) => ({ ...p, pct: Math.round((p.count / max) * 100) }));
 });
-
-const actionLabel = (action) => ({
-  promote_admin: 'Promoted',
-  demote_admin: 'Demoted',
-  delete_user: 'Deactivated',
-  force_delete_user: 'Deleted forever',
-  restore_user: 'Restored',
-  create_user: 'Created',
-  assign_organisation: 'Assigned org',
-  unassign_organisation: 'Unassigned org',
-}[action] || action);
 
 const when = (iso) => new Date(iso).toLocaleString('en-AU', {
   day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',

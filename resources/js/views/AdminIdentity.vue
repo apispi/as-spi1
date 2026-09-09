@@ -2,10 +2,10 @@
   <div class="ad">
     <header class="ad-head">
       <div>
-        <h1 class="ad-title">Security events</h1>
-        <p class="ad-sub">Account security activity across every user — sign-ins, failed sign-ins, and key changes.</p>
+        <h1 class="ad-title">Identity</h1>
+        <p class="ad-sub">Who's who and who's doing what — account security activity and admin actions across the platform.</p>
       </div>
-      <button class="ad-btn" @click="fetchPage(1)" :disabled="loading">{{ loading ? 'Refreshing…' : 'Refresh' }}</button>
+      <button class="ad-btn" @click="refresh" :disabled="loading">{{ loading ? 'Refreshing…' : 'Refresh' }}</button>
     </header>
 
     <!-- 24h summary -->
@@ -78,6 +78,25 @@
       <span class="ad-muted">Page {{ pagination.current_page }} of {{ pagination.last_page }}</span>
       <button class="ad-btn" :disabled="pagination.current_page >= pagination.last_page" @click="fetchPage(pagination.current_page + 1)">Next →</button>
     </div>
+
+    <!-- Recent admin actions -->
+    <div class="ad-section-head">
+      <h2 class="ad-section">Recent admin actions</h2>
+      <router-link to="/admin/logs" class="ad-back">Application logs →</router-link>
+    </div>
+    <p v-if="!actions.length" class="ad-muted">No admin actions recorded yet.</p>
+    <ul v-else class="se-list">
+      <li v-for="entry in actions" :key="entry.id" class="se-row">
+        <span class="se-badge" :class="entry.action.includes('delete') ? 'bad' : 'warn'">{{ actionLabel(entry.action) }}</span>
+        <div class="se-main">
+          <span class="se-actor">
+            <strong>{{ entry.admin?.name || entry.admin_email || 'Unknown' }}</strong>
+            <span class="ad-muted"> → {{ entry.target_email || '—' }}</span>
+          </span>
+          <span class="se-meta"><span class="se-time">{{ when(entry.created_at) }}</span></span>
+        </div>
+      </li>
+    </ul>
   </div>
 </template>
 
@@ -99,10 +118,26 @@ const ACTIONS = [
 
 const events = ref([]);
 const summary = ref({});
+const actions = ref([]);
 const pagination = reactive({ current_page: 1, last_page: 1 });
 const action = ref('');
 const q = ref('');
 const loading = ref(true);
+
+const loadActions = async () => {
+  try {
+    const res = await axios.get('/api/admin/actions');
+    actions.value = (res.data.data || []).slice(0, 10);
+  } catch { actions.value = []; }
+};
+
+const refresh = () => { fetchPage(1); loadActions(); };
+
+const actionLabel = (a) => ({
+  promote_admin: 'Promoted', demote_admin: 'Demoted', delete_user: 'Deactivated',
+  force_delete_user: 'Deleted forever', restore_user: 'Restored', create_user: 'Created',
+  assign_organisation: 'Assigned org', unassign_organisation: 'Unassigned org',
+}[a] || a);
 
 const fetchPage = async (page) => {
   loading.value = true;
@@ -135,7 +170,7 @@ const when = (ts) => {
   return d.toLocaleString();
 };
 
-onMounted(() => fetchPage(1));
+onMounted(refresh);
 </script>
 
 <style scoped>
@@ -163,4 +198,7 @@ onMounted(() => fetchPage(1));
 .se-time { font-size: 12px; color: var(--text-secondary); }
 
 .se-pager { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
+
+.ad-section { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); margin: 30px 0 10px; }
+.ad-section-head { display: flex; align-items: baseline; justify-content: space-between; }
 </style>

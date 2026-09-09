@@ -5,7 +5,8 @@ import Home from './views/Home.vue';
 import Dashboard from './views/Dashboard.vue';
 import Login from './views/Login.vue';
 import Register from './views/Register.vue';
-import Admin from './views/Admin.vue';
+import AdminIdentity from './views/AdminIdentity.vue';
+import AdminUsage from './views/AdminUsage.vue';
 import Profile from './views/Profile.vue';
 import Chat from './views/Chat.vue';
 import CatalogSection from './views/CatalogSection.vue';
@@ -25,7 +26,6 @@ import Collections from './views/Collections.vue';
 import AdminOrganisations from './views/AdminOrganisations.vue';
 import AdminMonitoring from './views/AdminMonitoring.vue';
 import AdminLogs from './views/AdminLogs.vue';
-import AdminSecurity from './views/AdminSecurity.vue';
 import AdminUserDetail from './views/AdminUserDetail.vue';
 import AdminUsers from './views/AdminUsers.vue';
 import Terms from './views/Terms.vue';
@@ -174,7 +174,7 @@ const routes = [
     {
         path: '/admin',
         name: 'admin',
-        component: Admin,
+        component: AdminIdentity,
         meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
@@ -202,15 +202,15 @@ const routes = [
         meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
-        path: '/admin/logs',
-        name: 'admin-logs',
-        component: AdminLogs,
+        path: '/admin/usage',
+        name: 'admin-usage',
+        component: AdminUsage,
         meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
-        path: '/admin/security',
-        name: 'admin-security',
-        component: AdminSecurity,
+        path: '/admin/logs',
+        name: 'admin-logs',
+        component: AdminLogs,
         meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
