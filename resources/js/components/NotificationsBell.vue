@@ -30,6 +30,8 @@
             </div>
           </li>
         </ul>
+
+        <router-link to="/notifications" class="nb-all" @click="open = false">See all notifications</router-link>
       </div>
     </transition>
   </div>
@@ -143,6 +145,8 @@ onUnmounted(() => {
 .nb-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
 .nb-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nb-time { font-size: 11px; color: var(--text-secondary); margin-top: 3px; }
+.nb-all { display: block; text-align: center; padding: 10px; font-size: 12.5px; color: var(--accent-color); text-decoration: none; border-top: 1px solid var(--border-color); }
+.nb-all:hover { background: var(--accent-soft); }
 
 .nb-pop-enter-active, .nb-pop-leave-active { transition: opacity .15s, transform .15s; }
 .nb-pop-enter-from, .nb-pop-leave-to { opacity: 0; transform: translateY(-6px); }

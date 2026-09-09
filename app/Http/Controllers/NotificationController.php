@@ -45,4 +45,33 @@ class NotificationController extends Controller
 
         return response()->json(['message' => 'All marked read.']);
     }
+
+    /** Full paginated history for the dedicated notifications page. */
+    public function history(Request $request)
+    {
+        $notes = UserNotification::where('user_id', $request->user()->id)
+            ->latest('id')
+            ->paginate(20, ['id', 'type', 'title', 'body', 'url', 'read_at', 'created_at']);
+
+        return response()->json($notes);
+    }
+
+    public function preferences(Request $request)
+    {
+        $prefs = $request->user()->notification_prefs ?? [];
+
+        return response()->json(collect(\App\Models\User::NOTIFICATION_CATEGORIES)
+            ->mapWithKeys(fn ($c) => [$c => ($prefs[$c] ?? true) !== false]));
+    }
+
+    public function updatePreferences(Request $request)
+    {
+        $rules = collect(\App\Models\User::NOTIFICATION_CATEGORIES)
+            ->mapWithKeys(fn ($c) => [$c => 'required|boolean'])->all();
+        $validated = $request->validate($rules);
+
+        $request->user()->forceFill(['notification_prefs' => $validated])->save();
+
+        return response()->json($validated);
+    }
 }

@@ -51,8 +51,13 @@ class UserNotification extends Model
      */
     public static function recordForWorkspace(User $owner, string $type, string $title, ?string $body = null, ?string $url = null): void
     {
-        foreach ($owner->workspaceUserIds() as $userId) {
-            static::record($userId, $type, $title, $body, $url);
+        $members = User::whereIn('id', $owner->workspaceUserIds())->get();
+
+        foreach ($members as $member) {
+            // Respect each recipient's own opt-outs.
+            if ($member->wantsNotification($type)) {
+                static::record($member->id, $type, $title, $body, $url);
+            }
         }
     }
 }

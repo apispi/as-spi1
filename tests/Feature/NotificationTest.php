@@ -122,4 +122,41 @@ class NotificationTest extends TestCase
 
         $this->assertSame(1, UserNotification::where('user_id', $solo->id)->count());
     }
+
+    public function test_a_muted_category_is_not_recorded(): void
+    {
+        $user = User::factory()->create(['notification_prefs' => ['monitor' => false]]);
+
+        UserNotification::recordForWorkspace($user, 'monitor_failing', 'Muted monitor');
+        UserNotification::recordForWorkspace($user, 'webhook_silent', 'Webhook still on');
+
+        $this->assertSame(0, UserNotification::where('user_id', $user->id)->where('type', 'monitor_failing')->count());
+        $this->assertSame(1, UserNotification::where('user_id', $user->id)->where('type', 'webhook_silent')->count());
+    }
+
+    public function test_preferences_default_on_and_can_be_updated(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->getJson('/api/notifications/preferences')
+            ->assertOk()->assertJsonPath('monitor', true)->assertJsonPath('webhook', true);
+
+        $this->actingAs($user)->putJson('/api/notifications/preferences', ['monitor' => false, 'webhook' => true])
+            ->assertOk()->assertJsonPath('monitor', false);
+
+        $this->assertFalse($user->fresh()->wantsNotification('monitor_failing'));
+        $this->assertTrue($user->fresh()->wantsNotification('webhook_silent'));
+    }
+
+    public function test_history_is_paginated(): void
+    {
+        $user = User::factory()->create();
+        for ($i = 0; $i < 25; $i++) {
+            UserNotification::record($user->id, 'monitor_failing', "n{$i}");
+        }
+
+        $res = $this->actingAs($user)->getJson('/api/notifications/history')->assertOk();
+        $this->assertSame(25, $res->json('total'));
+        $this->assertCount(20, $res->json('data'));
+    }
 }

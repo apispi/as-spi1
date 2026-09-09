@@ -158,6 +158,33 @@
               Replay the tour
             </button>
           </div>
+
+          <div class="up-card">
+            <div class="up-card-header">
+              <h2 class="up-card-title">Notifications</h2>
+              <p class="up-card-sub">Choose which alerts appear in your notification bell</p>
+            </div>
+            <div class="up-toggle-row">
+              <div class="up-toggle-info">
+                <div class="up-toggle-label">Monitor alerts</div>
+                <div class="up-toggle-desc">When a monitor starts failing or recovers</div>
+              </div>
+              <label class="up-toggle">
+                <input type="checkbox" v-model="notifyPrefs.monitor" @change="saveNotifyPrefs">
+                <span class="up-toggle-track"><span class="up-toggle-thumb"></span></span>
+              </label>
+            </div>
+            <div class="up-toggle-row" style="border-bottom: none">
+              <div class="up-toggle-info">
+                <div class="up-toggle-label">Webhook alerts</div>
+                <div class="up-toggle-desc">When an endpoint goes silent or resumes</div>
+              </div>
+              <label class="up-toggle">
+                <input type="checkbox" v-model="notifyPrefs.webhook" @change="saveNotifyPrefs">
+                <span class="up-toggle-track"><span class="up-toggle-thumb"></span></span>
+              </label>
+            </div>
+          </div>
         </template>
 
         <!-- ── API Keys tab ── -->
@@ -438,6 +465,7 @@ onMounted(() => {
   loadRecentActivity();
   loadSecurityLog();
   loadMonitors();
+  loadNotifyPrefs();
   loadPreferences();
 });
 
@@ -487,6 +515,20 @@ const stats = ref({});
 const recentActivity = ref([]);
 const securityLog = ref([]);
 const monitors = ref([]);
+const notifyPrefs = reactive({ monitor: true, webhook: true });
+
+const loadNotifyPrefs = async () => {
+  try {
+    const res = await axios.get('/api/notifications/preferences');
+    Object.assign(notifyPrefs, res.data);
+  } catch { /* keep defaults */ }
+};
+
+const saveNotifyPrefs = async () => {
+  try {
+    await axios.put('/api/notifications/preferences', { monitor: notifyPrefs.monitor, webhook: notifyPrefs.webhook });
+  } catch { /* ignore */ }
+};
 
 const monitorSummary = computed(() => ({
   failing: monitors.value.filter((m) => m.last_status === 'failing').length,

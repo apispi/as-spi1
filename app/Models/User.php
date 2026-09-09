@@ -56,7 +56,24 @@ class User extends Authenticatable
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted:array',
             'two_factor_confirmed_at' => 'datetime',
+            'notification_prefs' => 'array',
         ];
+    }
+
+    /** In-app notification categories a user can opt out of. */
+    public const NOTIFICATION_CATEGORIES = ['monitor', 'webhook'];
+
+    /**
+     * Whether this user wants in-app notifications of the given type. Types map
+     * to a category by prefix (monitor_*, webhook_*); a category is on unless
+     * the user has explicitly turned it off.
+     */
+    public function wantsNotification(string $type): bool
+    {
+        $category = explode('_', $type)[0];
+        $prefs = $this->notification_prefs ?? [];
+
+        return ($prefs[$category] ?? true) !== false;
     }
 
     /** Whether the user has completed two-factor setup (secret verified). */

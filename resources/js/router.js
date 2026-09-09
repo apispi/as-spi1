@@ -31,6 +31,7 @@ import AdminUsers from './views/AdminUsers.vue';
 import Terms from './views/Terms.vue';
 import Privacy from './views/Privacy.vue';
 import Docs from './views/Docs.vue';
+import Notifications from './views/Notifications.vue';
 
 const routes = [
     {
@@ -85,6 +86,12 @@ const routes = [
         path: '/profile',
         name: 'profile',
         component: Profile,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/notifications',
+        name: 'notifications',
+        component: Notifications,
         meta: { requiresAuth: true }
     },
     {
