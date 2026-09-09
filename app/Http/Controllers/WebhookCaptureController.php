@@ -59,8 +59,18 @@ class WebhookCaptureController extends Controller
         ])->save();
 
         // A hit on a silent endpoint is the recovery transition.
-        if ($wasSilent && $endpoint->alerts_enabled) {
-            $this->alert($dispatcher, $endpoint, recovered: true);
+        if ($wasSilent) {
+            \App\Models\UserNotification::recordForWorkspace(
+                $endpoint->user,
+                'webhook_recovered',
+                "Webhook recovered: {$endpoint->name}",
+                'Delivery resumed.',
+                '/webhooks',
+            );
+
+            if ($endpoint->alerts_enabled) {
+                $this->alert($dispatcher, $endpoint, recovered: true);
+            }
         }
 
         // Event-driven testing: a configured trigger fires a collection run

@@ -102,6 +102,21 @@ class WebhookCaptureTest extends TestCase
         Notification::assertSentTo($user, WebhookSilenceChanged::class);
     }
 
+    public function test_silence_and_recovery_create_in_app_notifications_without_alerts(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create();
+        // alerts_enabled defaults off — the in-app notification must fire anyway.
+        $endpoint = $this->endpoint($user, ['expect_interval_minutes' => 30, 'alerts_enabled' => false]);
+        $endpoint->forceFill(['last_received_at' => now()->subMinutes(45), 'last_status' => WebhookEndpoint::STATUS_RECEIVING])->save();
+
+        $this->artisan('webhooks:check')->assertExitCode(0);
+        $this->assertDatabaseHas('user_notifications', ['user_id' => $user->id, 'type' => 'webhook_silent']);
+
+        $this->postJson("/hook/{$endpoint->token}", ['back' => true])->assertOk();
+        $this->assertDatabaseHas('user_notifications', ['user_id' => $user->id, 'type' => 'webhook_recovered']);
+    }
+
     public function test_an_endpoint_that_never_received_anything_can_still_go_silent(): void
     {
         // The dead-man's switch must catch "the cron never fired at all", not

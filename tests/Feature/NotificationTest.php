@@ -100,4 +100,26 @@ class NotificationTest extends TestCase
     {
         $this->getJson('/api/notifications')->assertStatus(401);
     }
+
+    public function test_record_for_workspace_reaches_every_member(): void
+    {
+        $org = \App\Models\Organisation::create(['name' => 'Acme', 'slug' => 'acme']);
+        $alice = User::factory()->create(['organisation_id' => $org->id]);
+        $bob = User::factory()->create(['organisation_id' => $org->id]);
+        $outsider = User::factory()->create();
+
+        UserNotification::recordForWorkspace($alice, 'monitor_failing', 'Monitor failing: Shared');
+
+        $this->assertSame(1, UserNotification::where('user_id', $alice->id)->count());
+        $this->assertSame(1, UserNotification::where('user_id', $bob->id)->count());
+        $this->assertSame(0, UserNotification::where('user_id', $outsider->id)->count());
+    }
+
+    public function test_a_solo_user_gets_exactly_one(): void
+    {
+        $solo = User::factory()->create(); // no organisation
+        UserNotification::recordForWorkspace($solo, 'monitor_failing', 'Solo');
+
+        $this->assertSame(1, UserNotification::where('user_id', $solo->id)->count());
+    }
 }

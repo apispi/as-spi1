@@ -43,4 +43,16 @@ class UserNotification extends Model
 
         return $note;
     }
+
+    /**
+     * Record the same notification for every member of the owner's workspace,
+     * so a shared monitor or endpoint reaching everyone — not just whoever
+     * happened to create it. Solo accounts get exactly one, as before.
+     */
+    public static function recordForWorkspace(User $owner, string $type, string $title, ?string $body = null, ?string $url = null): void
+    {
+        foreach ($owner->workspaceUserIds() as $userId) {
+            static::record($userId, $type, $title, $body, $url);
+        }
+    }
 }

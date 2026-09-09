@@ -88,7 +88,11 @@ const openItem = async (n) => {
   if (n.url) router.push(n.url);
 };
 
-const dotClass = (type) => (type === 'monitor_recovered' ? 'ok' : type === 'monitor_failing' ? 'bad' : 'info');
+const dotClass = (type) => {
+  if (/recovered/.test(type)) return 'ok';
+  if (/failing|silent/.test(type)) return 'bad';
+  return 'info';
+};
 
 const ago = (ts) => {
   const secs = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);

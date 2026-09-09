@@ -31,6 +31,15 @@ class CheckWebhookSilence extends Command
 
             $this->line($endpoint->name.': SILENT');
 
+            // In-app notification fires regardless of external alert channels.
+            \App\Models\UserNotification::recordForWorkspace(
+                $endpoint->user,
+                'webhook_silent',
+                "Webhook silent: {$endpoint->name}",
+                'No delivery within the expected window.',
+                '/webhooks',
+            );
+
             if ($endpoint->alerts_enabled) {
                 $controller->alert($dispatcher, $endpoint, recovered: false);
             }
