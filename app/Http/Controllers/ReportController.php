@@ -68,11 +68,21 @@ class ReportController extends Controller
             return response()->json(['message' => 'Reports must be the same type to compare.'], 422);
         }
 
-        return response()->json([
+        $payload = [
             'type' => $a->type,
             'a' => $this->full($a),
             'b' => $this->full($b),
-        ]);
+        ];
+
+        // Collection runs get a computed step-level diff for regression triage.
+        if ($a->type === 'collection_run') {
+            $comparer = new \App\Services\Reports\ReportComparer;
+            $diff = $comparer->collectionRun($a->data ?? [], $b->data ?? []);
+            $payload['diff'] = $diff;
+            $payload['headline'] = $comparer->collectionRunHeadline($diff);
+        }
+
+        return response()->json($payload);
     }
 
     public function share(Request $request, InspectionReport $report)

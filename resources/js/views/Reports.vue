@@ -67,7 +67,42 @@
           <button class="rp-btn" @click="cmp = null">Close</button>
         </div>
         <div class="rp-delta" v-if="cmp.delta">{{ cmp.delta }}</div>
-        <div class="rp-compare">
+
+        <!-- Structured step-level diff for collection runs -->
+        <div v-if="cmp.diff" class="rp-diff">
+          <div class="rp-diff-summary">
+            <span class="rp-diff-chip" :class="cmp.diff.regressed_count ? 'bad' : 'muted'">{{ cmp.diff.regressed_count }} regressed</span>
+            <span class="rp-diff-chip" :class="cmp.diff.fixed_count ? 'ok' : 'muted'">{{ cmp.diff.fixed_count }} fixed</span>
+            <span class="rp-diff-chip muted">{{ fmtMs(cmp.diff.time_a_ms) }} → {{ fmtMs(cmp.diff.time_b_ms) }}</span>
+          </div>
+          <table class="rp-diff-table">
+            <thead><tr><th>Step</th><th>A</th><th>B</th><th>Δ time</th><th></th></tr></thead>
+            <tbody>
+              <tr v-for="s in cmp.diff.steps" :key="s.index" :class="'v-' + s.verdict">
+                <td>{{ s.name }}</td>
+                <td><span v-if="s.status_a != null" class="rp-st" :class="s.status_a < 400 ? 'ok' : 'bad'">{{ s.status_a }}</span><span v-else>—</span></td>
+                <td><span v-if="s.status_b != null" class="rp-st" :class="s.status_b < 400 ? 'ok' : 'bad'">{{ s.status_b }}</span><span v-else>—</span></td>
+                <td class="rp-delta-cell" :class="deltaClass(s.time_delta_ms)">{{ s.time_delta_ms != null ? signed(s.time_delta_ms) : '' }}</td>
+                <td><span class="rp-verdict" :class="s.verdict">{{ verdictLabel(s.verdict) }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <details v-if="cmp.diff" class="rp-raw"><summary>Show full side-by-side</summary>
+          <div class="rp-compare">
+            <div class="rp-compare-col">
+              <div class="rp-compare-cap">{{ ago(cmp.a.created_at) }} · {{ cmp.a.summary }}</div>
+              <ReportView :type="cmp.type" :data="cmp.a.data" />
+            </div>
+            <div class="rp-compare-col">
+              <div class="rp-compare-cap">{{ ago(cmp.b.created_at) }} · {{ cmp.b.summary }}</div>
+              <ReportView :type="cmp.type" :data="cmp.b.data" />
+            </div>
+          </div>
+        </details>
+
+        <div v-if="!cmp.diff" class="rp-compare">
           <div class="rp-compare-col">
             <div class="rp-compare-cap">{{ ago(cmp.a.created_at) }} · {{ cmp.a.summary }}</div>
             <ReportView :type="cmp.type" :data="cmp.a.data" />
@@ -163,12 +198,18 @@ async function runCompare() {
   if (selected.value.length !== 2) return;
   try {
     const res = await axios.get('/api/reports/compare', { params: { a: selected.value[0], b: selected.value[1] } });
-    cmp.value = { ...res.data, delta: deltaLine(res.data) };
+    // Collection runs carry a server-computed headline + step diff.
+    cmp.value = { ...res.data, delta: res.data.headline || deltaLine(res.data) };
     cancelCompare();
   } catch (e) {
     error.value = e.response?.data?.message || 'Could not compare.';
   }
 }
+
+const fmtMs = (ms) => (ms >= 1000 ? (ms / 1000).toFixed(1) + 's' : ms + 'ms');
+const signed = (ms) => (ms > 0 ? '+' : '') + fmtMs(ms);
+const deltaClass = (ms) => (ms > 20 ? 'slower' : ms < -20 ? 'faster' : '');
+const verdictLabel = (v) => ({ regressed: 'Regressed', fixed: 'Fixed', unchanged: '—', added: 'Added', removed: 'Removed' }[v] || v);
 
 // A one-line headline describing what changed between the two runs.
 function deltaLine(d) {
@@ -264,6 +305,26 @@ const ago = (iso) => {
 .rp-modal-actions { display: flex; gap: 6px; flex-shrink: 0; }
 .rp-share-url { font-family: ui-monospace, Menlo, monospace; font-size: 0.75rem; color: var(--accent-color); word-break: break-all; margin: 0 0 12px; }
 .rp-delta { font-weight: 700; color: var(--text-primary); background: var(--bg-secondary, #161b22); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; }
+.rp-diff { margin-bottom: 16px; }
+.rp-diff-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.rp-diff-chip { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: rgba(127,127,127,.14); color: var(--text-secondary); }
+.rp-diff-chip.bad { background: rgba(248,81,73,.16); color: #f85149; }
+.rp-diff-chip.ok { background: rgba(63,185,80,.16); color: #3fb950; }
+.rp-diff-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rp-diff-table th { text-align: left; color: var(--text-secondary); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; padding: 6px 10px; border-bottom: 1px solid var(--border-color); }
+.rp-diff-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
+.rp-diff-table tr.v-regressed { background: rgba(248,81,73,.06); }
+.rp-diff-table tr.v-fixed { background: rgba(63,185,80,.06); }
+.rp-st { font-family: 'Courier New', monospace; font-weight: 700; }
+.rp-st.ok { color: #3fb950; } .rp-st.bad { color: #f85149; }
+.rp-delta-cell { font-family: 'Courier New', monospace; color: var(--text-secondary); }
+.rp-delta-cell.slower { color: #d29922; } .rp-delta-cell.faster { color: #3fb950; }
+.rp-verdict { font-size: 10.5px; font-weight: 700; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; background: rgba(127,127,127,.14); color: var(--text-secondary); }
+.rp-verdict.regressed { background: rgba(248,81,73,.16); color: #f85149; }
+.rp-verdict.fixed { background: rgba(63,185,80,.16); color: #3fb950; }
+.rp-verdict.added, .rp-verdict.removed { background: rgba(210,153,34,.16); color: #d29922; }
+.rp-raw { margin-bottom: 8px; }
+.rp-raw summary { cursor: pointer; color: var(--accent-color); font-size: 13px; margin-bottom: 10px; }
 .rp-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .rp-compare-cap { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border-color); }
 .rp-err { color: #f85149; margin-top: 14px; }
