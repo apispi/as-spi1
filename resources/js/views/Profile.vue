@@ -296,6 +296,15 @@
             </div>
           </div>
 
+          <div v-if="requestTrend.length > 1" class="up-card" style="margin-top: 1.5rem">
+            <div class="up-card-header">
+              <h2 class="up-card-title">Request activity</h2>
+              <p class="up-card-sub">Your requests over the last 14 days</p>
+            </div>
+            <Sparkline :values="requestTrend" aria-label="Your requests per day over the last 14 days" />
+            <div class="up-trend-axis"><span>{{ trendFirstDay }}</span><span>{{ trendLastDay }}</span></div>
+          </div>
+
           <div class="up-card" style="margin-top: 1.5rem">
             <div class="up-card-header">
               <h2 class="up-card-title">Monitoring</h2>
@@ -446,6 +455,7 @@ import axios from 'axios';
 import { restartTour } from '../onboarding';
 import TwoFactorSettings from '../components/TwoFactorSettings.vue';
 import SessionsSettings from '../components/SessionsSettings.vue';
+import Sparkline from '../components/Sparkline.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -513,6 +523,12 @@ const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
 const stats = ref({});
 const recentActivity = ref([]);
+
+const requestDays = computed(() => stats.value?.requests_by_day || []);
+const requestTrend = computed(() => requestDays.value.map((d) => d.count));
+const fmtTrendDay = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString('en-AU', { day: '2-digit', month: 'short' });
+const trendFirstDay = computed(() => (requestDays.value.length ? fmtTrendDay(requestDays.value[0].date) : ''));
+const trendLastDay = computed(() => (requestDays.value.length ? fmtTrendDay(requestDays.value[requestDays.value.length - 1].date) : ''));
 const securityLog = ref([]);
 const monitors = ref([]);
 const notifyPrefs = reactive({ monitor: true, webhook: true });
@@ -871,6 +887,7 @@ const deleteAccount = async () => {
 .up-input-lock { font-size: 0.72rem; color: var(--text-secondary); flex-shrink: 0; }
 
 .up-hint { font-size: 0.76rem; color: var(--text-secondary); }
+.up-trend-axis { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-secondary); margin-top: 4px; }
 
 .scx-key-status { font-size: 0.85rem; color: var(--success-color); margin-left: 0.75rem; font-family: monospace; letter-spacing: 0.1em; }
 

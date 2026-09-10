@@ -36,6 +36,20 @@ class UserControllerTest extends TestCase
             ->assertJsonPath('active_days', 1);
     }
 
+    public function test_stats_include_a_zero_filled_14_day_request_series(): void
+    {
+        $user = User::factory()->create();
+        RequestHistory::record($user->id, ['protocol' => 'rest', 'method' => 'GET', 'url' => 'https://a.test', 'status' => 200, 'time_ms' => 5]);
+        // Another user's requests must not count toward this user's series.
+        RequestHistory::record(User::factory()->create()->id, ['protocol' => 'rest', 'method' => 'GET', 'url' => 'https://x.test', 'status' => 200, 'time_ms' => 5]);
+
+        $series = $this->actingAs($user)->getJson('/api/user/stats')->json('requests_by_day');
+
+        $this->assertCount(14, $series);
+        $this->assertSame(now()->toDateString(), $series[13]['date']);
+        $this->assertSame(1, $series[13]['count']);
+    }
+
     public function test_activity_returns_recent_requests_newest_first(): void
     {
         $user = User::factory()->create();

@@ -38,7 +38,33 @@ class UserController extends Controller
             // Response sizes are not persisted, so bandwidth is not tracked.
             'bandwidth' => 0,
             'active_days' => $activeDays,
+            'requests_by_day' => $this->requestsByDay($user, 14),
         ]);
+    }
+
+    /**
+     * This user's daily request counts for the last $days days, oldest first,
+     * zero-filled. DATE(created_at) grouping is portable across MySQL/SQLite.
+     *
+     * @return array<int,array{date:string,count:int}>
+     */
+    protected function requestsByDay(User $user, int $days): array
+    {
+        $since = now()->subDays($days - 1)->startOfDay();
+
+        $counts = $user->requestHistories()
+            ->where('created_at', '>=', $since)
+            ->select(\Illuminate\Support\Facades\DB::raw('DATE(created_at) as d'), \Illuminate\Support\Facades\DB::raw('count(*) as c'))
+            ->groupBy('d')
+            ->pluck('c', 'd');
+
+        $series = [];
+        for ($i = 0; $i < $days; $i++) {
+            $date = now()->subDays($days - 1 - $i)->toDateString();
+            $series[] = ['date' => $date, 'count' => (int) ($counts[$date] ?? 0)];
+        }
+
+        return $series;
     }
 
     public function activity(Request $request)
