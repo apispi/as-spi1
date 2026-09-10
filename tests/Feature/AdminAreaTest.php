@@ -71,6 +71,37 @@ class AdminAreaTest extends TestCase
             ->assertOk()->assertJsonCount(2, 'organisations');
     }
 
+    public function test_an_admin_lists_and_manages_organisation_members(): void
+    {
+        $admin = $this->admin();
+        $org = Organisation::create(['name' => 'Acme', 'slug' => 'acme']);
+        $alice = User::factory()->create(['name' => 'Alice', 'organisation_id' => $org->id]);
+        $bob = User::factory()->create(['name' => 'Bob']); // unassigned
+
+        // List members: only Alice.
+        $this->actingAs($admin)->getJson("/api/admin/organisations/{$org->id}/members")
+            ->assertOk()
+            ->assertJsonCount(1, 'members')
+            ->assertJsonPath('members.0.name', 'Alice');
+
+        // Add Bob via the reused assign endpoint.
+        $this->actingAs($admin)->putJson("/api/admin/users/{$bob->id}/organisation", ['organisation_id' => $org->id])->assertOk();
+        $this->actingAs($admin)->getJson("/api/admin/organisations/{$org->id}/members")->assertJsonCount(2, 'members');
+
+        // Remove Alice.
+        $this->actingAs($admin)->putJson("/api/admin/users/{$alice->id}/organisation", ['organisation_id' => null])->assertOk();
+        $this->actingAs($admin)->getJson("/api/admin/organisations/{$org->id}/members")
+            ->assertJsonCount(1, 'members')
+            ->assertJsonPath('members.0.name', 'Bob');
+    }
+
+    public function test_organisation_members_endpoint_requires_admin(): void
+    {
+        $org = Organisation::create(['name' => 'Acme', 'slug' => 'acme']);
+        $this->actingAs(User::factory()->create(['is_admin' => false]))
+            ->getJson("/api/admin/organisations/{$org->id}/members")->assertStatus(403);
+    }
+
     public function test_deleting_an_organisation_unassigns_members_rather_than_deleting_them(): void
     {
         $org = Organisation::create(['name' => 'Acme', 'slug' => 'acme']);

@@ -250,6 +250,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
 
     Route::get('/api/admin/organisations', [OrganisationController::class, 'index']);
     Route::post('/api/admin/organisations', [OrganisationController::class, 'store']);
+    Route::get('/api/admin/organisations/{organisation}/members', [OrganisationController::class, 'members']);
     Route::put('/api/admin/organisations/{organisation}', [OrganisationController::class, 'update']);
     Route::delete('/api/admin/organisations/{organisation}', [OrganisationController::class, 'destroy']);
     Route::get('/api/admin/stats', [AdminController::class, 'stats']);

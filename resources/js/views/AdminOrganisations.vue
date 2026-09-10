@@ -25,6 +25,7 @@
           </div>
           <span class="ad-row-sub">{{ o.description || o.slug }}</span>
         </div>
+        <button class="ad-btn" @click="openMembers(o)">Members</button>
         <button class="ad-btn" @click="edit(o)">Edit</button>
       </li>
     </ul>
@@ -32,6 +33,40 @@
     <p v-if="unassigned" class="ad-note">
       {{ unassigned }} user{{ unassigned === 1 ? ' is' : 's are' }} not in any organisation.
     </p>
+
+    <!-- Members management -->
+    <div v-if="members" class="ad-scrim" @click.self="members = null">
+      <div class="ad-modal">
+        <header class="ad-modal-head">
+          <h2>{{ members.org.name }} · members</h2>
+          <button class="ad-x" @click="members = null" aria-label="Close"><Icon name="close" :size="18" /></button>
+        </header>
+        <div class="ad-form">
+          <!-- Add a member -->
+          <label class="ad-label">Add a member</label>
+          <input v-model="memberSearch" class="input-field" placeholder="Search users by name or email…" @input="searchUsers" />
+          <ul v-if="candidates.length" class="om-candidates">
+            <li v-for="c in candidates" :key="c.id" class="om-candidate">
+              <span>{{ c.name }} <span class="ad-muted">· {{ c.email }}</span><span v-if="c.organisation" class="ad-pill">{{ c.organisation.name }}</span></span>
+              <button class="ad-btn" :disabled="memberBusy" @click="addMember(c)">Add</button>
+            </li>
+          </ul>
+
+          <label class="ad-label" style="margin-top:14px">Current members ({{ members.list.length }})</label>
+          <p v-if="!members.list.length" class="ad-muted">No members yet.</p>
+          <ul v-else class="ad-list om-list">
+            <li v-for="m in members.list" :key="m.id" class="ad-row">
+              <div class="ad-row-main">
+                <span class="ad-row-name">{{ m.name }} <span v-if="m.is_admin" class="ad-pill passing">admin</span></span>
+                <span class="ad-row-sub">{{ m.email }}</span>
+              </div>
+              <button class="ad-btn ad-danger-sm" :disabled="memberBusy" @click="removeMember(m)">Remove</button>
+            </li>
+          </ul>
+          <p v-if="memberError" class="ad-error">{{ memberError }}</p>
+        </div>
+      </div>
+    </div>
 
     <div v-if="editing" class="ad-scrim" @click.self="editing = null">
       <div class="ad-modal">
@@ -129,6 +164,75 @@ const save = async () => {
   }
 };
 
+// ── Member management ──
+const members = ref(null);           // { org, list }
+const memberSearch = ref('');
+const candidates = ref([]);
+const memberBusy = ref(false);
+const memberError = ref('');
+let searchTimer = null;
+
+const openMembers = async (o) => {
+  memberSearch.value = '';
+  candidates.value = [];
+  memberError.value = '';
+  members.value = { org: o, list: [] };
+  await loadMembers(o.id);
+};
+
+const loadMembers = async (orgId) => {
+  try {
+    const res = await axios.get(`/api/admin/organisations/${orgId}/members`);
+    members.value.list = res.data.members;
+  } catch {
+    memberError.value = 'Could not load members.';
+  }
+};
+
+const searchUsers = () => {
+  clearTimeout(searchTimer);
+  const term = memberSearch.value.trim();
+  if (!term) { candidates.value = []; return; }
+  searchTimer = setTimeout(async () => {
+    try {
+      const res = await axios.get('/api/admin/users', { params: { search: term, per_page: 8 } });
+      const memberIds = new Set(members.value.list.map((m) => m.id));
+      candidates.value = (res.data.data || []).filter((u) => !memberIds.has(u.id));
+    } catch { candidates.value = []; }
+  }, 250);
+};
+
+const addMember = async (c) => {
+  memberBusy.value = true;
+  memberError.value = '';
+  try {
+    await axios.put(`/api/admin/users/${c.id}/organisation`, { organisation_id: members.value.org.id });
+    memberSearch.value = '';
+    candidates.value = [];
+    await loadMembers(members.value.org.id);
+    await fetchAll();
+  } catch (e) {
+    memberError.value = e.response?.data?.message || 'Could not add member.';
+  } finally {
+    memberBusy.value = false;
+  }
+};
+
+const removeMember = async (m) => {
+  if (!confirm(`Remove ${m.name} from ${members.value.org.name}?`)) return;
+  memberBusy.value = true;
+  memberError.value = '';
+  try {
+    await axios.put(`/api/admin/users/${m.id}/organisation`, { organisation_id: null });
+    await loadMembers(members.value.org.id);
+    await fetchAll();
+  } catch (e) {
+    memberError.value = e.response?.data?.message || 'Could not remove member.';
+  } finally {
+    memberBusy.value = false;
+  }
+};
+
 const remove = async () => {
   if (!confirm(`Delete "${editing.value.name}"? Its members stay, unassigned.`)) return;
   saving.value = true;
@@ -146,4 +250,11 @@ const remove = async () => {
 
 <style scoped>
 @import './admin-shared.css';
+
+.om-candidates { list-style: none; margin: 6px 0 0; padding: 0; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+.om-candidate { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); }
+.om-candidate:last-child { border-bottom: none; }
+.om-list { margin-top: 8px; }
+.ad-danger-sm { color: var(--error-color); border-color: rgba(248,113,113,.4); }
+.ad-danger-sm:hover:not(:disabled) { background: rgba(248,113,113,.12); }
 </style>

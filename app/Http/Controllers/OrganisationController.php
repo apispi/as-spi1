@@ -22,6 +22,24 @@ class OrganisationController extends Controller
         ]);
     }
 
+    /**
+     * The members of one organisation, for the admin member-management panel.
+     */
+    public function members(Organisation $organisation)
+    {
+        $members = $organisation->users()
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'is_admin'])
+            ->map(fn ($u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'is_admin' => (bool) $u->is_admin,
+            ]);
+
+        return response()->json(['members' => $members]);
+    }
+
     public function store(Request $request)
     {
         $validated = $this->validated($request, null);
