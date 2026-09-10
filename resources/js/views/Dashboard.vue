@@ -5,6 +5,28 @@
       <p class="hub-sub">Test, inspect, and harden MCP servers, agents, and APIs — with AI in the loop.</p>
     </header>
 
+    <!-- At-a-glance overview -->
+    <router-link v-if="failingCount" to="/monitors" class="ov-alert">
+      <Icon name="activity" :size="16" />
+      {{ failingCount }} monitor{{ failingCount === 1 ? ' is' : 's are' }} failing — investigate →
+    </router-link>
+
+    <section v-if="stats" class="ov">
+      <div class="ov-stats">
+        <div class="ov-stat"><div class="ov-v">{{ stats.requests }}</div><div class="ov-l">Requests</div></div>
+        <div class="ov-stat"><div class="ov-v">{{ stats.saved }}</div><div class="ov-l">Saved</div></div>
+        <router-link to="/monitors" class="ov-stat ov-link">
+          <div class="ov-v" :class="{ bad: failingCount }">{{ passingCount }}/{{ monitorTotal }}</div>
+          <div class="ov-l">Monitors passing</div>
+        </router-link>
+        <div class="ov-stat"><div class="ov-v">{{ stats.active_days }}</div><div class="ov-l">Active days</div></div>
+      </div>
+      <div v-if="trendValues.length > 1" class="ov-trend">
+        <div class="ov-trend-l">Your requests · last {{ trendValues.length }} days</div>
+        <Sparkline :values="trendValues" aria-label="Your requests per day" />
+      </div>
+    </section>
+
     <!-- Feature bento -->
     <section class="bento">
       <router-link
@@ -58,12 +80,20 @@ import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { useAuthStore } from '../store/auth';
 import Icon from '../components/Icon.vue';
+import Sparkline from '../components/Sparkline.vue';
 
 const authStore = useAuthStore();
 const firstName = computed(() => (authStore.user?.name || 'there').split(' ')[0]);
 
 const reports = ref([]);
 const loadingReports = ref(true);
+const stats = ref(null);
+const monitors = ref([]);
+
+const trendValues = computed(() => (stats.value?.requests_by_day || []).map((d) => d.count));
+const monitorTotal = computed(() => monitors.value.length);
+const failingCount = computed(() => monitors.value.filter((m) => m.last_status === 'failing').length);
+const passingCount = computed(() => monitors.value.filter((m) => m.last_status === 'passing').length);
 
 const cards = computed(() => {
   const base = [
@@ -92,6 +122,10 @@ onMounted(async () => {
   } finally {
     loadingReports.value = false;
   }
+
+  // Overview data — best-effort, never blocks the rest of the page.
+  try { stats.value = (await axios.get('/api/user/stats')).data; } catch { /* ignore */ }
+  try { monitors.value = (await axios.get('/api/monitors')).data || []; } catch { /* ignore */ }
 });
 
 const typeName = (t) => ({ conformance: 'Conformance', security: 'Security', agent_loop: 'Agent run', collection_run: 'Collection run', mcp_drift: 'MCP drift', parity: 'Env parity', exploration: 'Exploration', fuzz: 'Fuzz', replay: 'Replay', dataset_run: 'Dataset run', perf: 'Performance' }[t] || t);
@@ -112,6 +146,24 @@ const ago = (iso) => {
 .hub-sub { color: var(--text-secondary); margin: 8px 0 0; font-size: 15px; }
 
 /* Bento grid */
+/* Overview */
+.ov-alert {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding: 10px 14px;
+  border-radius: 10px; border: 1px solid rgba(248,81,73,.4); background: rgba(248,81,73,.1);
+  color: var(--error-color); font-size: 13px; font-weight: 600; text-decoration: none;
+}
+.ov-alert:hover { background: rgba(248,81,73,.16); }
+.ov { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 28px; }
+.ov-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.ov-stat { padding: 14px 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--panel-bg); text-decoration: none; }
+.ov-link:hover { border-color: var(--accent-color); }
+.ov-v { font-size: 1.7rem; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.ov-v.bad { color: var(--error-color); }
+.ov-l { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); margin-top: 4px; }
+.ov-trend { padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--panel-bg); display: flex; flex-direction: column; justify-content: center; }
+.ov-trend-l { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); margin-bottom: 6px; }
+@media (max-width: 760px) { .ov { grid-template-columns: 1fr; } .ov-stats { grid-template-columns: repeat(2, 1fr); } }
+
 .bento { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-bottom: 40px; }
 .card {
   position: relative; display: flex; flex-direction: column; gap: 14px;
