@@ -66,6 +66,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import { toast } from '../toast';
 import RequestPanel from '../components/RequestPanel.vue';
 import ResponsePanel from '../components/ResponsePanel.vue';
 import EnvironmentManager from '../components/EnvironmentManager.vue';
@@ -144,7 +145,7 @@ const handleSaveRequest = async (requestData) => {
   try {
     await requestsStore.saveRequest(requestData);
   } catch (error) {
-    alert(error.response?.data?.message || 'Failed to save request. Ensure you are logged in.');
+    toast.error(error.response?.data?.message || 'Failed to save request. Ensure you are logged in.');
   }
 };
 

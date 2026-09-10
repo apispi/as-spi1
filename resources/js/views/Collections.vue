@@ -230,6 +230,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
+import { toast } from '../toast';
 import { useRouter } from 'vue-router';
 import Icon from '../components/Icon.vue';
 import CollectionManager from '../components/CollectionManager.vue';
@@ -326,7 +327,7 @@ const perf = async (req) => {
     const res = await axios.post(`/api/saved-requests/${req.id}/perf`, { samples: 20, environment_id: envStore.selectedId || null });
     perfResult.value = res.data;
   } catch (e) {
-    alert(e.response?.data?.message || 'Profiling failed.');
+    toast.error(e.response?.data?.message || 'Profiling failed.');
   } finally {
     perfing.value = null;
   }
@@ -341,7 +342,7 @@ const fuzz = async (req) => {
     fuzzResult.value = res.data;
   } catch (e) {
     if (e.response?.status === 422 && e.response.data?.results) fuzzResult.value = e.response.data;
-    else alert(e.response?.data?.message || 'Fuzzing failed.');
+    else toast.error(e.response?.data?.message || 'Fuzzing failed.');
   } finally {
     fuzzing.value = null;
   }
@@ -362,7 +363,7 @@ const exportCollection = async (c, format = 'postman') => {
     a.click();
     URL.revokeObjectURL(a.href);
   } catch {
-    alert('Export failed.');
+    toast.error('Export failed.');
   }
 };
 

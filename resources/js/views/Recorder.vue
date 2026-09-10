@@ -209,6 +209,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import { toast } from '../toast';
 import Icon from '../components/Icon.vue';
 
 const proxies = ref([]);
@@ -317,7 +318,7 @@ const replay = async () => {
     replayResult.value = res.data;
   } catch (e) {
     if (e.response?.status === 422 && e.response.data?.steps) replayResult.value = e.response.data;
-    else alert(e.response?.data?.message || 'Replay failed.');
+    else toast.error(e.response?.data?.message || 'Replay failed.');
   } finally {
     replaying.value = false;
   }

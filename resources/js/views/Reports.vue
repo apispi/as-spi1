@@ -114,6 +114,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import { toast } from '../toast';
 import ReportView from '../components/ReportView.vue';
 import ReportDiff from '../components/ReportDiff.vue';
 
@@ -165,7 +166,7 @@ async function exportReport(report, format) {
     a.click();
     URL.revokeObjectURL(url);
   } catch {
-    error.value = 'Could not export the report.';
+    toast.error('Could not export the report.');
   }
 }
 
@@ -252,7 +253,7 @@ async function toggleShare(r) {
     r.share_url = res.data.url; r.is_shared = true;
     copy(res.data.url);
     const row = rows.value.find((x) => x.id === r.id); if (row) row.is_shared = true;
-  } catch (e) { error.value = 'Could not share.'; } finally { busy.value = false; }
+  } catch (e) { toast.error('Could not create a share link.'); } finally { busy.value = false; }
 }
 
 async function revoke(r) {
@@ -274,7 +275,7 @@ async function remove(r) {
 }
 
 async function copy(url) {
-  try { await navigator.clipboard.writeText(url); } catch { /* clipboard unavailable */ }
+  try { await navigator.clipboard.writeText(url); toast.success('Share link copied to clipboard'); } catch { toast.error('Could not copy the link'); }
 }
 
 const ago = (iso) => {
