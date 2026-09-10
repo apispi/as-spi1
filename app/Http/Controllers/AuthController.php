@@ -28,6 +28,7 @@ class AuthController extends Controller
         $request->session()->regenerate();
 
         AuditEvent::record('auth.register', $user, $request);
+        $this->sendWelcome($user);
 
         return response()->json($user, 201);
     }
@@ -139,5 +140,18 @@ class AuthController extends Controller
         AuditEvent::record('auth.password_changed', $user, $request);
 
         return response()->json(['message' => 'Password updated successfully.']);
+    }
+
+    /**
+     * Send the welcome email, but never let a mail misconfiguration break the
+     * sign-up the user just completed.
+     */
+    private function sendWelcome(User $user): void
+    {
+        try {
+            \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\WelcomeMail($user));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Welcome email failed', ['user' => $user->id, 'error' => $e->getMessage()]);
+        }
     }
 }

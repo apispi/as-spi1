@@ -85,6 +85,12 @@ class RegistrationController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
+        try {
+            \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\WelcomeMail($user));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Welcome email failed', ['user' => $user->id, 'error' => $e->getMessage()]);
+        }
+
         return response()->json($user, 201);
     }
 
