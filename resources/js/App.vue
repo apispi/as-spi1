@@ -127,8 +127,9 @@
     <router-view class="router-content"></router-view>
   </div>
 
-  <!-- Global toast feedback, above every view and both shells -->
+  <!-- Global toast feedback + confirm dialog, above every view and both shells -->
   <ToastHost />
+  <ConfirmDialog />
 </template>
 
 <script setup>
@@ -140,6 +141,7 @@ import CommandPalette from './components/CommandPalette.vue';
 import OnboardingTour from './components/OnboardingTour.vue';
 import NotificationsBell from './components/NotificationsBell.vue';
 import ToastHost from './components/ToastHost.vue';
+import ConfirmDialog from './components/ConfirmDialog.vue';
 import { theme, toggleTheme } from './theme';
 import { maybeStartTour } from './onboarding';
 

@@ -357,6 +357,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
+import { confirmDialog } from '../confirm';
 import { useMonitorsStore } from '../store/monitors';
 import { useCollectionsStore } from '../store/collections';
 import { useEnvironmentsStore } from '../store/environments';
@@ -459,7 +460,7 @@ const savePage = async () => {
 };
 
 const removePage = async () => {
-  if (!confirm(`Delete "${pageForm.value.name}"? Its public link will stop working.`)) return;
+  if (!(await confirmDialog(`Delete "${pageForm.value.name}"? Its public link will stop working.`))) return;
   savingPage.value = true;
   try {
     await axios.delete(`/api/status-pages/${pageForm.value.id}`);
@@ -517,7 +518,7 @@ const saveChannel = async () => {
 };
 
 const removeChannel = async () => {
-  if (!confirm(`Delete the "${channelForm.value.name}" channel?`)) return;
+  if (!(await confirmDialog(`Delete the "${channelForm.value.name}" channel?`))) return;
   savingChannel.value = true;
   try {
     await axios.delete(`/api/alert-channels/${channelForm.value.id}`);
@@ -662,7 +663,7 @@ const save = async () => {
 };
 
 const remove = async () => {
-  if (!confirm(`Delete the "${editing.value.name}" monitor?`)) return;
+  if (!(await confirmDialog(`Delete the "${editing.value.name}" monitor?`))) return;
   saving.value = true;
   try {
     await store.remove(editing.value.id);

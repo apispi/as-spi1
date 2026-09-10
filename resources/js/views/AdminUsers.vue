@@ -127,6 +127,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import { confirmDialog } from '../confirm';
 import Icon from '../components/Icon.vue';
 import { useAuthStore } from '../store/auth';
 
@@ -225,7 +226,7 @@ const toggleAdmin = async (user) => {
 };
 
 const deleteUser = async (user) => {
-  if (!confirm(`Deactivate "${user.name}" (${user.email})?\n\nThey will not be able to sign in. Their data is kept and you can restore them later.`)) return;
+  if (!(await confirmDialog(`Deactivate "${user.name}" (${user.email})?\n\nThey will not be able to sign in. Their data is kept and you can restore them later.`))) return;
   try {
     const res = await axios.delete(`/api/admin/users/${user.id}`);
     show(res.data.message);

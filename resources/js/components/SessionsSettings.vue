@@ -40,6 +40,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
+import { confirmDialog } from '../confirm';
 
 const sessions = ref([]);
 const loading = ref(true);
@@ -74,7 +75,7 @@ const revoke = async (s) => {
 };
 
 const revokeOthers = async () => {
-  if (!confirm('Sign out every other device? They will need to log in again.')) return;
+  if (!(await confirmDialog('Sign out every other device? They will need to log in again.'))) return;
   busy.value = 'others';
   error.value = '';
   try {

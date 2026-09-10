@@ -101,6 +101,7 @@
 </template>
 
 <script setup>
+import { confirmDialog } from '../confirm';
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useCollectionsStore } from '../store/collections';
 import { useRequestsStore } from '../store/requests';
@@ -189,7 +190,7 @@ const runIt = async () => {
 };
 
 const remove = async () => {
-  if (!confirm(`Delete the "${editing.value.name}" collection?`)) return;
+  if (!(await confirmDialog(`Delete the "${editing.value.name}" collection?`))) return;
   saving.value = true;
   try {
     await store.remove(editing.value.id);

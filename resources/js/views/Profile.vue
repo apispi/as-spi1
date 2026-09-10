@@ -535,6 +535,7 @@ import { ref, reactive, computed, onMounted } from 'vue';
 import { useAuthStore } from '../store/auth';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
+import { confirmDialog } from '../confirm';
 import { restartTour } from '../onboarding';
 import TwoFactorSettings from '../components/TwoFactorSettings.vue';
 import SessionsSettings from '../components/SessionsSettings.vue';
@@ -809,7 +810,7 @@ const createKey = async () => {
 };
 
 const revokeKey = async (key) => {
-  if (!confirm(`Revoke "${key.name}"? Any request using it will stop working immediately.`)) return;
+  if (!(await confirmDialog(`Revoke "${key.name}"? Any request using it will stop working immediately.`))) return;
   revokingId.value = key.id;
   flashError.value = '';
   try {

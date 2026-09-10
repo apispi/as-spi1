@@ -127,6 +127,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
+import { confirmDialog } from '../confirm';
 
 const route = useRoute();
 const user = ref(null);
@@ -167,7 +168,7 @@ onMounted(async () => {
 });
 
 const revokeSessions = async () => {
-  if (!confirm(`Sign ${user.value.name} out of all devices? They will need to log in again.`)) return;
+  if (!(await confirmDialog(`Sign ${user.value.name} out of all devices? They will need to log in again.`))) return;
   busy.value = true;
   try {
     const res = await axios.post(`/api/admin/users/${route.params.id}/revoke-sessions`);
@@ -180,7 +181,7 @@ const revokeSessions = async () => {
 };
 
 const disable2fa = async () => {
-  if (!confirm(`Turn off two-factor for ${user.value.name}? Use this only for account recovery.`)) return;
+  if (!(await confirmDialog(`Turn off two-factor for ${user.value.name}? Use this only for account recovery.`))) return;
   busy.value = true;
   try {
     await axios.post(`/api/admin/users/${route.params.id}/disable-2fa`);

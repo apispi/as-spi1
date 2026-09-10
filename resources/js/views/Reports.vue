@@ -114,6 +114,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import { confirmDialog } from '../confirm';
 import { toast } from '../toast';
 import ReportView from '../components/ReportView.vue';
 import ReportDiff from '../components/ReportDiff.vue';
@@ -266,7 +267,7 @@ async function revoke(r) {
 }
 
 async function remove(r) {
-  if (!confirm('Delete this report? This cannot be undone.')) return;
+  if (!(await confirmDialog('Delete this report? This cannot be undone.'))) return;
   try {
     await axios.delete(`/api/reports/${r.id}`);
     rows.value = rows.value.filter((x) => x.id !== r.id);

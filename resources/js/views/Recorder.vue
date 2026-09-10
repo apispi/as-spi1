@@ -209,6 +209,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import { confirmDialog } from '../confirm';
 import { toast } from '../toast';
 import Icon from '../components/Icon.vue';
 
@@ -290,7 +291,7 @@ const save = async () => {
 };
 
 const remove = async () => {
-  if (!confirm(`Delete "${editing.value.name}" and its recording? Agents using its URL will get 404s.`)) return;
+  if (!(await confirmDialog(`Delete "${editing.value.name}" and its recording? Agents using its URL will get 404s.`))) return;
   saving.value = true;
   try {
     await axios.delete(`/api/mcp-proxies/${editing.value.id}`);

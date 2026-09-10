@@ -208,6 +208,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
+import { confirmDialog } from '../confirm';
 import ReportView from '../components/ReportView.vue';
 
 const route = useRoute();
@@ -491,7 +492,7 @@ const toggleActive = async (item) => {
 };
 
 const destroy = async (item) => {
-  if (!confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
+  if (!(await confirmDialog(`Delete "${item.name}"? This cannot be undone.`))) return;
   try {
     await axios.delete(`/api/admin/catalog/${item.id}`);
     showFlash('Item deleted.');

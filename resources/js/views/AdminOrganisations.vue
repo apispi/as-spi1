@@ -108,6 +108,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import { confirmDialog } from '../confirm';
 import Icon from '../components/Icon.vue';
 
 const organisations = ref([]);
@@ -219,7 +220,7 @@ const addMember = async (c) => {
 };
 
 const removeMember = async (m) => {
-  if (!confirm(`Remove ${m.name} from ${members.value.org.name}?`)) return;
+  if (!(await confirmDialog(`Remove ${m.name} from ${members.value.org.name}?`))) return;
   memberBusy.value = true;
   memberError.value = '';
   try {
@@ -234,7 +235,7 @@ const removeMember = async (m) => {
 };
 
 const remove = async () => {
-  if (!confirm(`Delete "${editing.value.name}"? Its members stay, unassigned.`)) return;
+  if (!(await confirmDialog(`Delete "${editing.value.name}"? Its members stay, unassigned.`))) return;
   saving.value = true;
   try {
     await axios.delete(`/api/admin/organisations/${editing.value.id}`);

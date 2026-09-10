@@ -230,6 +230,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
+import { confirmDialog } from '../confirm';
 import { toast } from '../toast';
 import { useRouter } from 'vue-router';
 import Icon from '../components/Icon.vue';
@@ -293,7 +294,7 @@ const openHistoryEntry = (entry) => {
 };
 
 const remove = async (req) => {
-  if (!confirm(`Delete "${req.name}"?`)) return;
+  if (!(await confirmDialog(`Delete "${req.name}"?`))) return;
   await requestsStore.deleteRequest(req.id);
   // A deleted request takes its collection steps with it.
   collectionsStore.fetch();
@@ -426,7 +427,7 @@ const openHistory = async () => {
 };
 
 const clearHistory = async () => {
-  if (!confirm('Clear your entire request history?')) return;
+  if (!(await confirmDialog('Clear your entire request history?'))) return;
   await axios.delete('/api/history');
   history.value = [];
 };

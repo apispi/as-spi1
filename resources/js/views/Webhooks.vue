@@ -141,6 +141,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import { confirmDialog } from '../confirm';
 import { useRouter } from 'vue-router';
 import Icon from '../components/Icon.vue';
 import { useRequestsStore } from '../store/requests';
@@ -245,7 +246,7 @@ const save = async () => {
 };
 
 const remove = async () => {
-  if (!confirm(`Delete "${editing.value.name}" and its captures? Senders will start getting 404s.`)) return;
+  if (!(await confirmDialog(`Delete "${editing.value.name}" and its captures? Senders will start getting 404s.`))) return;
   saving.value = true;
   try {
     await axios.delete(`/api/webhook-endpoints/${editing.value.id}`);

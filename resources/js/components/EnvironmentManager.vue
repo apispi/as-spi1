@@ -99,6 +99,7 @@
 </template>
 
 <script setup>
+import { confirmDialog } from '../confirm';
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useEnvironmentsStore } from '../store/environments';
 import { useAuthStore } from '../store/auth';
@@ -160,7 +161,7 @@ const save = async () => {
 };
 
 const remove = async () => {
-  if (!confirm(`Delete the "${editing.value.name}" environment?`)) return;
+  if (!(await confirmDialog(`Delete the "${editing.value.name}" environment?`))) return;
   saving.value = true;
   try {
     await store.remove(editing.value.id);

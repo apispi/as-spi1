@@ -97,6 +97,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import { confirmDialog } from '../confirm';
 import Icon from '../components/Icon.vue';
 import { useAuthStore } from '../store/auth';
 
@@ -172,7 +173,7 @@ const save = async () => {
 };
 
 const remove = async () => {
-  if (!confirm(`Delete "${editing.value.name}"? Its URL will stop working.`)) return;
+  if (!(await confirmDialog(`Delete "${editing.value.name}"? Its URL will stop working.`))) return;
   saving.value = true;
   try { await axios.delete(`/api/mcp-mocks/${editing.value.id}`); editing.value = null; await fetchAll(); }
   catch { error.value = 'Failed to delete.'; }
