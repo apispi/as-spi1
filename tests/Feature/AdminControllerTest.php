@@ -169,4 +169,26 @@ class AdminControllerTest extends TestCase
             ->assertJsonPath('protocol_breakdown.mcp', 2)
             ->assertJsonPath('protocol_breakdown.a2a', 0);
     }
+
+    public function test_stats_includes_a_zero_filled_14_day_request_series(): void
+    {
+        $admin = $this->admin();
+
+        // Two today, one three days ago; every other day should be zero.
+        \App\Models\RequestHistory::record($admin->id, ['protocol' => 'rest', 'method' => 'GET', 'url' => 'https://a.test', 'status' => 200, 'time_ms' => 5]);
+        \App\Models\RequestHistory::record($admin->id, ['protocol' => 'rest', 'method' => 'GET', 'url' => 'https://a.test', 'status' => 200, 'time_ms' => 5]);
+        $old = \App\Models\RequestHistory::create(['user_id' => $admin->id, 'protocol' => 'rest', 'method' => 'GET', 'url' => 'https://a.test', 'status' => 200, 'time_ms' => 5]);
+        $old->created_at = now()->subDays(3);
+        $old->save();
+
+        $series = $this->actingAs($admin)->getJson('/api/admin/stats')->json('requests_by_day');
+
+        $this->assertCount(14, $series);
+        // Oldest first; last entry is today with the 2 recent requests.
+        $this->assertSame(now()->toDateString(), $series[13]['date']);
+        $this->assertSame(2, $series[13]['count']);
+        // The day three days ago has the backdated request.
+        $threeAgo = collect($series)->firstWhere('date', now()->subDays(3)->toDateString());
+        $this->assertSame(1, $threeAgo['count']);
+    }
 }

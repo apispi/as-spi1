@@ -31,6 +31,17 @@
       </div>
     </div>
 
+    <template v-if="dailyValues.length > 1">
+      <div class="ad-section-head">
+        <h2 class="ad-section">Requests · last 14 days</h2>
+        <span class="ad-muted">{{ dailyTotal }} total · peak {{ dailyPeak }}/day</span>
+      </div>
+      <div class="ad-boxed-block">
+        <Sparkline :values="dailyValues" aria-label="Requests per day over the last 14 days" />
+        <div class="au-axis"><span>{{ firstDay }}</span><span>{{ lastDay }}</span></div>
+      </div>
+    </template>
+
     <template v-if="protocolRows.length">
       <h2 class="ad-section">Requests by protocol</h2>
       <div class="ad-proto ad-boxed-block">
@@ -67,6 +78,15 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
+import Sparkline from '../components/Sparkline.vue';
+
+const days = computed(() => stats.value?.requests_by_day || []);
+const dailyValues = computed(() => days.value.map((d) => d.count));
+const dailyTotal = computed(() => dailyValues.value.reduce((a, b) => a + b, 0));
+const dailyPeak = computed(() => (dailyValues.value.length ? Math.max(...dailyValues.value) : 0));
+const fmtDay = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString('en-AU', { day: '2-digit', month: 'short' });
+const firstDay = computed(() => (days.value.length ? fmtDay(days.value[0].date) : ''));
+const lastDay = computed(() => (days.value.length ? fmtDay(days.value[days.value.length - 1].date) : ''));
 
 const stats = ref(null);
 const connectors = ref([]);
@@ -116,4 +136,5 @@ const when = (iso) => new Date(iso).toLocaleString('en-AU', {
 .ad-proto-track { height: 8px; border-radius: 999px; background: rgba(255,255,255,.06); overflow: hidden; }
 .ad-proto-fill { height: 100%; border-radius: 999px; background: var(--accent-color); }
 .ad-proto-count { font-size: 12px; color: var(--text-secondary); text-align: right; }
+.au-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
 </style>

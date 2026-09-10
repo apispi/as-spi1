@@ -84,7 +84,32 @@ class AdminController extends Controller
                 'mcp' => (int) ($protocolBreakdown['mcp'] ?? 0),
                 'a2a' => (int) ($protocolBreakdown['a2a'] ?? 0),
             ],
+            'requests_by_day' => $this->requestsByDay(14),
         ]);
+    }
+
+    /**
+     * Daily request counts for the last $days days, oldest first, with zero-fill
+     * for quiet days. DATE(created_at) grouping works on both MySQL and SQLite.
+     *
+     * @return array<int,array{date:string,count:int}>
+     */
+    protected function requestsByDay(int $days): array
+    {
+        $since = now()->subDays($days - 1)->startOfDay();
+
+        $counts = RequestHistory::where('created_at', '>=', $since)
+            ->select(DB::raw('DATE(created_at) as d'), DB::raw('count(*) as c'))
+            ->groupBy('d')
+            ->pluck('c', 'd');
+
+        $series = [];
+        for ($i = 0; $i < $days; $i++) {
+            $date = now()->subDays($days - 1 - $i)->toDateString();
+            $series[] = ['date' => $date, 'count' => (int) ($counts[$date] ?? 0)];
+        }
+
+        return $series;
     }
 
     /**
