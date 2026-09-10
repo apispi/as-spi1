@@ -398,6 +398,10 @@ class AdminController extends Controller
 
         $user->delete();
 
+        // A deactivated user must not keep riding a live session until it
+        // expires — end every session now so the block takes effect at once.
+        DB::table('sessions')->where('user_id', $user->id)->delete();
+
         return response()->json(['message' => 'User deactivated. Their data is kept and can be restored.']);
     }
 
@@ -421,11 +425,11 @@ class AdminController extends Controller
     /**
      * Hard delete: the account and everything it owns, permanently.
      *
-     * The owned tables all cascade on delete, so the database does the work;
-     * the counts are gathered first purely so the audit entry records what
-     * went. The audit log itself is deliberately NOT owned data — entries
-     * about this user survive, and entries they wrote as an admin keep their
-     * email snapshot.
+     * Owned tables cascade on delete, except sessions (no foreign key) and the
+     * user's own audit_events (user_id is nulled, not deleted) — both are
+     * cleared explicitly so nothing identifying the user is left behind. The
+     * admin_actions log is NOT owned data: entries recording what admins did
+     * to this account survive, with their email snapshot.
      */
     public function forceDeleteUser(Request $request, $id)
     {
@@ -443,6 +447,9 @@ class AdminController extends Controller
             'monitors' => $user->monitors()->count(),
             'alert_channels' => $user->alertChannels()->count(),
             'reports' => InspectionReport::where('user_id', $user->id)->count(),
+            'api_keys' => $user->apiKeys()->count(),
+            'sessions' => DB::table('sessions')->where('user_id', $user->id)->count(),
+            'security_events' => \App\Models\AuditEvent::where('user_id', $user->id)->count(),
         ];
 
         AdminAction::create([
@@ -459,7 +466,15 @@ class AdminController extends Controller
             ],
         ]);
 
-        $user->forceDelete();
+        // Most owned tables cascade on delete, but two do not: sessions carry
+        // no foreign key, and audit_events null the user_id (keeping the
+        // actor_email). For a true erasure both must go explicitly, before the
+        // row they reference disappears.
+        DB::transaction(function () use ($user) {
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+            \App\Models\AuditEvent::where('user_id', $user->id)->delete();
+            $user->forceDelete();
+        });
 
         return response()->json([
             'message' => 'User and all associated records permanently deleted.',

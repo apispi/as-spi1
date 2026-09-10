@@ -43,6 +43,12 @@ class AdminUserLifecycleTest extends TestCase
         \App\Models\InspectionReport::create([
             'user_id' => $user->id, 'type' => 'collection_run', 'summary' => 'x', 'data' => [],
         ]);
+        \App\Models\ApiKey::issue($user, 'CI key');
+        \App\Models\AuditEvent::record('auth.login', $user);
+        \Illuminate\Support\Facades\DB::table('sessions')->insert([
+            'id' => 'sess-'.$user->id, 'user_id' => $user->id, 'ip_address' => '1.2.3.4',
+            'user_agent' => 'x', 'payload' => '', 'last_activity' => time(),
+        ]);
 
         return $user;
     }
@@ -125,15 +131,35 @@ class AdminUserLifecycleTest extends TestCase
         $this->assertDatabaseMissing('users', ['id' => $user->id]);
 
         foreach (['saved_requests', 'request_histories', 'environments', 'collections',
-            'monitors', 'alert_channels', 'inspection_reports'] as $table) {
+            'monitors', 'alert_channels', 'inspection_reports', 'api_keys'] as $table) {
             $this->assertDatabaseMissing($table, ['user_id' => $user->id]);
         }
 
         // Collection steps hang off the collection, not the user directly.
         $this->assertSame(0, \App\Models\CollectionStep::count());
 
+        // The two that do not cascade must be cleared explicitly: a true
+        // erasure leaves no session and no audit event bearing the user.
+        $this->assertSame(0, \Illuminate\Support\Facades\DB::table('sessions')->where('user_id', $user->id)->count());
+        $this->assertDatabaseMissing('audit_events', ['user_id' => $user->id]);
+
         $response->assertJsonPath('deleted.saved_requests', 1)
-            ->assertJsonPath('deleted.monitors', 1);
+            ->assertJsonPath('deleted.monitors', 1)
+            ->assertJsonPath('deleted.api_keys', 1)
+            ->assertJsonPath('deleted.sessions', 1);
+    }
+
+    public function test_deactivating_a_user_ends_their_live_sessions(): void
+    {
+        $user = $this->userWithData(); // seeds one session
+
+        $this->assertSame(1, \Illuminate\Support\Facades\DB::table('sessions')->where('user_id', $user->id)->count());
+
+        $this->actingAs($this->admin())->deleteJson("/api/admin/users/{$user->id}")->assertOk();
+
+        // Soft-deleted, but their session is gone so the lock-out is immediate.
+        $this->assertSoftDeleted('users', ['id' => $user->id]);
+        $this->assertSame(0, \Illuminate\Support\Facades\DB::table('sessions')->where('user_id', $user->id)->count());
     }
 
     public function test_a_hard_delete_can_be_applied_to_an_already_soft_deleted_user(): void
