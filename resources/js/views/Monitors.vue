@@ -303,15 +303,36 @@
             </p>
 
             <ul class="mon-runs">
-              <li v-for="r in [...history.results].reverse()" :key="r.id" :class="r.passed ? 'pass' : 'fail'">
+              <li v-for="(r, i) in runsNewestFirst" :key="r.id" :class="r.passed ? 'pass' : 'fail'">
                 <span class="mon-run-mark">{{ r.passed ? '✓' : '✕' }}</span>
                 <span class="mon-run-when">{{ when(r.created_at) }}</span>
                 <span class="mon-run-steps">{{ r.passed_count }}/{{ r.total }}</span>
                 <span class="mon-run-time">{{ r.time_ms }} ms</span>
                 <span class="mon-run-summary">{{ r.summary }}</span>
+                <button
+                  v-if="history.type === 'collection' && runsNewestFirst[i + 1] && r.inspection_report_id && runsNewestFirst[i + 1].inspection_report_id"
+                  class="mon-run-cmp"
+                  :disabled="comparing"
+                  @click="compareToPrevious(r, runsNewestFirst[i + 1])"
+                >Compare to previous</button>
               </li>
             </ul>
           </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- Run comparison (this run vs the previous) -->
+    <div v-if="cmp" class="mon-scrim" @click.self="cmp = null">
+      <div class="mon-modal">
+        <header class="mon-modal-head">
+          <h2>Run comparison</h2>
+          <button class="mon-x" @click="cmp = null" aria-label="Close"><Icon name="close" :size="18" /></button>
+        </header>
+        <div class="mon-history">
+          <p v-if="cmpError" class="mon-muted">{{ cmpError }}</p>
+          <ReportDiff v-else-if="cmp.diff" :diff="cmp.diff" :headline="cmp.headline" />
+          <p v-else class="mon-muted">These runs are identical.</p>
         </div>
       </div>
     </div>
@@ -326,6 +347,7 @@ import { useCollectionsStore } from '../store/collections';
 import { useEnvironmentsStore } from '../store/environments';
 import { useAuthStore } from '../store/auth';
 import Icon from '../components/Icon.vue';
+import ReportDiff from '../components/ReportDiff.vue';
 
 const store = useMonitorsStore();
 const collectionsStore = useCollectionsStore();
@@ -536,6 +558,30 @@ const medianLatency = computed(() => {
   return times.length % 2 ? times[mid] : Math.round((times[mid - 1] + times[mid]) / 2);
 });
 
+// Newest run first, so index+1 is always the previous (older) run.
+const runsNewestFirst = computed(() => [...(history.value?.results || [])].reverse());
+
+const cmp = ref(null);
+const cmpError = ref('');
+const comparing = ref(false);
+
+// Diff a run against the one before it (older = A, newer = B).
+const compareToPrevious = async (newer, older) => {
+  comparing.value = true;
+  cmpError.value = '';
+  cmp.value = { diff: null };
+  try {
+    const res = await axios.get('/api/reports/compare', {
+      params: { a: older.inspection_report_id, b: newer.inspection_report_id },
+    });
+    cmp.value = { diff: res.data.diff, headline: res.data.headline };
+  } catch (e) {
+    cmpError.value = e.response?.data?.message || 'Could not compare these runs.';
+  } finally {
+    comparing.value = false;
+  }
+};
+
 const startNew = () => {
   error.value = '';
   editing.value = {
@@ -693,7 +739,10 @@ const openHistory = async (m) => {
 .mon-strip-meta { font-size: 12px; color: var(--text-secondary); margin: 8px 0 16px; }
 
 .mon-runs { list-style: none; margin: 0; padding: 0; }
-.mon-runs li { display: grid; grid-template-columns: 16px 130px 52px 70px 1fr; gap: 8px; align-items: baseline; font-size: 12.5px; padding: 6px 0; border-top: 1px solid var(--border-color); }
+.mon-runs li { display: grid; grid-template-columns: 16px 130px 52px 70px 1fr auto; gap: 8px; align-items: baseline; font-size: 12.5px; padding: 6px 0; border-top: 1px solid var(--border-color); }
+.mon-run-cmp { background: none; border: 1px solid var(--border-color); color: var(--text-secondary); border-radius: 6px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.mon-run-cmp:hover:not(:disabled) { border-color: var(--accent-color); color: var(--accent-color); }
+.mon-run-cmp:disabled { opacity: .5; cursor: not-allowed; }
 .mon-run-mark { font-weight: 700; }
 .mon-runs .pass .mon-run-mark { color: #3fb950; }
 .mon-runs .fail .mon-run-mark { color: #f85149; }
@@ -703,7 +752,7 @@ const openHistory = async (m) => {
 @media (max-width: 720px) {
   .mon-row { flex-wrap: wrap; }
   .mon-actions { width: 100%; }
-  .mon-runs li { grid-template-columns: 16px 1fr 52px; }
+  .mon-runs li { grid-template-columns: 16px 1fr 52px auto; }
   .mon-run-time, .mon-run-summary { display: none; }
 }
 </style>
