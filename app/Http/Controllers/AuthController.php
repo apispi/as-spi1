@@ -139,6 +139,15 @@ class AuthController extends Controller
 
         AuditEvent::record('auth.password_changed', $user, $request);
 
+        // Security notice — a changed password the owner didn't make is the
+        // signal that matters. Never let mail trouble fail the change itself.
+        try {
+            \Illuminate\Support\Facades\Mail::to($user->email)
+                ->send(new \App\Mail\PasswordChangedMail($user, $request->ip()));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Password-changed email failed', ['user' => $user->id, 'error' => $e->getMessage()]);
+        }
+
         return response()->json(['message' => 'Password updated successfully.']);
     }
 
