@@ -189,6 +189,8 @@ class AdminController extends Controller
                 'organisation' => $user->organisation
                     ? ['id' => $user->organisation->id, 'name' => $user->organisation->name]
                     : null,
+                'two_factor_enabled' => $user->hasTwoFactorEnabled(),
+                'active_sessions' => DB::table('sessions')->where('user_id', $user->id)->count(),
                 'created_at' => $user->created_at?->toDateTimeString(),
                 'updated_at' => $user->updated_at?->toDateTimeString(),
                 'deleted_at' => $user->deleted_at?->toDateTimeString(),
@@ -216,6 +218,57 @@ class AdminController extends Controller
                     'created_at' => $e->created_at?->toDateTimeString(),
                 ]),
         ]);
+    }
+
+    /**
+     * Incident response: sign a user out of every device by clearing their
+     * database sessions. Their next request is unauthenticated.
+     */
+    public function revokeSessions(Request $request, int $id)
+    {
+        $user = User::findOrFail($id);
+
+        $count = DB::table('sessions')->where('user_id', $user->id)->delete();
+
+        AdminAction::create([
+            'admin_id' => $request->user()->id,
+            'admin_email' => $request->user()->email,
+            'action' => 'revoke_sessions',
+            'target_user_id' => $user->id,
+            'target_email' => $user->email,
+            'details' => ['sessions' => $count],
+        ]);
+
+        return response()->json(['message' => "Signed out {$count} session(s).", 'active_sessions' => 0]);
+    }
+
+    /**
+     * Account recovery: turn off a user's two-factor authentication when they
+     * have lost their device. They can re-enrol afterwards.
+     */
+    public function disableTwoFactor(Request $request, int $id)
+    {
+        $user = User::findOrFail($id);
+
+        if (! $user->hasTwoFactorEnabled()) {
+            return response()->json(['message' => 'This user does not have two-factor enabled.'], 422);
+        }
+
+        $user->forceFill([
+            'two_factor_secret' => null,
+            'two_factor_recovery_codes' => null,
+            'two_factor_confirmed_at' => null,
+        ])->save();
+
+        AdminAction::create([
+            'admin_id' => $request->user()->id,
+            'admin_email' => $request->user()->email,
+            'action' => 'disable_two_factor',
+            'target_user_id' => $user->id,
+            'target_email' => $user->email,
+        ]);
+
+        return response()->json(['message' => 'Two-factor disabled.', 'two_factor_enabled' => false]);
     }
 
     /**

@@ -58,6 +58,32 @@
         </li>
       </ul>
 
+      <!-- Security posture + remediation -->
+      <h2 class="ad-section">Security</h2>
+      <ul class="ad-list">
+        <li class="ad-row">
+          <div class="ad-row-main">
+            <span class="ad-row-name">
+              Two-factor
+              <span class="ad-pill" :class="user.two_factor_enabled ? 'passing' : 'unknown'">{{ user.two_factor_enabled ? 'enabled' : 'off' }}</span>
+            </span>
+            <span class="ad-row-sub">{{ user.active_sessions }} active session{{ user.active_sessions === 1 ? '' : 's' }}</span>
+          </div>
+          <div class="aud-actions">
+            <button v-if="user.two_factor_enabled" class="ad-btn" :disabled="busy" @click="disable2fa">Reset 2FA</button>
+            <button class="ad-btn" :disabled="busy || !user.active_sessions" @click="revokeSessions">Sign out all</button>
+          </div>
+        </li>
+      </ul>
+      <ul v-if="securityEvents.length" class="ad-list">
+        <li v-for="(e, i) in securityEvents" :key="i" class="ad-row">
+          <div class="ad-row-main">
+            <span class="ad-row-name">{{ e.label }}</span>
+            <span class="ad-row-sub"><template v-if="e.ip">{{ e.ip }} · </template>{{ e.created_at }}</span>
+          </div>
+        </li>
+      </ul>
+
       <!-- Monitors -->
       <h2 class="ad-section">Monitors</h2>
       <p v-if="!monitors.length" class="ad-muted">None.</p>
@@ -107,8 +133,10 @@ const user = ref(null);
 const counts = ref({});
 const recent = ref([]);
 const monitors = ref([]);
+const securityEvents = ref([]);
 const organisations = ref([]);
 const loading = ref(true);
+const busy = ref(false);
 const error = ref('');
 
 const tiles = computed(() => [
@@ -129,6 +157,7 @@ onMounted(async () => {
     counts.value = detail.data.counts;
     recent.value = detail.data.recent_requests;
     monitors.value = detail.data.monitors;
+    securityEvents.value = detail.data.security_events || [];
     organisations.value = orgs.data.organisations;
   } catch (e) {
     error.value = e.response?.status === 404 ? 'That user no longer exists.' : 'Could not load this user.';
@@ -136,6 +165,32 @@ onMounted(async () => {
     loading.value = false;
   }
 });
+
+const revokeSessions = async () => {
+  if (!confirm(`Sign ${user.value.name} out of all devices? They will need to log in again.`)) return;
+  busy.value = true;
+  try {
+    const res = await axios.post(`/api/admin/users/${route.params.id}/revoke-sessions`);
+    user.value.active_sessions = res.data.active_sessions;
+  } catch (e) {
+    error.value = e.response?.data?.message || 'Could not sign the user out.';
+  } finally {
+    busy.value = false;
+  }
+};
+
+const disable2fa = async () => {
+  if (!confirm(`Turn off two-factor for ${user.value.name}? Use this only for account recovery.`)) return;
+  busy.value = true;
+  try {
+    await axios.post(`/api/admin/users/${route.params.id}/disable-2fa`);
+    user.value.two_factor_enabled = false;
+  } catch (e) {
+    error.value = e.response?.data?.message || 'Could not disable two-factor.';
+  } finally {
+    busy.value = false;
+  }
+};
 
 const assign = async (e) => {
   const value = e.target.value;
@@ -157,5 +212,6 @@ const assign = async (e) => {
 .ad-section { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-secondary); margin: 26px 0 10px; }
 .ad-boxed { border: 1px solid var(--border-color); border-radius: 12px; }
 .ad-select { max-width: 220px; padding: 6px 10px; font-size: 13px; }
+.aud-actions { display: flex; gap: 8px; flex-shrink: 0; }
 .ad-url { color: var(--text-primary); font-family: 'Courier New', monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
