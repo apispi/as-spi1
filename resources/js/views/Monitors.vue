@@ -302,6 +302,21 @@
               · median {{ medianLatency }} ms
             </p>
 
+            <!-- Latency trend -->
+            <div v-if="history.results.length > 1" class="mon-trend">
+              <div class="mon-trend-head">
+                <span class="mon-trend-title">Latency</span>
+                <span class="mon-trend-stats">
+                  min {{ latencyStats.min }} · median {{ medianLatency }} · p95 {{ latencyStats.p95 }} · max {{ latencyStats.max }} ms
+                </span>
+              </div>
+              <Sparkline
+                :values="history.results.map((r) => r.time_ms)"
+                :marks="history.results.map((r) => r.passed)"
+                aria-label="Response time over recent runs"
+              />
+            </div>
+
             <ul class="mon-runs">
               <li v-for="(r, i) in runsNewestFirst" :key="r.id" :class="r.passed ? 'pass' : 'fail'">
                 <span class="mon-run-mark">{{ r.passed ? '✓' : '✕' }}</span>
@@ -348,6 +363,7 @@ import { useEnvironmentsStore } from '../store/environments';
 import { useAuthStore } from '../store/auth';
 import Icon from '../components/Icon.vue';
 import ReportDiff from '../components/ReportDiff.vue';
+import Sparkline from '../components/Sparkline.vue';
 
 const store = useMonitorsStore();
 const collectionsStore = useCollectionsStore();
@@ -561,6 +577,13 @@ const medianLatency = computed(() => {
 // Newest run first, so index+1 is always the previous (older) run.
 const runsNewestFirst = computed(() => [...(history.value?.results || [])].reverse());
 
+const latencyStats = computed(() => {
+  const times = (history.value?.results || []).map((r) => r.time_ms).sort((a, b) => a - b);
+  if (!times.length) return { min: 0, max: 0, p95: 0 };
+  const p95 = times[Math.min(times.length - 1, Math.ceil(times.length * 0.95) - 1)];
+  return { min: times[0], max: times[times.length - 1], p95 };
+});
+
 const cmp = ref(null);
 const cmpError = ref('');
 const comparing = ref(false);
@@ -740,6 +763,10 @@ const openHistory = async (m) => {
 
 .mon-runs { list-style: none; margin: 0; padding: 0; }
 .mon-runs li { display: grid; grid-template-columns: 16px 130px 52px 70px 1fr auto; gap: 8px; align-items: baseline; font-size: 12.5px; padding: 6px 0; border-top: 1px solid var(--border-color); }
+.mon-trend { margin: 14px 0 4px; }
+.mon-trend-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
+.mon-trend-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-secondary); }
+.mon-trend-stats { font-size: 11.5px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .mon-run-cmp { background: none; border: 1px solid var(--border-color); color: var(--text-secondary); border-radius: 6px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .mon-run-cmp:hover:not(:disabled) { border-color: var(--accent-color); color: var(--accent-color); }
 .mon-run-cmp:disabled { opacity: .5; cursor: not-allowed; }
