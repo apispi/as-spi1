@@ -14,7 +14,7 @@
       </div>
     </header>
 
-    <p v-if="store.isLoading" class="mon-muted">Loading…</p>
+    <Skeleton v-if="store.isLoading" :rows="5" />
 
     <div v-else-if="!store.monitors.length" class="mon-empty">
       <Icon name="activity" :size="26" />
@@ -363,6 +363,7 @@ import { useCollectionsStore } from '../store/collections';
 import { useEnvironmentsStore } from '../store/environments';
 import { useAuthStore } from '../store/auth';
 import Icon from '../components/Icon.vue';
+import Skeleton from '../components/Skeleton.vue';
 import ReportDiff from '../components/ReportDiff.vue';
 import Sparkline from '../components/Sparkline.vue';
 

@@ -47,7 +47,7 @@
       <input v-model="search" class="amf-search" type="search" placeholder="Filter by name or owner…" />
     </div>
 
-    <p v-if="loading && !monitors.length" class="ad-muted">Loading…</p>
+    <Skeleton v-if="loading && !monitors.length" :rows="5" />
 
     <div v-else-if="!monitors.length" class="ad-empty">
       <Icon name="activity" :size="26" />
@@ -84,6 +84,7 @@
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import Icon from '../components/Icon.vue';
+import Skeleton from '../components/Skeleton.vue';
 
 const monitors = ref([]);
 const summary = ref({});

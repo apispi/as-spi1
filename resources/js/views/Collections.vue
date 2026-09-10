@@ -23,7 +23,7 @@
 
     <!-- Saved requests -->
     <section v-if="tab === 'saved'">
-      <p v-if="requestsStore.isLoading" class="col-muted">Loading…</p>
+      <Skeleton v-if="requestsStore.isLoading" :rows="5" />
       <div v-else-if="!requestsStore.savedRequests.length" class="col-empty">
         <Icon name="send" :size="26" />
         <p>No saved requests yet. Build one in the tester and save it — saved requests are the steps a collection runs.</p>
@@ -91,7 +91,7 @@
 
     <!-- Collections -->
     <section v-else-if="tab === 'collections'">
-      <p v-if="collectionsStore.isLoading" class="col-muted">Loading…</p>
+      <Skeleton v-if="collectionsStore.isLoading" :rows="5" />
       <div v-else-if="!collectionsStore.collections.length" class="col-empty">
         <Icon name="layers" :size="26" />
         <p>No collections yet. A collection runs saved requests in order against one environment, checking each step's assertions.</p>
@@ -234,6 +234,7 @@ import { confirmDialog } from '../confirm';
 import { toast } from '../toast';
 import { useRouter } from 'vue-router';
 import Icon from '../components/Icon.vue';
+import Skeleton from '../components/Skeleton.vue';
 import CollectionManager from '../components/CollectionManager.vue';
 import RunResults from '../components/RunResults.vue';
 import { useRequestsStore } from '../store/requests';

@@ -27,7 +27,7 @@
       </template>
     </div>
 
-    <p v-if="loading" class="rp-muted">Loading…</p>
+    <Skeleton v-if="loading" :rows="5" />
     <p v-else-if="!rows.length" class="rp-muted">No reports yet. Run Grade, Scan, or Agent on a connector in the Catalog.</p>
 
     <table v-else class="rp-table">
@@ -112,6 +112,7 @@
 </template>
 
 <script setup>
+import Skeleton from '../components/Skeleton.vue';
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import { confirmDialog } from '../confirm';

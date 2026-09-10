@@ -54,7 +54,7 @@
         <router-link to="/reports" class="recent-all">View all <Icon name="chevronRight" :size="14" /></router-link>
       </div>
 
-      <p v-if="loadingReports" class="muted">Loading…</p>
+      <Skeleton v-if="loadingReports" :rows="4" />
       <div v-else-if="!reports.length" class="empty">
         <Icon name="report" :size="26" />
         <p>No reports yet. Run a conformance grade, security scan, or agent session on a connector to see it here.</p>
@@ -80,6 +80,7 @@ import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { useAuthStore } from '../store/auth';
 import Icon from '../components/Icon.vue';
+import Skeleton from '../components/Skeleton.vue';
 import Sparkline from '../components/Sparkline.vue';
 
 const authStore = useAuthStore();

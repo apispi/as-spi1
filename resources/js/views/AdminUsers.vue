@@ -23,7 +23,7 @@
       <span class="ad-muted ad-total">{{ total }} user{{ total === 1 ? '' : 's' }}</span>
     </div>
 
-    <p v-if="loading && !users.length" class="ad-muted">Loading…</p>
+    <Skeleton v-if="loading && !users.length" :rows="6" />
 
     <div v-else class="ad-tablewrap">
       <table class="ad-table">
@@ -129,6 +129,7 @@ import { useRouter } from 'vue-router';
 import axios from 'axios';
 import { confirmDialog } from '../confirm';
 import Icon from '../components/Icon.vue';
+import Skeleton from '../components/Skeleton.vue';
 import { useAuthStore } from '../store/auth';
 
 const router = useRouter();
