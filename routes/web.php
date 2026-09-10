@@ -208,6 +208,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/api/environments', [EnvironmentController::class, 'index']);
     Route::post('/api/environments', [EnvironmentController::class, 'store']);
+    Route::post('/api/environments/import', [EnvironmentController::class, 'import']);
+    Route::get('/api/environments/{id}/export', [EnvironmentController::class, 'export']);
     Route::put('/api/environments/{id}', [EnvironmentController::class, 'update']);
     Route::delete('/api/environments/{id}', [EnvironmentController::class, 'destroy']);
 

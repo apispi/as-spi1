@@ -21,6 +21,8 @@
           </button>
           <p v-if="!store.environments.length" class="env-none">No environments yet.</p>
           <button class="env-new" @click="startNew">+ New environment</button>
+          <button class="env-new" @click="triggerImport">↥ Import from file</button>
+          <input ref="importInput" type="file" accept="application/json,.json" class="env-file" @change="onImportFile" />
         </aside>
 
         <!-- Editor -->
@@ -80,6 +82,7 @@
             <button class="primary" @click="save" :disabled="saving || !editing.name.trim()">
               {{ saving ? 'Saving…' : 'Save' }}
             </button>
+            <button v-if="editing.id" class="secondary" @click="exportEnv(editing)">Export</button>
             <button v-if="editing.id" class="danger" @click="remove" :disabled="saving">Delete</button>
             <button class="secondary" @click="editing = null" :disabled="saving">Cancel</button>
           </footer>
@@ -101,8 +104,10 @@
 <script setup>
 import { confirmDialog } from '../confirm';
 import { ref, onMounted, onUnmounted } from 'vue';
+import axios from 'axios';
 import { useEnvironmentsStore } from '../store/environments';
 import { useAuthStore } from '../store/auth';
+import { toast } from '../toast';
 import Icon from './Icon.vue';
 
 const emit = defineEmits(['close']);
@@ -113,6 +118,42 @@ const ownerName = (env) => (env.owner && env.owner.id !== authStore.user?.id ? e
 const editing = ref(null);
 const saving = ref(false);
 const error = ref('');
+const importInput = ref(null);
+
+const exportEnv = async (env) => {
+  try {
+    const res = await axios.get(`/api/environments/${env.id}/export`, { responseType: 'blob' });
+    const url = URL.createObjectURL(res.data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${(env.name || 'environment').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.spi-env.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Environment exported. Secret values are not included.');
+  } catch {
+    toast.error('Could not export the environment.');
+  }
+};
+
+const triggerImport = () => importInput.value?.click();
+
+const onImportFile = async (e) => {
+  const file = e.target.files?.[0];
+  e.target.value = ''; // allow re-selecting the same file later
+  if (!file) return;
+  try {
+    const doc = JSON.parse(await file.text());
+    const res = await axios.post('/api/environments/import', {
+      name: doc.name || 'Imported environment',
+      variables: doc.variables || [],
+    });
+    await store.fetch();
+    edit(res.data);
+    toast.success(`Imported "${res.data.name}". Re-enter any secret values.`);
+  } catch (err) {
+    toast.error(err.response?.data?.message || 'That file is not a valid environment export.');
+  }
+};
 
 const close = () => emit('close');
 
@@ -214,6 +255,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey));
 .env-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: rgba(63,185,80,.16); color: #3fb950; }
 .env-none { color: var(--text-secondary); font-size: 13px; padding: 8px 11px; margin: 0; }
 .env-new { margin-top: 4px; padding: 9px; border: 1px dashed var(--border-color); border-radius: 8px; background: none; color: var(--text-secondary); font-size: 13px; cursor: pointer; }
+.env-file { display: none; }
 .env-new:hover { border-color: var(--accent-color); color: var(--accent-color); }
 
 .env-editor { padding: 18px 20px; overflow-y: auto; }
