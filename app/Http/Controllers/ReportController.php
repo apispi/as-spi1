@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\InspectionReport;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * Saved connector-inspection reports: listing, viewing, comparing two runs,
@@ -21,13 +22,20 @@ class ReportController extends Controller
     public function index(Request $request)
     {
         $validated = $request->validate([
-            'type' => 'nullable|in:agent_loop,conformance,security',
+            // Any real report type — the list spans far more than the three
+            // connector-scan types it originally shipped with.
+            'type' => ['nullable', Rule::in(InspectionReport::TYPES)],
             'connector_slug' => 'nullable|string',
+            'q' => 'nullable|string|max:120',
         ]);
 
         $reports = InspectionReport::inWorkspaceOf($request->user())
             ->when($validated['type'] ?? null, fn ($q, $t) => $q->where('type', $t))
             ->when($validated['connector_slug'] ?? null, fn ($q, $s) => $q->where('connector_slug', $s))
+            ->when($validated['q'] ?? null, function ($q, $term) {
+                $like = '%'.trim($term).'%';
+                $q->where(fn ($w) => $w->where('summary', 'like', $like)->orWhere('connector_name', 'like', $like));
+            })
             ->orderByDesc('id')
             ->get(['id', 'type', 'summary', 'connector_slug', 'connector_name', 'share_token', 'created_at'])
             ->map(fn ($r) => $this->listRow($r));

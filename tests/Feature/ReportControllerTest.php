@@ -55,6 +55,36 @@ class ReportControllerTest extends TestCase
             ->assertJsonPath('reports.0.type', 'security');
     }
 
+    public function test_index_filters_by_collection_run_type(): void
+    {
+        // Regression: collection_run (and the other non-scan types) used to be
+        // rejected by the type validation, breaking the list filter.
+        $user = User::factory()->create();
+        InspectionReport::create(['user_id' => $user->id, 'type' => 'collection_run', 'summary' => 'Smoke — 3/3 passed', 'data' => []]);
+        $this->report($user, ['type' => 'conformance']);
+
+        $this->actingAs($user)->getJson('/api/reports?type=collection_run')
+            ->assertStatus(200)->assertJsonCount(1, 'reports')
+            ->assertJsonPath('reports.0.type', 'collection_run');
+    }
+
+    public function test_index_searches_summaries(): void
+    {
+        $user = User::factory()->create();
+        InspectionReport::create(['user_id' => $user->id, 'type' => 'collection_run', 'summary' => 'Checkout suite — 5/5 passed', 'data' => []]);
+        InspectionReport::create(['user_id' => $user->id, 'type' => 'collection_run', 'summary' => 'Login suite — 2/3 passed', 'data' => []]);
+
+        $res = $this->actingAs($user)->getJson('/api/reports?q=checkout')
+            ->assertStatus(200)->assertJsonCount(1, 'reports');
+        $this->assertStringContainsString('Checkout', $res->json('reports.0.summary'));
+    }
+
+    public function test_index_rejects_an_unknown_type(): void
+    {
+        $this->actingAs(User::factory()->create())->getJson('/api/reports?type=dragon')
+            ->assertStatus(422)->assertJsonValidationErrors(['type']);
+    }
+
     public function test_show_returns_full_data_to_owner_and_403_to_others(): void
     {
         $user = User::factory()->create();

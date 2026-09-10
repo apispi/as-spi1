@@ -11,6 +11,14 @@
                 :class="['rp-chip', { active: typeFilter === f.value }]"
                 @click="setFilter(f.value)">{{ f.label }}</button>
       </div>
+      <input
+        v-if="!compareMode"
+        v-model="search"
+        type="search"
+        class="rp-search"
+        placeholder="Search summaries…"
+        @input="onSearch"
+      />
       <button v-if="!compareMode" class="rp-btn" @click="compareMode = true">Compare</button>
       <template v-else>
         <span class="rp-hint">Pick two {{ selected.length ? typeName(rows.find(r => r.id === selected[0])?.type) : '' }} reports · {{ selected.length }}/2</span>
@@ -120,12 +128,15 @@ const filters = [
   { value: 'replay', label: 'Replays' },
   { value: 'dataset_run', label: 'Dataset runs' },
   { value: 'perf', label: 'Performance' },
+  { value: 'snapshot', label: 'Snapshots' },
 ];
 
 const rows = ref([]);
 const loading = ref(false);
 const error = ref('');
 const typeFilter = ref('');
+const search = ref('');
+let searchTimer = null;
 const open = ref(null);
 const cmp = ref(null);
 const busy = ref(false);
@@ -134,10 +145,18 @@ const selected = ref([]);
 
 onMounted(load);
 
+function onSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(load, 250);
+}
+
 async function load() {
   loading.value = true; error.value = '';
   try {
-    const res = await axios.get('/api/reports', { params: typeFilter.value ? { type: typeFilter.value } : {} });
+    const params = {};
+    if (typeFilter.value) params.type = typeFilter.value;
+    if (search.value.trim()) params.q = search.value.trim();
+    const res = await axios.get('/api/reports', { params });
     rows.value = res.data.reports;
   } catch (e) {
     error.value = 'Could not load reports.';
@@ -147,7 +166,7 @@ async function load() {
 }
 
 function setFilter(v) { typeFilter.value = v; cancelCompare(); load(); }
-const typeName = (t) => ({ conformance: 'Conformance', security: 'Security', agent_loop: 'Agent run', collection_run: 'Collection run', mcp_drift: 'MCP drift', parity: 'Env parity', exploration: 'Exploration', fuzz: 'Fuzz', replay: 'Replay', dataset_run: 'Dataset run', perf: 'Performance' }[t] || t);
+const typeName = (t) => ({ conformance: 'Conformance', security: 'Security', agent_loop: 'Agent run', collection_run: 'Collection run', mcp_drift: 'MCP drift', parity: 'Env parity', exploration: 'Exploration', fuzz: 'Fuzz', replay: 'Replay', dataset_run: 'Dataset run', perf: 'Performance', snapshot: 'Snapshot' }[t] || t);
 
 function rowClick(r) {
   if (compareMode.value) { toggleSelect(r); return; }
@@ -258,6 +277,8 @@ const ago = (iso) => {
 .rp-chip { background: none; border: 1px solid var(--border-color); border-radius: 20px; padding: 5px 13px; color: var(--text-secondary); cursor: pointer; font-size: 13px; }
 .rp-chip.active { background: var(--accent-color); color: #fff; border-color: var(--accent-color); }
 .rp-hint { color: var(--text-secondary); font-size: 13px; }
+.rp-search { margin-left: auto; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 7px 12px; color: var(--text-primary); font-size: 13px; font-family: inherit; min-width: 180px; }
+.rp-search:focus { outline: none; border-color: var(--accent-color); }
 .rp-btn { background: none; border: 1px solid var(--border-color); border-radius: 8px; padding: 7px 14px; color: var(--text-primary); cursor: pointer; font-size: 13px; }
 .rp-btn:hover:not(:disabled) { border-color: var(--accent-color); color: var(--accent-color); }
 .rp-btn:disabled { opacity: .5; cursor: not-allowed; }
