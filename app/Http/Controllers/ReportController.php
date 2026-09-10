@@ -50,6 +50,34 @@ class ReportController extends Controller
         return response()->json($this->full($report));
     }
 
+    /**
+     * Download a report as a JSON record or a Markdown document, for archiving
+     * or pasting into an issue/PR outside Spi.
+     */
+    public function export(Request $request, InspectionReport $report)
+    {
+        $this->authorizeOwner($request, $report);
+
+        $format = $request->query('format') === 'md' ? 'md' : 'json';
+        $base = 'report-'.$report->id;
+
+        if ($format === 'md') {
+            $body = (new \App\Services\Reports\ReportExporter)->markdown($report);
+
+            return response($body, 200, [
+                'Content-Type' => 'text/markdown; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="'.$base.'.md"',
+            ]);
+        }
+
+        $body = json_encode($this->full($report), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+        return response($body, 200, [
+            'Content-Type' => 'application/json',
+            'Content-Disposition' => 'attachment; filename="'.$base.'.json"',
+        ]);
+    }
+
     public function destroy(Request $request, InspectionReport $report)
     {
         $this->authorizeOwner($request, $report);

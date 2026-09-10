@@ -85,6 +85,47 @@ class ReportControllerTest extends TestCase
             ->assertStatus(422)->assertJsonValidationErrors(['type']);
     }
 
+    public function test_a_report_exports_as_json(): void
+    {
+        $user = User::factory()->create();
+        $report = $this->report($user);
+
+        $res = $this->actingAs($user)->get("/api/reports/{$report->id}/export?format=json")
+            ->assertOk()
+            ->assertHeader('Content-Disposition', 'attachment; filename="report-'.$report->id.'.json"');
+
+        $this->assertStringContainsString('application/json', $res->headers->get('Content-Type'));
+        $this->assertSame('A', $res->json('data.grade'));
+    }
+
+    public function test_a_report_exports_as_markdown(): void
+    {
+        $user = User::factory()->create();
+        $report = InspectionReport::create([
+            'user_id' => $user->id, 'type' => 'collection_run',
+            'summary' => 'Smoke — 2/3 passed',
+            'data' => ['passed_count' => 2, 'total' => 3, 'steps' => [['name' => 'Login', 'passed' => true]]],
+        ]);
+
+        $res = $this->actingAs($user)->get("/api/reports/{$report->id}/export?format=md")
+            ->assertOk()
+            ->assertHeader('Content-Disposition', 'attachment; filename="report-'.$report->id.'.md"');
+
+        $body = $res->getContent();
+        $this->assertStringContainsString('# Collection run', $body);
+        $this->assertStringContainsString('Smoke — 2/3 passed', $body);
+        $this->assertStringContainsString('Login', $body);
+    }
+
+    public function test_export_is_workspace_scoped(): void
+    {
+        $owner = User::factory()->create();
+        $report = $this->report($owner);
+
+        $this->actingAs(User::factory()->create())
+            ->get("/api/reports/{$report->id}/export")->assertStatus(403);
+    }
+
     public function test_show_returns_full_data_to_owner_and_403_to_others(): void
     {
         $user = User::factory()->create();

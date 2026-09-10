@@ -234,6 +234,7 @@ Route::middleware('auth')->group(function () {
     // wildcard so it isn't captured as a report id.
     Route::get('/api/reports', [ReportController::class, 'index']);
     Route::get('/api/reports/compare', [ReportController::class, 'compare']);
+    Route::get('/api/reports/{report}/export', [ReportController::class, 'export']);
     Route::get('/api/reports/{report}', [ReportController::class, 'show']);
     Route::delete('/api/reports/{report}', [ReportController::class, 'destroy']);
     Route::post('/api/reports/{report}/share', [ReportController::class, 'share']);
