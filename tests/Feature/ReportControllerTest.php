@@ -79,6 +79,25 @@ class ReportControllerTest extends TestCase
         $this->assertStringContainsString('Checkout', $res->json('reports.0.summary'));
     }
 
+    public function test_index_filters_by_a_rolling_date_window(): void
+    {
+        $user = User::factory()->create();
+        $recent = InspectionReport::create(['user_id' => $user->id, 'type' => 'collection_run', 'summary' => 'today', 'data' => []]);
+        $old = InspectionReport::create(['user_id' => $user->id, 'type' => 'collection_run', 'summary' => 'old', 'data' => []]);
+        $old->forceFill(['created_at' => now()->subDays(40)])->save();
+
+        // Last 7 days → only the recent one.
+        $this->actingAs($user)->getJson('/api/reports?days=7')
+            ->assertOk()->assertJsonCount(1, 'reports')
+            ->assertJsonPath('reports.0.id', $recent->id);
+
+        // Any time (no window) → both.
+        $this->actingAs($user)->getJson('/api/reports')->assertJsonCount(2, 'reports');
+
+        // An unsupported window is rejected.
+        $this->actingAs($user)->getJson('/api/reports?days=3')->assertStatus(422);
+    }
+
     public function test_index_rejects_an_unknown_type(): void
     {
         $this->actingAs(User::factory()->create())->getJson('/api/reports?type=dragon')

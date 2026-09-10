@@ -11,6 +11,13 @@
                 :class="['rp-chip', { active: typeFilter === f.value }]"
                 @click="setFilter(f.value)">{{ f.label }}</button>
       </div>
+      <select v-if="!compareMode" v-model.number="days" class="rp-range" @change="load">
+        <option :value="0">Any time</option>
+        <option :value="1">Last 24h</option>
+        <option :value="7">Last 7 days</option>
+        <option :value="30">Last 30 days</option>
+        <option :value="90">Last 90 days</option>
+      </select>
       <input
         v-if="!compareMode"
         v-model="search"
@@ -141,6 +148,7 @@ const loading = ref(false);
 const error = ref('');
 const typeFilter = ref('');
 const search = ref('');
+const days = ref(0);
 let searchTimer = null;
 const open = ref(null);
 const cmp = ref(null);
@@ -178,6 +186,7 @@ async function load() {
     const params = {};
     if (typeFilter.value) params.type = typeFilter.value;
     if (search.value.trim()) params.q = search.value.trim();
+    if (days.value) params.days = days.value;
     const res = await axios.get('/api/reports', { params });
     rows.value = res.data.reports;
   } catch (e) {
@@ -299,7 +308,8 @@ const ago = (iso) => {
 .rp-chip { background: none; border: 1px solid var(--border-color); border-radius: 20px; padding: 5px 13px; color: var(--text-secondary); cursor: pointer; font-size: 13px; }
 .rp-chip.active { background: var(--accent-color); color: #fff; border-color: var(--accent-color); }
 .rp-hint { color: var(--text-secondary); font-size: 13px; }
-.rp-search { margin-left: auto; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 7px 12px; color: var(--text-primary); font-size: 13px; font-family: inherit; min-width: 180px; }
+.rp-range { margin-left: auto; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 7px 10px; color: var(--text-primary); font-size: 13px; font-family: inherit; }
+.rp-search { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 7px 12px; color: var(--text-primary); font-size: 13px; font-family: inherit; min-width: 180px; }
 .rp-search:focus { outline: none; border-color: var(--accent-color); }
 .rp-btn { background: none; border: 1px solid var(--border-color); border-radius: 8px; padding: 7px 14px; color: var(--text-primary); cursor: pointer; font-size: 13px; }
 .rp-btn:hover:not(:disabled) { border-color: var(--accent-color); color: var(--accent-color); }

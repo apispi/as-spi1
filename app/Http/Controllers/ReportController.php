@@ -27,11 +27,14 @@ class ReportController extends Controller
             'type' => ['nullable', Rule::in(InspectionReport::TYPES)],
             'connector_slug' => 'nullable|string',
             'q' => 'nullable|string|max:120',
+            // Rolling time window in days; anything else means "any time".
+            'days' => ['nullable', Rule::in([1, 7, 30, 90])],
         ]);
 
         $reports = InspectionReport::inWorkspaceOf($request->user())
             ->when($validated['type'] ?? null, fn ($q, $t) => $q->where('type', $t))
             ->when($validated['connector_slug'] ?? null, fn ($q, $s) => $q->where('connector_slug', $s))
+            ->when($validated['days'] ?? null, fn ($q, $d) => $q->where('created_at', '>=', now()->subDays((int) $d)))
             ->when($validated['q'] ?? null, function ($q, $term) {
                 $like = '%'.trim($term).'%';
                 $q->where(fn ($w) => $w->where('summary', 'like', $like)->orWhere('connector_name', 'like', $like));
