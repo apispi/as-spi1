@@ -6,7 +6,7 @@
         <p class="nt-sub">Monitor and webhook alerts for your workspace.</p>
       </div>
       <div class="nt-actions">
-        <router-link to="/profile?tab=personalisation" class="nt-btn">Preferences</router-link>
+        <router-link to="/profile?tab=preferences" class="nt-btn">Preferences</router-link>
         <button class="nt-btn" @click="markAll" :disabled="!hasUnread">Mark all read</button>
       </div>
     </header>

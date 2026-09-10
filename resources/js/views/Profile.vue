@@ -22,11 +22,12 @@
         <!-- Tabs -->
         <div class="up-tabs">
           <button :class="['up-tab', { active: activeTab === 'account' }]" @click="activeTab = 'account'">Account</button>
-          <button :class="['up-tab', { active: activeTab === 'personalisation' }]" @click="activeTab = 'personalisation'">Personalisation</button>
-          <button :class="['up-tab', { active: activeTab === 'api-keys' }]" @click="activeTab = 'api-keys'">API Keys</button>
+          <button :class="['up-tab', { active: activeTab === 'preferences' }]" @click="activeTab = 'preferences'">Preferences</button>
           <button :class="['up-tab', { active: activeTab === 'usage' }]" @click="activeTab = 'usage'">Usage</button>
-          <button :class="['up-tab', { active: activeTab === 'settings' }]" @click="activeTab = 'settings'">Settings</button>
-          <button :class="['up-tab', { active: activeTab === 'danger' }]" @click="activeTab = 'danger'">Danger Zone</button>
+          <button :class="['up-tab', { active: activeTab === 'tokens' }]" @click="activeTab = 'tokens'">Token Bank</button>
+          <button :class="['up-tab', { active: activeTab === 'payment' }]" @click="activeTab = 'payment'">Payment</button>
+          <button :class="['up-tab', { active: activeTab === 'api-keys' }]" @click="activeTab = 'api-keys'">API Keys</button>
+          <button :class="['up-tab', { active: activeTab === 'helpdesk' }]" @click="activeTab = 'helpdesk'">Helpdesk</button>
         </div>
 
         <!-- ── Account tab ── -->
@@ -91,10 +92,37 @@
 
           <TwoFactorSettings />
           <SessionsSettings />
+
+          <div class="up-card up-card-danger">
+            <div class="up-card-header">
+              <h2 class="up-card-title up-danger-title">Danger zone</h2>
+              <p class="up-card-sub">Irreversible actions — proceed with caution</p>
+            </div>
+            <div class="up-danger-row">
+              <div class="up-danger-info">
+                <div class="up-danger-label">Delete account</div>
+                <div class="up-danger-desc">Permanently remove your account and all associated data. This cannot be undone.</div>
+              </div>
+              <button type="button" class="up-btn-danger" @click="showDeleteConfirm = !showDeleteConfirm">
+                Delete account
+              </button>
+            </div>
+            <div v-if="showDeleteConfirm" class="up-delete-confirm">
+              <p class="up-delete-warning">Type <strong>DELETE</strong> below to confirm account deletion.</p>
+              <div class="up-delete-row">
+                <input type="text" v-model="deleteConfirmText"
+                       class="up-input" placeholder="Type DELETE to confirm" autocomplete="off">
+                <button type="button" class="up-btn-danger-confirm"
+                        :disabled="deleteConfirmText !== 'DELETE'" @click="deleteAccount">
+                  Confirm delete
+                </button>
+              </div>
+            </div>
+          </div>
         </template>
 
-        <!-- ── Personalisation tab ── -->
-        <template v-else-if="activeTab === 'personalisation'">
+        <!-- ── Preferences tab ── -->
+        <template v-else-if="activeTab === 'preferences'">
           <div class="up-card">
             <div class="up-card-header">
               <h2 class="up-card-title">Personalisation</h2>
@@ -382,10 +410,32 @@
         </template>
 
         <!-- ── Settings tab ── -->
-        <template v-else-if="activeTab === 'settings'">
+        <!-- ── Token Bank tab ── -->
+        <template v-else-if="activeTab === 'tokens'">
           <div class="up-card">
             <div class="up-card-header">
-              <h2 class="up-card-title">SCX AI Integration</h2>
+              <h2 class="up-card-title">Token bank</h2>
+              <p class="up-card-sub">Your AI connection and token usage for the Spi assistant and AI Lab</p>
+            </div>
+            <div class="up-token-balance">
+              <div class="up-token-stat">
+                <span class="up-token-dot" :class="hasScxKey ? 'on' : 'off'"></span>
+                <div>
+                  <div class="up-token-status">{{ hasScxKey ? 'Connected' : 'Not connected' }}</div>
+                  <div class="up-token-desc">
+                    {{ hasScxKey
+                      ? 'AI features draw on your connected SCX account; token usage is metered there.'
+                      : 'Connect an SCX AI key below to use the Spi assistant and AI Lab.' }}
+                  </div>
+                </div>
+              </div>
+              <div class="up-token-model" v-if="hasScxKey">Model · {{ scxModelForm || 'scx-ai' }}</div>
+            </div>
+          </div>
+
+          <div class="up-card">
+            <div class="up-card-header">
+              <h2 class="up-card-title">SCX AI integration</h2>
               <p class="up-card-sub">Connect your SCX AI account using an API key</p>
             </div>
             <form @submit.prevent="updateScxApiKey">
@@ -414,33 +464,66 @@
           </div>
         </template>
 
-        <!-- ── Danger Zone tab ── -->
-        <template v-else-if="activeTab === 'danger'">
-          <div class="up-card up-card-danger">
+        <!-- ── Payment tab ── -->
+        <template v-else-if="activeTab === 'payment'">
+          <div class="up-card">
             <div class="up-card-header">
-              <h2 class="up-card-title up-danger-title">Danger Zone</h2>
-              <p class="up-card-sub">Irreversible actions — proceed with caution</p>
+              <h2 class="up-card-title">Plan &amp; billing</h2>
+              <p class="up-card-sub">Your current plan and payment details</p>
             </div>
-            <div class="up-danger-row">
-              <div class="up-danger-info">
-                <div class="up-danger-label">Delete account</div>
-                <div class="up-danger-desc">Permanently remove your account and all associated data. This cannot be undone.</div>
+            <div class="up-plan-row">
+              <div>
+                <div class="up-plan-name">Free · Beta</div>
+                <div class="up-plan-desc">You have full access during the beta. Paid plans with metered usage are coming.</div>
               </div>
-              <button type="button" class="up-btn-danger" @click="showDeleteConfirm = !showDeleteConfirm">
-                Delete Account
-              </button>
+              <span class="up-plan-badge">Active</span>
             </div>
-            <div v-if="showDeleteConfirm" class="up-delete-confirm">
-              <p class="up-delete-warning">Type <strong>DELETE</strong> below to confirm account deletion.</p>
-              <div class="up-delete-row">
-                <input type="text" v-model="deleteConfirmText"
-                       class="up-input" placeholder="Type DELETE to confirm" autocomplete="off">
-                <button type="button" class="up-btn-danger-confirm"
-                        :disabled="deleteConfirmText !== 'DELETE'" @click="deleteAccount">
-                  Confirm Delete
-                </button>
+          </div>
+
+          <div class="up-card">
+            <div class="up-card-header">
+              <h2 class="up-card-title">Payment method</h2>
+              <p class="up-card-sub">Used for future paid plans</p>
+            </div>
+            <div class="up-empty">No payment method on file. Billing isn’t enabled yet — you’ll be asked to add one only when you choose a paid plan.</div>
+            <button type="button" class="up-btn-save" style="margin-top:1rem" disabled>Add payment method (coming soon)</button>
+          </div>
+        </template>
+
+        <!-- ── Helpdesk tab ── -->
+        <template v-else-if="activeTab === 'helpdesk'">
+          <div class="up-card">
+            <div class="up-card-header">
+              <h2 class="up-card-title">Help &amp; resources</h2>
+              <p class="up-card-sub">Guides and answers to get you moving</p>
+            </div>
+            <ul class="up-help-links">
+              <li><router-link to="/docs" class="up-inline-link">Documentation</router-link> — guides for every feature</li>
+              <li><router-link to="/docs/quickstart" class="up-inline-link">Quickstart</router-link> — send your first request</li>
+              <li><router-link to="/developers" class="up-inline-link">Developer API</router-link> — the programmatic reference</li>
+              <li><router-link to="/docs/usage-and-account-activity" class="up-inline-link">Usage &amp; account activity</router-link></li>
+            </ul>
+          </div>
+
+          <div class="up-card">
+            <div class="up-card-header">
+              <h2 class="up-card-title">Contact support</h2>
+              <p class="up-card-sub">Can’t find an answer? Send us a message</p>
+            </div>
+            <form @submit.prevent="sendSupport">
+              <div class="up-form-group">
+                <label class="up-label" for="help-subject">Subject</label>
+                <input id="help-subject" v-model="support.subject" class="up-input" maxlength="120" placeholder="Brief summary">
               </div>
-            </div>
+              <div class="up-form-group">
+                <label class="up-label" for="help-body">Message</label>
+                <textarea id="help-body" v-model="support.body" class="up-input" rows="4" placeholder="Describe your question or issue"></textarea>
+              </div>
+              <div class="up-form-footer">
+                <button type="submit" class="up-btn-save" :disabled="!support.subject.trim()">Email support</button>
+                <p class="up-hint">Opens your mail app to <a class="up-inline-link" href="mailto:support@apispi.com">support@apispi.com</a>.</p>
+              </div>
+            </form>
           </div>
         </template>
 
@@ -450,7 +533,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useAuthStore } from '../store/auth';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 import { restartTour } from '../onboarding';
 import TwoFactorSettings from '../components/TwoFactorSettings.vue';
@@ -459,6 +542,7 @@ import Sparkline from '../components/Sparkline.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
+const route = useRoute();
 
 // Clear the completion flag and replay the tour from the dashboard, where all
 // of its highlighted targets exist.
@@ -484,9 +568,17 @@ const userInitial = computed(() => {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 });
 
-const VALID_TABS = ['account', 'personalisation', 'api-keys', 'usage', 'settings', 'danger'];
+const VALID_TABS = ['account', 'preferences', 'usage', 'tokens', 'payment', 'api-keys', 'helpdesk'];
 
-const activeTab = ref('account');
+// Deep-linkable via ?tab=… (e.g. the notifications "Preferences" link).
+const activeTab = ref(VALID_TABS.includes(route.query.tab) ? route.query.tab : 'account');
+
+const support = reactive({ subject: '', body: '' });
+const sendSupport = () => {
+  const subject = encodeURIComponent(support.subject.trim() || 'Spi support request');
+  const body = encodeURIComponent(support.body.trim());
+  window.location.href = `mailto:support@apispi.com?subject=${subject}&body=${body}`;
+};
 const flashSuccess = ref('');
 const flashError = ref('');
 
@@ -977,6 +1069,26 @@ const deleteAccount = async () => {
 
 /* Activity feed */
 .up-empty { padding: 2rem 0; text-align: center; font-size: 0.875rem; color: var(--text-secondary); }
+
+/* Token Bank */
+.up-token-balance { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.up-token-stat { display: flex; align-items: flex-start; gap: 12px; }
+.up-token-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; background: var(--text-secondary); }
+.up-token-dot.on { background: var(--success-color); }
+.up-token-dot.off { background: var(--text-secondary); }
+.up-token-status { font-size: 0.95rem; font-weight: 700; color: var(--text-primary); }
+.up-token-desc { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; margin-top: 2px; max-width: 480px; }
+.up-token-model { font-size: 0.78rem; color: var(--text-secondary); background: var(--input-bg); border: 1px solid var(--border-color); padding: 0.35rem 0.7rem; border-radius: 0.5rem; }
+
+/* Payment */
+.up-plan-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.up-plan-name { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+.up-plan-desc { font-size: 0.8rem; color: var(--text-secondary); margin-top: 3px; max-width: 460px; line-height: 1.5; }
+.up-plan-badge { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--success-color); background: rgba(35,134,54,.14); padding: 3px 10px; border-radius: 999px; }
+
+/* Helpdesk */
+.up-help-links { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.up-help-links li { font-size: 0.85rem; color: var(--text-secondary); }
 .up-activity-list { display: flex; flex-direction: column; }
 .up-activity-row {
   display: flex; align-items: flex-start; gap: 0.875rem;
