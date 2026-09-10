@@ -175,6 +175,22 @@ class CatalogSeeder extends Seeder
                     'capabilities' => ['streaming' => false, 'pushNotifications' => false],
                 ],
             ],
+            [
+                // The AI agent behind Spi chat and the AI Lab, wired to the SCX
+                // connector so its authoring/explaining capability is catalogued
+                // like any other agent.
+                'type' => 'agent',
+                'connector' => 'scx-ai',
+                'name' => 'SCX Assistant',
+                'description' => 'The SCX-powered assistant behind Spi chat and the AI Lab: authors requests from plain English, explains responses, and drafts assertions. Runs on each user\'s own SCX key.',
+                'version' => '1.0.0',
+                'is_active' => true,
+                'metadata' => [
+                    'protocols' => ['mcp'],
+                    'model' => 'scx-ai',
+                    'capabilities' => ['streaming' => true, 'pushNotifications' => false],
+                ],
+            ],
         ];
     }
 
@@ -228,6 +244,20 @@ class CatalogSeeder extends Seeder
                     'id' => 'review-mcp-server',
                     'tags' => ['mcp', 'security', 'conformance'],
                     'examples' => ['Review this MCP server before we connect it.'],
+                ],
+            ],
+            [
+                // An SCX-powered skill, so the AI connector exposes a skill as
+                // well as its chat tool and prompts.
+                'type' => 'skill',
+                'connector' => 'scx-ai',
+                'name' => 'Explain API Response',
+                'description' => 'Read a response and explain it field by field in plain English, flagging anything unexpected — powered by SCX.',
+                'is_active' => true,
+                'metadata' => [
+                    'id' => 'explain-api-response',
+                    'tags' => ['ai', 'explain', 'debugging'],
+                    'examples' => ['What does this 207 Multi-Status body mean?', 'Explain why this field is null.'],
                 ],
             ],
         ];

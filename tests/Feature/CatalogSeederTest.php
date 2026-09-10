@@ -35,6 +35,27 @@ class CatalogSeederTest extends TestCase
         $this->assertArrayNotHasKey('auth_header', $scx->metadata);
     }
 
+    public function test_the_scx_ai_connector_is_wired_across_types(): void
+    {
+        $this->seed(CatalogSeeder::class);
+
+        // The AI connector exposes an agent, a skill, a tool and a prompt —
+        // each carrying the connector's endpoint, none carrying its auth.
+        foreach (['agent', 'skill', 'tool', 'prompt'] as $type) {
+            $items = CatalogItem::ofType($type)
+                ->where('metadata->connector_slug', 'scx-ai')
+                ->get();
+
+            $this->assertGreaterThan(0, $items->count(), "SCX AI has no {$type}.");
+
+            foreach ($items as $item) {
+                $this->assertSame('https://api.scx.ai/v1/chat/completions', $item->metadata['endpoint']);
+                $this->assertSame('SCX AI', $item->provider);
+                $this->assertArrayNotHasKey('auth_header', $item->metadata);
+            }
+        }
+    }
+
     public function test_connector_items_carry_their_connectors_endpoint_but_never_its_auth(): void
     {
         $this->seed(CatalogSeeder::class);
