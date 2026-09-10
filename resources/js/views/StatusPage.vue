@@ -38,6 +38,15 @@
             ></span>
           </div>
           <p v-else class="sp-muted sp-none">No checks recorded yet.</p>
+
+          <div v-if="m.kind === 'checks' && m.history.length > 1" class="sp-trend">
+            <span class="sp-trend-label">Response time · median {{ median(m.history) }} ms</span>
+            <Sparkline
+              :values="m.history.map((h) => h.time_ms)"
+              :marks="m.history.map((h) => h.ok)"
+              aria-label="Response time over recent checks"
+            />
+          </div>
         </section>
 
         <footer class="sp-foot">
@@ -53,6 +62,14 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
+import Sparkline from '../components/Sparkline.vue';
+
+const median = (history) => {
+  const times = history.map((h) => h.time_ms).sort((a, b) => a - b);
+  if (!times.length) return 0;
+  const mid = Math.floor(times.length / 2);
+  return times.length % 2 ? times[mid] : Math.round((times[mid - 1] + times[mid]) / 2);
+};
 
 const route = useRoute();
 const page = ref(null);
@@ -121,6 +138,8 @@ const when = (iso) => new Date(iso).toLocaleString('en-AU', { day: '2-digit', mo
 .sp-strip { display: flex; gap: 2px; height: 30px; }
 .sp-tick { flex: 1; min-width: 3px; border-radius: 2px; background: #3fb950; }
 .sp-tick.bad { background: #f85149; }
+.sp-trend { margin-top: 12px; }
+.sp-trend-label { display: block; font-size: 11.5px; color: var(--text-secondary); margin-bottom: 2px; }
 .sp-none { font-size: 13px; margin: 0; }
 
 .sp-foot { margin-top: 26px; font-size: 12.5px; color: var(--text-secondary); text-align: center; }
