@@ -8,12 +8,13 @@
       <button class="ad-btn" @click="fetchLogs" :disabled="loading">{{ loading ? 'Refreshing…' : 'Refresh' }}</button>
     </header>
 
-    <!-- Level counts -->
+    <!-- Level counts (click to filter to that level and worse) -->
     <div class="ad-stats" v-if="Object.keys(counts).length">
-      <div class="ad-stat" v-for="lvl in orderedCounts" :key="lvl">
+      <button class="ad-stat lg-stat" v-for="lvl in orderedCounts" :key="lvl"
+              :class="{ active: level === lvl }" @click="setLevel(lvl)" type="button">
         <div class="ad-stat-value" :class="lvl === 'error' || lvl === 'critical' || lvl === 'emergency' || lvl === 'alert' ? 'bad' : ''">{{ counts[lvl] }}</div>
         <div class="ad-stat-label">{{ lvl }}</div>
-      </div>
+      </button>
     </div>
 
     <!-- Controls -->
@@ -101,6 +102,9 @@ const fetchLogs = async () => {
 
 const toggle = (i) => { expanded.value = expanded.value === i ? null : i; };
 
+// Clicking a level count filters to it (or clears the filter if already on it).
+const setLevel = (lvl) => { level.value = level.value === lvl ? '' : lvl; fetchLogs(); };
+
 const fmtSize = (b) => {
   if (b < 1024) return `${b} B`;
   if (b < 1048576) return `${(b / 1024).toFixed(0)} KB`;
@@ -113,6 +117,9 @@ onMounted(fetchLogs);
 <style scoped>
 @import './admin-shared.css';
 
+.lg-stat { cursor: pointer; text-align: left; font-family: inherit; transition: border-color .15s; }
+.lg-stat:hover { border-color: var(--text-secondary); }
+.lg-stat.active { border-color: var(--accent-color); }
 .lg-controls { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
 .lg-input {
   padding: 8px 12px; border-radius: 8px; font-size: 13px; font-family: inherit;

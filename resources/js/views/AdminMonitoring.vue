@@ -36,6 +36,17 @@
       nobody unless its owner has email alerts on and SMTP is set up.
     </p>
 
+    <div class="amf-controls" v-if="monitors.length">
+      <div class="amf-chips">
+        <button v-for="s in statusOptions" :key="s.value"
+                :class="['ad-chip', { active: statusFilter === s.value }]"
+                @click="statusFilter = s.value">
+          {{ s.label }}<span class="ad-chip-n">{{ statusCount(s.value) }}</span>
+        </button>
+      </div>
+      <input v-model="search" class="amf-search" type="search" placeholder="Filter by name or owner…" />
+    </div>
+
     <p v-if="loading && !monitors.length" class="ad-muted">Loading…</p>
 
     <div v-else-if="!monitors.length" class="ad-empty">
@@ -43,8 +54,10 @@
       <p>No monitors exist yet. Users create them from their own Monitors page.</p>
     </div>
 
+    <p v-else-if="!filteredMonitors.length" class="ad-muted">No monitors match this filter.</p>
+
     <ul v-else class="ad-list">
-      <li v-for="m in monitors" :key="m.id" class="ad-row">
+      <li v-for="m in filteredMonitors" :key="m.id" class="ad-row">
         <span class="ad-dot" :class="m.last_status"></span>
         <div class="ad-row-main">
           <div>
@@ -68,13 +81,42 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import Icon from '../components/Icon.vue';
 
 const monitors = ref([]);
 const summary = ref({});
 const loading = ref(true);
+const statusFilter = ref('all');
+const search = ref('');
+
+const statusOptions = [
+  { value: 'all', label: 'All' },
+  { value: 'failing', label: 'Failing' },
+  { value: 'passing', label: 'Passing' },
+  { value: 'paused', label: 'Paused' },
+  { value: 'unknown', label: 'Not run' },
+];
+
+const matchesStatus = (m, s) => {
+  if (s === 'all') return true;
+  if (s === 'paused') return !m.is_enabled;
+  return m.is_enabled && m.last_status === s;
+};
+
+const statusCount = (s) => monitors.value.filter((m) => matchesStatus(m, s)).length;
+
+const filteredMonitors = computed(() => {
+  const q = search.value.trim().toLowerCase();
+  return monitors.value.filter((m) => {
+    if (!matchesStatus(m, statusFilter.value)) return false;
+    if (!q) return true;
+    return (m.name || '').toLowerCase().includes(q)
+      || (m.owner?.email || '').toLowerCase().includes(q)
+      || (m.owner?.name || '').toLowerCase().includes(q);
+  });
+});
 
 const fetchAll = async () => {
   loading.value = true;
@@ -100,4 +142,9 @@ const intervalLabel = (m) => {
 
 <style scoped>
 @import './admin-shared.css';
+
+.amf-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.amf-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.amf-search { flex: 1; min-width: 180px; max-width: 280px; padding: 7px 12px; border-radius: 8px; font-size: 13px; font-family: inherit; background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-primary); }
+.amf-search:focus { outline: none; border-color: var(--accent-color); }
 </style>

@@ -170,6 +170,24 @@ class AdminControllerTest extends TestCase
             ->assertJsonPath('protocol_breakdown.a2a', 0);
     }
 
+    public function test_stats_request_series_respects_the_days_window(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->getJson('/api/admin/stats?days=7')
+            ->assertOk()
+            ->assertJsonPath('requests_by_day_span', 7)
+            ->assertJsonCount(7, 'requests_by_day');
+
+        $this->actingAs($admin)->getJson('/api/admin/stats?days=30')
+            ->assertJsonCount(30, 'requests_by_day');
+
+        // An unsupported window falls back to the 14-day default.
+        $this->actingAs($admin)->getJson('/api/admin/stats?days=999')
+            ->assertJsonPath('requests_by_day_span', 14)
+            ->assertJsonCount(14, 'requests_by_day');
+    }
+
     public function test_stats_includes_a_zero_filled_14_day_request_series(): void
     {
         $admin = $this->admin();

@@ -108,3 +108,13 @@
 }
 .ad-toast.success { border-color: #3fb950; }
 .ad-toast.error { border-color: #f85149; color: #f85149; }
+
+/* Filter chips (shared across admin list pages) */
+.ad-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 1px solid var(--border-color); border-radius: 999px;
+  padding: 5px 12px; color: var(--text-secondary); cursor: pointer; font-size: 13px; font-family: inherit;
+}
+.ad-chip:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+.ad-chip.active { color: var(--accent-color); border-color: var(--accent-color); background: var(--accent-soft); }
+.ad-chip-n { font-size: 11px; font-variant-numeric: tabular-nums; opacity: .8; }

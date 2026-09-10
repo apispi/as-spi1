@@ -33,8 +33,16 @@
 
     <template v-if="dailyValues.length > 1">
       <div class="ad-section-head">
-        <h2 class="ad-section">Requests · last 14 days</h2>
-        <span class="ad-muted">{{ dailyTotal }} total · peak {{ dailyPeak }}/day</span>
+        <h2 class="ad-section">Requests · last {{ rangeDays }} days</h2>
+        <div class="au-trend-controls">
+          <select v-model.number="rangeDays" class="au-range" @change="fetchAll">
+            <option :value="7">7 days</option>
+            <option :value="14">14 days</option>
+            <option :value="30">30 days</option>
+            <option :value="90">90 days</option>
+          </select>
+          <span class="ad-muted">{{ dailyTotal }} total · peak {{ dailyPeak }}/day</span>
+        </div>
       </div>
       <div class="ad-boxed-block">
         <Sparkline :values="dailyValues" aria-label="Requests per day over the last 14 days" />
@@ -91,12 +99,13 @@ const lastDay = computed(() => (days.value.length ? fmtDay(days.value[days.value
 const stats = ref(null);
 const connectors = ref([]);
 const loading = ref(true);
+const rangeDays = ref(14);
 
 const fetchAll = async () => {
   loading.value = true;
   try {
     const [statsRes, connectorsRes] = await Promise.all([
-      axios.get('/api/admin/stats'),
+      axios.get('/api/admin/stats', { params: { days: rangeDays.value } }),
       axios.get('/api/admin/catalog', { params: { type: 'connector' } }),
     ]);
     stats.value = statsRes.data;
@@ -137,4 +146,6 @@ const when = (iso) => new Date(iso).toLocaleString('en-AU', {
 .ad-proto-fill { height: 100%; border-radius: 999px; background: var(--accent-color); }
 .ad-proto-count { font-size: 12px; color: var(--text-secondary); text-align: right; }
 .au-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+.au-trend-controls { display: flex; align-items: center; gap: 12px; }
+.au-range { padding: 5px 10px; border-radius: 8px; font-size: 12px; font-family: inherit; background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-primary); }
 </style>

@@ -68,6 +68,10 @@ class AdminController extends Controller
      */
     public function stats(Request $request)
     {
+        // Window for the request trend; clamped to a small set of sane spans.
+        $days = (int) $request->integer('days', 14);
+        $days = in_array($days, [7, 14, 30, 90], true) ? $days : 14;
+
         $protocolBreakdown = RequestHistory::select('protocol', DB::raw('count(*) as count'))
             ->groupBy('protocol')
             ->pluck('count', 'protocol');
@@ -84,7 +88,8 @@ class AdminController extends Controller
                 'mcp' => (int) ($protocolBreakdown['mcp'] ?? 0),
                 'a2a' => (int) ($protocolBreakdown['a2a'] ?? 0),
             ],
-            'requests_by_day' => $this->requestsByDay(14),
+            'requests_by_day' => $this->requestsByDay($days),
+            'requests_by_day_span' => $days,
         ]);
     }
 
