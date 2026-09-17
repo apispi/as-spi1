@@ -32,29 +32,21 @@ class MonitorStatusChanged extends Notification
     {
         $recovered = $this->status === Monitor::STATUS_PASSING;
 
-        $mail = (new MailMessage)
+        return (new MailMessage)
             ->subject(sprintf(
                 '[Spi] %s %s',
                 $this->monitor->name,
                 $recovered ? 'recovered' : 'is failing'
             ))
-            ->greeting($recovered ? 'Back to normal' : 'Monitor failing');
-
-        if ($recovered) {
-            $mail->line(sprintf('"%s" is passing again.', $this->monitor->name));
-        } else {
-            $mail->line(sprintf('"%s" failed its checks.', $this->monitor->name))
-                ->line($this->result->summary ?: 'One or more steps failed.');
-        }
-
-        return $mail
-            ->line(sprintf(
-                '%d of %d steps passed in %d ms.',
-                $this->result->passed_count,
-                $this->result->total,
-                $this->result->time_ms
-            ))
-            ->action('View monitors', url('/monitors'))
-            ->line('You can turn alerts off for this monitor in Spi.');
+            ->markdown('emails.monitor-status', [
+                'monitorName' => $this->monitor->name,
+                'recovered' => $recovered,
+                'summary' => $recovered ? null : ($this->result->summary ?: 'One or more steps failed.'),
+                'passedCount' => (int) $this->result->passed_count,
+                'total' => (int) $this->result->total,
+                'timeMs' => (int) $this->result->time_ms,
+                'consecutiveFailures' => (int) $this->monitor->consecutive_failures,
+                'monitorsUrl' => url('/monitors'),
+            ]);
     }
 }
