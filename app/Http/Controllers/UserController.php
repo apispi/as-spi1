@@ -184,9 +184,21 @@ class UserController extends Controller
             ], 422);
         }
 
+        // Capture what the confirmation email needs BEFORE the row is erased.
+        $email = $user->email;
+        $firstName = trim(explode(' ', (string) $user->name)[0]) ?: 'there';
+
         // Log that a self-deletion happened, but anonymously — the account is
         // being erased per the Privacy Notice, so no identifying detail is kept.
         \App\Models\AuditEvent::record('account.deleted', null, $request);
+
+        // A final confirmation, so an unexpected deletion is noticed. Sent to
+        // the captured address; never blocks the erasure.
+        try {
+            \Illuminate\Support\Facades\Mail::to($email)->send(new \App\Mail\AccountDeletedMail($firstName));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Account-deleted email failed', ['error' => $e->getMessage()]);
+        }
 
         Auth::logout();
         $request->session()->invalidate();
