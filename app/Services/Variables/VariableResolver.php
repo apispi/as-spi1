@@ -15,9 +15,17 @@ class VariableResolver
 {
     /**
      * Placeholder names are restricted so that JSON bodies containing braces
-     * (templating languages, JSON-in-JSON) are not mangled.
+     * (templating languages, JSON-in-JSON) are not mangled. A single leading
+     * `$` is allowed so computed variables like `{{$uuid}}` match too.
      */
-    private const PATTERN = '/\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}/';
+    private const PATTERN = '/\{\{\s*(\$?[A-Za-z0-9_.-]+)\s*\}\}/';
+
+    private DynamicVariables $dynamic;
+
+    public function __construct(?DynamicVariables $dynamic = null)
+    {
+        $this->dynamic = $dynamic ?? new DynamicVariables;
+    }
 
     /**
      * Names encountered during the last resolve() that had no variable.
@@ -73,15 +81,25 @@ class VariableResolver
         return preg_replace_callback(self::PATTERN, function ($matches) use ($variables) {
             $name = $matches[1];
 
-            if (! array_key_exists($name, $variables)) {
-                $this->unresolved[$name] = true;
+            // An environment variable of the same name wins, so a computed
+            // variable can be pinned to a fixed value when a test needs it.
+            if (array_key_exists($name, $variables)) {
+                $this->used[$name] = true;
 
-                return $matches[0];
+                return $variables[$name];
             }
 
-            $this->used[$name] = true;
+            // Computed variables ({{$uuid}}, {{$timestamp}}, …) produce a fresh
+            // value each time they are used.
+            if (str_starts_with($name, '$') && $this->dynamic->has($name)) {
+                $this->used[$name] = true;
 
-            return $variables[$name];
+                return (string) $this->dynamic->resolve($name);
+            }
+
+            $this->unresolved[$name] = true;
+
+            return $matches[0];
         }, $subject);
     }
 

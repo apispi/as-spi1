@@ -199,6 +199,31 @@ export const DOCS = [
   },
 
   {
+    slug: 'dynamic-variables',
+    title: 'Dynamic variables',
+    category: 'testing',
+    summary: 'Computed {{$…}} values — a fresh UUID, timestamp, or throwaway test data on every send.',
+    body: [
+      { type: 'p', text: 'Some values should be different on every request: a unique idempotency key, the current time, a throwaway email for a sign-up test. **Dynamic variables** produce a fresh value each time they are used, so you never maintain an environment full of placeholder data. They are written like a normal variable but with a leading `$`.' },
+      { type: 'code', lang: 'json', code: '{\n  "id": "{{$uuid}}",\n  "created_at": "{{$isoTimestamp}}",\n  "email": "{{$randomEmail}}"\n}' },
+      { type: 'p', text: 'They resolve at send time, everywhere a normal `{{variable}}` does — URL, headers, body — and in collection runs, fuzzing, and profiling too. Two `{{$uuid}}` in the same request are two different ids.' },
+      { type: 'h2', text: 'Available variables' },
+      { type: 'ul', items: [
+        '`{{$uuid}}` / `{{$guid}}` — a v4 UUID.',
+        '`{{$timestamp}}` — current Unix time in seconds; `{{$isoTimestamp}}` — the same moment as an ISO 8601 string in UTC.',
+        '`{{$randomInt}}` — a whole number from 0 to 1000; `{{$randomBoolean}}` — "true" or "false".',
+        '`{{$randomEmail}}`, `{{$randomFirstName}}`, `{{$randomLastName}}`, `{{$randomFullName}}`, `{{$randomUserName}}`.',
+        '`{{$randomWord}}`, `{{$randomWords}}`, `{{$randomColor}}`, `{{$randomHexColor}}`.',
+        '`{{$randomIP}}`, `{{$randomPhoneNumber}}`, `{{$randomUrl}}`.',
+      ] },
+      { type: 'p', text: 'The full list, with a live example of each, is in the **Manage → Environments** dialog — click a variable there to copy its placeholder.' },
+      { type: 'h2', text: 'Overriding for a deterministic test' },
+      { type: 'p', text: 'Resolution checks the active environment first, and an environment variable name cannot contain `$` — so a dynamic variable never clashes with one of yours. But if you *do* define an environment variable named, say, `$timestamp`, it wins. That is the escape hatch for a test that needs a fixed, repeatable value instead of a fresh one.' },
+      { type: 'note', text: 'An unknown `{{$token}}` is left in place and reported as unresolved, exactly like a mistyped ordinary variable — so a typo is obvious rather than silently blank.' },
+    ],
+  },
+
+  {
     slug: 'assertions',
     title: 'Assertions',
     category: 'testing',

@@ -76,6 +76,21 @@
             when the request is sent.
           </p>
 
+          <details class="env-dyn" v-if="dynamicVars.length">
+            <summary>Dynamic variables — fresh value each send</summary>
+            <p class="env-dyn-lead">
+              Computed values you can drop into any request without defining them.
+              Click one to copy. An environment variable of the same name overrides it.
+            </p>
+            <ul class="env-dyn-list">
+              <li v-for="v in dynamicVars" :key="v.token" @click="copyToken(v.token)" :title="'Copy ' + placeholderFor(v.token)">
+                <code>{{ placeholderFor(v.token) }}</code>
+                <span class="env-dyn-desc">{{ v.description }}</span>
+                <span class="env-dyn-eg">e.g. {{ v.example }}</span>
+              </li>
+            </ul>
+          </details>
+
           <p v-if="error" class="env-error">{{ error }}</p>
 
           <footer class="env-actions">
@@ -119,6 +134,20 @@ const ownerName = (env) => (env.owner && env.owner.id !== authStore.user?.id ? e
 const editing = ref(null);
 const saving = ref(false);
 const error = ref('');
+const dynamicVars = ref([]);
+
+// `{{$uuid}}` from the `$uuid` token — kept out of the template so Vue's
+// mustache parser never sees the braces.
+const placeholderFor = (token) => '{{' + token + '}}';
+
+async function copyToken(token) {
+  try {
+    await navigator.clipboard.writeText(placeholderFor(token));
+    toast.success('Copied ' + placeholderFor(token));
+  } catch {
+    toast.error('Could not copy to clipboard');
+  }
+}
 const importInput = ref(null);
 
 const exportEnv = async (env) => {
@@ -236,6 +265,9 @@ const onKey = (e) => {
 onMounted(() => {
   window.addEventListener('keydown', onKey);
   if (!store.loaded) store.fetch();
+  axios.get('/api/dynamic-variables')
+    .then((res) => { dynamicVars.value = res.data.variables || []; })
+    .catch(() => {});
 });
 onUnmounted(() => window.removeEventListener('keydown', onKey));
 </script>
@@ -294,6 +326,20 @@ onUnmounted(() => window.removeEventListener('keydown', onKey));
 
 .env-hint { font-size: 12.5px; line-height: 1.6; color: var(--text-secondary); margin: 16px 0 0; }
 .env-hint code { font-family: 'Courier New', monospace; background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 4px; }
+
+.env-dyn { margin-top: 14px; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; }
+.env-dyn summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--text-secondary); }
+.env-dyn summary:hover { color: var(--text-primary); }
+.env-dyn-lead { font-size: 12px; line-height: 1.5; color: var(--text-secondary); margin: 8px 0 10px; }
+.env-dyn-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 220px; overflow-y: auto; }
+.env-dyn-list li {
+  display: grid; grid-template-columns: minmax(130px, auto) 1fr auto; gap: 10px; align-items: baseline;
+  padding: 4px 6px; border-radius: 6px; cursor: pointer;
+}
+.env-dyn-list li:hover { background: var(--accent-soft, rgba(88,166,255,.12)); }
+.env-dyn-list code { font-family: 'Courier New', monospace; font-size: 12px; color: var(--accent-color); background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 4px; }
+.env-dyn-desc { font-size: 12px; color: var(--text-secondary); }
+.env-dyn-eg { font-size: 11px; color: var(--text-secondary); opacity: .8; font-family: 'Courier New', monospace; white-space: nowrap; }
 .env-error { color: #f85149; font-size: 13px; margin: 12px 0 0; }
 .env-actions { display: flex; gap: 8px; margin-top: 20px; }
 .env-actions .danger { margin-left: auto; background: none; border: 1px solid var(--border-color); color: #f85149; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; }
