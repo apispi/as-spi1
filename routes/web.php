@@ -146,6 +146,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/import/curl', [ImportController::class, 'curl']);
     Route::post('/api/import/openapi', [ImportController::class, 'openapi']);
     Route::post('/api/import/postman', [ImportController::class, 'postman']);
+    Route::post('/api/diff/openapi', [\App\Http\Controllers\ApiDiffController::class, 'openapi']);
     Route::post('/api/export', [ImportController::class, 'exportDraft']);
     Route::get('/api/saved-requests/{id}/export', [ImportController::class, 'export']);
     Route::post('/api/saved-requests/{id}/fuzz', [\App\Http\Controllers\FuzzController::class, 'fuzz'])

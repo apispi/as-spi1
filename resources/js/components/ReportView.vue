@@ -58,6 +58,25 @@
         <strong>Final answer:</strong> {{ data.final_answer }}
       </div>
     </template>
+
+    <!-- OpenAPI diff -->
+    <template v-else-if="type === 'api_diff'">
+      <div class="rv-hero">
+        <span class="rv-grade" :class="data.breaking ? 'g-f' : 'g-a'">{{ data.breaking ? '✗' : '✓' }}</span>
+        <div>
+          <div class="rv-score">{{ data.breaking ? (data.breaking_count + ' breaking change' + (data.breaking_count === 1 ? '' : 's')) : 'No breaking changes' }}</div>
+          <div class="rv-muted">{{ data.new_title }} · {{ data.old_version || '—' }} → {{ data.new_version || '—' }}</div>
+        </div>
+      </div>
+      <p v-if="!data.changes || !data.changes.length" class="rv-clean">Identical — nothing changed. ✅</p>
+      <div v-for="(c, i) in data.changes" :key="i" class="rv-row" :class="'diff-' + c.severity">
+        <span class="rv-badge">{{ severityLabel(c.severity) }}</span>
+        <div>
+          <strong v-if="c.operation" class="rv-mono">{{ c.operation }}</strong>
+          <div class="rv-muted">{{ c.detail }}</div>
+        </div>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -72,6 +91,7 @@ const gradeClass = (g) => {
   return { A: 'g-a', B: 'g-b', C: 'g-c', D: 'g-d', F: 'g-f' }[l] || 'g-c';
 };
 const jsonArgs = (a) => { try { return JSON.stringify(a); } catch { return String(a); } };
+const severityLabel = (s) => ({ breaking: 'breaking', non_breaking: 'safe', info: 'info' }[s] || s);
 </script>
 
 <style scoped>
@@ -93,6 +113,9 @@ const jsonArgs = (a) => { try { return JSON.stringify(a); } catch { return Strin
 .sev-high .rv-badge, .sev-critical .rv-badge { background: rgba(248,81,73,.16); color: #f85149; }
 .sev-medium .rv-badge { background: rgba(210,153,34,.18); color: #d29922; }
 .sev-low .rv-badge { background: var(--border-color); color: var(--text-secondary); }
+.diff-breaking .rv-badge { background: rgba(248,81,73,.16); color: #f85149; }
+.diff-non_breaking .rv-badge { background: rgba(210,153,34,.18); color: #d29922; }
+.diff-info .rv-badge { background: rgba(63,185,80,.16); color: #3fb950; }
 .rv-mono { font-family: ui-monospace, Menlo, monospace; font-size: 0.78rem; word-break: break-word; }
 .rv-step { border-left: 2px solid var(--border-color); padding: 4px 0 4px 12px; margin-bottom: 10px; }
 .rv-step-head { font-weight: 700; color: var(--text-secondary); font-size: 0.8rem; }

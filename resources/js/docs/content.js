@@ -269,6 +269,29 @@ export const DOCS = [
   },
 
   {
+    slug: 'api-diff',
+    title: 'API diff',
+    category: 'testing',
+    summary: 'Diff two OpenAPI documents and flag breaking changes before you ship them.',
+    body: [
+      { type: 'p', text: 'Response contracts catch drift in a running API. **API Diff** catches it one step earlier — in the spec itself, before the change ships. Paste the current (baseline) OpenAPI document and the proposed one into [API Diff](/api-diff), and Spi reports every difference, sorted with the changes that break existing clients first. Both JSON and YAML are accepted.' },
+      { type: 'h2', text: 'What counts as breaking' },
+      { type: 'p', text: 'A change is *breaking* when it could break a client already calling the old version of the API:' },
+      { type: 'ul', items: [
+        'An **endpoint was removed** — a method + path that existed no longer does.',
+        'A **new required input** — a required query, header, or path parameter, or a request body that is now required.',
+        'A parameter **became required** when it used to be optional.',
+        'A **documented success response was removed** — a `2xx` the API used to promise is gone.',
+      ] },
+      { type: 'p', text: 'Everything else is reported but does not break the build: a **new endpoint**, a **new optional parameter**, a parameter that **relaxed** from required to optional, and informational notes such as an API version bump or an added response code.' },
+      { type: 'h2', text: 'Gating a pull request on it' },
+      { type: 'p', text: 'The diff is also an API endpoint. Post the two documents to `/api/diff/openapi` with an [API key](/docs/api-keys-and-programmatic-access); it returns `200` when there are no breaking changes and `422` when there are, so a CI step can fail the build on a breaking spec change:' },
+      { type: 'code', lang: 'bash', code: 'curl -sf -X POST https://apispi.com/api/diff/openapi \\\n  -H "Authorization: Bearer $SPI_TOKEN" \\\n  --data-urlencode "old@openapi.main.json" \\\n  --data-urlencode "new@openapi.branch.json" \\\n  || echo "Breaking API changes — review before merge."' },
+      { type: 'note', text: 'Every comparison is also saved as a [report](/docs/reports-and-sharing) you can open, share as a read-only link, or compare against a later run. Deep schema comparison (field-level types and enum values) is intentionally left to [response contracts](/docs/response-contracts), which check them against real traffic.' },
+    ],
+  },
+
+  {
     slug: 'collections',
     title: 'Collections',
     category: 'automation',

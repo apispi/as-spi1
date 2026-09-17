@@ -23,6 +23,7 @@ import Webhooks from './views/Webhooks.vue';
 import Recorder from './views/Recorder.vue';
 import Mocks from './views/Mocks.vue';
 import Collections from './views/Collections.vue';
+import ApiDiff from './views/ApiDiff.vue';
 import AdminOrganisations from './views/AdminOrganisations.vue';
 import AdminMonitoring from './views/AdminMonitoring.vue';
 import AdminLogs from './views/AdminLogs.vue';
@@ -110,6 +111,12 @@ const routes = [
         path: '/explore',
         name: 'explore',
         component: Explore,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/api-diff',
+        name: 'api-diff',
+        component: ApiDiff,
         meta: { requiresAuth: true }
     },
     {
