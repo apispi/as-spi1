@@ -102,6 +102,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/saved-requests', [SavedRequestController::class, 'index']);
     Route::post('/api/saved-requests', [SavedRequestController::class, 'store']);
     Route::delete('/api/saved-requests/{id}', [SavedRequestController::class, 'destroy']);
+    Route::post('/api/saved-requests/{id}/duplicate', [SavedRequestController::class, 'duplicate']);
     Route::get('/api/tools/active', [ToolController::class, 'active']);
     Route::get('/api/prompts/active', [PromptController::class, 'active']);
     Route::get('/api/resources/active', [ResourceController::class, 'active']);

@@ -73,4 +73,46 @@ class SavedRequestController extends Controller
 
         return response()->json(['message' => 'Deleted']);
     }
+
+    /**
+     * Clone a saved request into a new one owned by the caller, with a
+     * workspace-unique name. Assertions and contract carry over; the captured
+     * snapshot does not — a copy earns its own baseline.
+     */
+    public function duplicate(Request $request, int $id)
+    {
+        $user = $request->user();
+        $source = SavedRequest::inWorkspaceOf($user)->findOrFail($id);
+
+        if (! $user->isAdmin() && $user->savedRequests()->count() >= self::FREE_PLAN_LIMIT) {
+            return response()->json([
+                'message' => 'Free plan limit reached ('.self::FREE_PLAN_LIMIT.' saved requests). Delete one to save another.',
+            ], 422);
+        }
+
+        $copy = $user->savedRequests()->create([
+            'name' => $this->uniqueCopyName($user, $source->name),
+            'protocol' => $source->protocol,
+            'method' => $source->method,
+            'url' => $source->url,
+            'headers' => $source->headers,
+            'body' => $source->body,
+            'params' => $source->params,
+            'assertions' => $source->assertions,
+            'contract' => $source->contract,
+        ]);
+
+        return response()->json($copy->fresh()->load('owner:id,name'), 201);
+    }
+
+    private function uniqueCopyName($user, string $base): string
+    {
+        $name = trim($base).' (copy)';
+        $i = 2;
+        while (SavedRequest::inWorkspaceOf($user)->where('name', $name)->exists()) {
+            $name = trim($base).' (copy '.$i++.')';
+        }
+
+        return mb_substr($name, 0, 255);
+    }
 }

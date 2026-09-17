@@ -83,6 +83,9 @@
               {{ perfing === req.id ? 'Profiling…' : 'Perf' }}
             </button>
             <button class="col-btn" @click="open(req)">Open</button>
+            <button class="col-btn" @click="duplicateRequest(req)" :disabled="duplicatingReq === req.id">
+              {{ duplicatingReq === req.id ? '…' : 'Duplicate' }}
+            </button>
             <button class="col-del" @click="remove(req)" title="Delete request"><Icon name="close" :size="14" /></button>
           </div>
         </li>
@@ -257,6 +260,20 @@ const historyLoading = ref(false);
 const showManager = ref(false);
 const running = ref(null);
 const duplicating = ref(null);
+const duplicatingReq = ref(null);
+
+const duplicateRequest = async (req) => {
+  duplicatingReq.value = req.id;
+  try {
+    await axios.post(`/api/saved-requests/${req.id}/duplicate`);
+    await requestsStore.fetchSavedRequests();
+    toast.success(`Duplicated "${req.name}".`);
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Could not duplicate the request.');
+  } finally {
+    duplicatingReq.value = null;
+  }
+};
 
 const duplicate = async (c) => {
   duplicating.value = c.id;
