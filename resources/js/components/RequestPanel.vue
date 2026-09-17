@@ -125,6 +125,21 @@
         <span v-if="discoverError" class="discover-error text-sm">{{ discoverError }}</span>
       </div>
 
+      <div v-if="protocol === 'rest'" class="mcp-toolbar flex gap-2 items-center mt-4">
+        <button class="secondary text-sm" @click="showGraphql = true" :disabled="!url" title="Fetch a GraphQL endpoint's schema">
+          Introspect GraphQL
+        </button>
+      </div>
+
+      <GraphqlSchema
+        v-if="showGraphql"
+        :url="url"
+        :headers="exportHeaders"
+        :environment-id="envStore.selectedId"
+        @insert="onGraphqlInsert"
+        @close="showGraphql = false"
+      />
+
       <div v-if="protocol === 'a2a'" class="mcp-toolbar flex gap-2 items-center mt-4">
         <button class="secondary text-sm" @click="fetchAgentCard" :disabled="isFetchingCard || !url">
           {{ isFetchingCard ? 'Fetching...' : 'Fetch Agent Card' }}
@@ -266,6 +281,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 import { useEnvironmentsStore } from '../store/environments';
 import ExportMenu from './ExportMenu.vue';
+import GraphqlSchema from './GraphqlSchema.vue';
 
 const envStore = useEnvironmentsStore();
 
@@ -369,6 +385,14 @@ const parseHostPort = () => {
 
 // Inline save (replaces window.prompt).
 const showSave = ref(false);
+const showGraphql = ref(false);
+
+// Drop a GraphQL query skeleton into the body, switching method to POST.
+const onGraphqlInsert = (skeleton) => {
+  method.value = 'POST';
+  body.value = skeleton;
+  showGraphql.value = false;
+};
 const saveName = ref('');
 const saveInput = ref(null);
 // Inline JSON error (replaces alert()).

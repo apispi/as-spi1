@@ -68,6 +68,7 @@ Route::get('/{any}', function () {
 })->where('any', '^(?!api\/|auth\/|hook\/|mcp-proxy\/|mcp-mock\/).*$');
 
 Route::post('/api/proxy', [ProxyController::class, 'handle'])->middleware(['throttle:proxy', 'resolve.vars']);
+Route::post('/api/graphql/introspect', [\App\Http\Controllers\GraphqlIntrospectionController::class, 'introspect'])->middleware(['auth', 'throttle:outbound-test', 'resolve.vars']);
 
 // Spi's own MCP server — the endpoint the seeded "Spi Gateway" connector
 // advertises. API-key authenticated and stateless; see McpGatewayController.
