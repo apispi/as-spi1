@@ -20,21 +20,41 @@ class ApiKey extends Model
 
     public const PREFIX = 'spi_';
 
+    /**
+     * The abilities a key can be scoped to. Each /api/v1 route requires one.
+     * `requests` covers the single-request testers; `collections` covers
+     * running a collection.
+     */
+    public const SCOPES = ['requests', 'collections'];
+
     protected $fillable = [
         'user_id',
         'name',
         'token_hash',
         'last_four',
+        'scopes',
         'last_used_at',
         'expires_at',
         'revoked_at',
     ];
 
     protected $casts = [
+        'scopes' => 'array',
         'last_used_at' => 'datetime',
         'expires_at' => 'datetime',
         'revoked_at' => 'datetime',
     ];
+
+    /**
+     * Whether this key may use the given ability. A key with no scopes has
+     * full access — this is how keys issued before scopes existed keep working.
+     */
+    public function hasScope(string $ability): bool
+    {
+        $scopes = $this->scopes ?? [];
+
+        return $scopes === [] || in_array($ability, $scopes, true);
+    }
 
     public function user()
     {
@@ -50,7 +70,7 @@ class ApiKey extends Model
      * Create a key for a user and return [model, plaintext]. The plaintext is
      * the only time the full key exists.
      */
-    public static function issue(User $user, string $name, ?\DateTimeInterface $expiresAt = null): array
+    public static function issue(User $user, string $name, ?\DateTimeInterface $expiresAt = null, array $scopes = []): array
     {
         $plain = self::PREFIX.Str::random(40);
 
@@ -58,6 +78,8 @@ class ApiKey extends Model
             'name' => $name,
             'token_hash' => self::hash($plain),
             'last_four' => substr($plain, -4),
+            // Only keep known scopes; an empty list means full access.
+            'scopes' => array_values(array_intersect($scopes, self::SCOPES)) ?: null,
             'expires_at' => $expiresAt,
         ]);
 
@@ -86,6 +108,7 @@ class ApiKey extends Model
             'id' => $this->id,
             'name' => $this->name,
             'masked' => self::PREFIX.str_repeat('•', 8).$this->last_four,
+            'scopes' => $this->scopes ?? [],
             'last_used_at' => $this->last_used_at,
             'expires_at' => $this->expires_at,
             'revoked' => $this->revoked_at !== null,

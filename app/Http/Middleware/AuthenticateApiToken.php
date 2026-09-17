@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\ApiKey;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
@@ -26,7 +27,17 @@ class AuthenticateApiToken
             return response()->json(['message' => 'API key required.'], 401);
         }
 
-        $user = User::findByApiKey($token);
+        // Resolve the named key first so its scopes can be enforced downstream;
+        // fall back to the legacy single api_token column (which is unscoped).
+        if ($key = ApiKey::resolve($token)) {
+            $key->forceFill(['last_used_at' => now()])->save();
+            Auth::setUser($key->user);
+            $request->attributes->set('api_key', $key);
+
+            return $next($request);
+        }
+
+        $user = User::where('api_token', User::hashApiKey($token))->first();
 
         if (! $user) {
             return response()->json(['message' => 'Invalid API key.'], 401);

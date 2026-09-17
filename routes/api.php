@@ -24,14 +24,18 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware(['auth.apitoken', 'throttle:outbound-test', 'resolve.vars'])->group(function () {
-    Route::post('/proxy', [ProxyController::class, 'handle']);
-    Route::post('/mcp/test', [McpTestController::class, 'test']);
-    Route::post('/a2a/test', [A2aTestController::class, 'test']);
-    Route::post('/grpc/test', [GrpcTestController::class, 'test']);
-    Route::post('/mqtt/test', [MqttTestController::class, 'test']);
-    Route::post('/amqp/test', [AmqpTestController::class, 'test']);
+    // Single-request testers — the `requests` scope.
+    Route::middleware('scope:requests')->group(function () {
+        Route::post('/proxy', [ProxyController::class, 'handle']);
+        Route::post('/mcp/test', [McpTestController::class, 'test']);
+        Route::post('/a2a/test', [A2aTestController::class, 'test']);
+        Route::post('/grpc/test', [GrpcTestController::class, 'test']);
+        Route::post('/mqtt/test', [MqttTestController::class, 'test']);
+        Route::post('/amqp/test', [AmqpTestController::class, 'test']);
+    });
 
     // Run a collection from CI. Returns 200 when every step passed, 422 when
     // any failed, so a caller can gate on the status code alone.
-    Route::post('/collections/{id}/run', [CollectionController::class, 'run']);
+    Route::post('/collections/{id}/run', [CollectionController::class, 'run'])
+        ->middleware('scope:collections');
 });

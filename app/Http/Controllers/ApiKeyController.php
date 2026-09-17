@@ -31,12 +31,15 @@ class ApiKeyController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:60',
             'expires_at' => 'nullable|date|after:now',
+            'scopes' => 'nullable|array',
+            'scopes.*' => ['string', \Illuminate\Validation\Rule::in(ApiKey::SCOPES)],
         ]);
 
         [$key, $plain] = ApiKey::issue(
             $user,
             $validated['name'],
-            isset($validated['expires_at']) ? new \DateTimeImmutable($validated['expires_at']) : null
+            isset($validated['expires_at']) ? new \DateTimeImmutable($validated['expires_at']) : null,
+            $validated['scopes'] ?? [],
         );
 
         AuditEvent::record('api_key.created', $user, $request, ['name' => $key->name, 'last_four' => $key->last_four]);

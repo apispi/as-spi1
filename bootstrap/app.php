@@ -21,6 +21,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\IsAdmin::class,
             'auth.apitoken' => \App\Http\Middleware\AuthenticateApiToken::class,
+            'scope' => \App\Http\Middleware\RequireApiScope::class,
             'resolve.vars' => \App\Http\Middleware\ResolveEnvironmentVariables::class,
         ]);
     })

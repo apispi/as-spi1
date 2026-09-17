@@ -253,6 +253,14 @@
               <button type="submit" class="up-btn-save" :disabled="creatingKey || !keyForm.name.trim()">
                 {{ creatingKey ? 'Creating…' : 'Create Key' }}
               </button>
+              <div class="up-key-scopes">
+                <span class="up-key-scopes-label">Scopes:</span>
+                <label v-for="s in KEY_SCOPES" :key="s.value" class="up-key-scope">
+                  <input type="checkbox" :value="s.value" v-model="keyForm.scopes" :disabled="creatingKey">
+                  <span>{{ s.label }}</span>
+                </label>
+                <span class="up-hint">Leave all unchecked for full access.</span>
+              </div>
             </form>
 
             <div v-if="apiKeys.length" class="up-key-table">
@@ -265,6 +273,10 @@
                     <span v-else class="up-key-badge active">active</span>
                   </div>
                   <code class="up-key-item-mask">{{ key.masked }}</code>
+                  <div class="up-key-item-scopes">
+                    <span v-if="!key.scopes || !key.scopes.length" class="up-key-scope-tag full">full access</span>
+                    <span v-else v-for="s in key.scopes" :key="s" class="up-key-scope-tag">{{ s }}</span>
+                  </div>
                 </div>
                 <div class="up-key-item-meta">
                   <span>created {{ formatMemberSince(key.created_at) }}</span>
@@ -604,7 +616,11 @@ const timezones = (typeof Intl.supportedValuesOf === 'function')
   : ['UTC', 'America/New_York', 'Europe/London', 'Australia/Sydney', 'Asia/Singapore'];
 
 const apiKeys = ref([]);
-const keyForm = reactive({ name: '', expires_at: '' });
+const keyForm = reactive({ name: '', expires_at: '', scopes: [] });
+const KEY_SCOPES = [
+  { value: 'requests', label: 'Send requests' },
+  { value: 'collections', label: 'Run collections' },
+];
 const creatingKey = ref(false);
 const revokingId = ref(null);
 const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
@@ -793,6 +809,7 @@ const createKey = async () => {
   try {
     const payload = { name: keyForm.name.trim() };
     if (keyForm.expires_at) payload.expires_at = keyForm.expires_at;
+    if (keyForm.scopes.length) payload.scopes = keyForm.scopes;
     const res = await axios.post('/api/user/api-keys', payload);
     // Plaintext is returned once only — surface it in the copy banner.
     newKey.value = res.data.plaintext;
@@ -801,6 +818,7 @@ const createKey = async () => {
     copiedKey.value = false;
     keyForm.name = '';
     keyForm.expires_at = '';
+    keyForm.scopes = [];
     await loadApiKeys();
   } catch (error) {
     flashError.value = error.response?.data?.message || 'Failed to create key';
@@ -1025,6 +1043,12 @@ const deleteAccount = async () => {
 .up-key-item-main { grid-column: 1; display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
 .up-key-item-name { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem; }
 .up-key-item-mask { font-family: 'Courier New', monospace; font-size: 0.8rem; color: var(--accent-color); word-break: break-all; }
+.up-key-scopes { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; margin-top: 0.25rem; }
+.up-key-scopes-label { font-size: 0.78rem; color: var(--text-secondary); }
+.up-key-scope { display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; color: var(--text-primary); cursor: pointer; }
+.up-key-item-scopes { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+.up-key-scope-tag { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 1px 6px; border-radius: 4px; background: var(--accent-soft); color: var(--accent-color); }
+.up-key-scope-tag.full { background: rgba(127,127,127,.14); color: var(--text-secondary); }
 .up-key-item-meta { grid-column: 1; font-size: 0.72rem; color: var(--text-secondary); display: flex; gap: 0.35rem; flex-wrap: wrap; }
 .up-key-badge { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.1rem 0.4rem; border-radius: 0.35rem; }
 .up-key-badge.active { color: var(--success-color); background: rgba(0,217,126,0.12); }
