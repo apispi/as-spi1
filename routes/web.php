@@ -154,6 +154,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/collections', [CollectionController::class, 'store']);
     Route::put('/api/collections/{id}', [CollectionController::class, 'update']);
     Route::delete('/api/collections/{id}', [CollectionController::class, 'destroy']);
+    Route::post('/api/collections/{id}/duplicate', [CollectionController::class, 'duplicate']);
     Route::post('/api/collections/{id}/run', [CollectionController::class, 'run'])
         ->middleware('throttle:outbound-test');
     Route::post('/api/collections/{id}/parity', [CollectionController::class, 'parity'])

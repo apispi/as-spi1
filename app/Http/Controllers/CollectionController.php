@@ -71,6 +71,52 @@ class CollectionController extends Controller
     }
 
     /**
+     * Clone a collection (and its steps) into a new one owned by the caller.
+     * The copy gets a workspace-unique name and is never the default target.
+     */
+    public function duplicate(Request $request, int $id)
+    {
+        $user = $request->user();
+        $source = Collection::inWorkspaceOf($user)->with('steps')->findOrFail($id);
+
+        if ($user->collections()->count() >= Collection::MAX_PER_USER) {
+            return response()->json(['message' => 'Collection limit reached ('.Collection::MAX_PER_USER.').'], 422);
+        }
+
+        $copy = $user->collections()->create([
+            'name' => $this->uniqueCopyName($user, $source->name),
+            'description' => $source->description,
+            'continue_on_failure' => $source->continue_on_failure,
+        ]);
+
+        // Steps reference saved requests, which are shared across the workspace,
+        // so the copy can point at the same ones — only the ordering and extract
+        // rules are duplicated.
+        foreach ($source->steps as $step) {
+            $copy->steps()->create([
+                'saved_request_id' => $step->saved_request_id,
+                'position' => $step->position,
+                'extract' => $step->extract,
+            ]);
+        }
+
+        return response()->json($this->fresh($copy), 201);
+    }
+
+    /** A workspace-unique "… (copy)" name, numbered on further collision. */
+    private function uniqueCopyName($user, string $base): string
+    {
+        $name = trim($base).' (copy)';
+        $i = 2;
+        while (Collection::inWorkspaceOf($user)->where('name', $name)->exists()) {
+            $name = trim($base).' (copy '.$i++.')';
+        }
+
+        // Names are capped at 80 chars by validation; keep within it.
+        return mb_substr($name, 0, 80);
+    }
+
+    /**
      * Run the collection and persist the result as a shareable report.
      */
     public function run(Request $request, CollectionRunner $runner, int $id)

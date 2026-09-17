@@ -117,6 +117,9 @@
                     title="Download as a Postman collection">Export Postman</button>
             <button class="col-btn" @click="exportCollection(c, 'openapi')" :disabled="!c.steps.length"
                     title="Download as an OpenAPI 3.1 document">Export OpenAPI</button>
+            <button class="col-btn" @click="duplicate(c)" :disabled="duplicating === c.id">
+              {{ duplicating === c.id ? 'Duplicating…' : 'Duplicate' }}
+            </button>
             <button class="col-btn" @click="showManager = true">Edit</button>
           </div>
         </li>
@@ -253,6 +256,20 @@ const history = ref([]);
 const historyLoading = ref(false);
 const showManager = ref(false);
 const running = ref(null);
+const duplicating = ref(null);
+
+const duplicate = async (c) => {
+  duplicating.value = c.id;
+  try {
+    await axios.post(`/api/collections/${c.id}/duplicate`);
+    await collectionsStore.fetch();
+    toast.success(`Duplicated "${c.name}".`);
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Could not duplicate the collection.');
+  } finally {
+    duplicating.value = null;
+  }
+};
 const parity = ref(null);
 const fuzzing = ref(null);
 const fuzzResult = ref(null);
