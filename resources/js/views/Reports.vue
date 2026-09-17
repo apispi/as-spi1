@@ -67,6 +67,8 @@
             <button v-if="open.is_shared" class="rp-btn" :disabled="busy" @click="revoke(open)">Unshare</button>
             <button class="rp-btn" @click="exportReport(open, 'md')">Export MD</button>
             <button class="rp-btn" @click="exportReport(open, 'json')">Export JSON</button>
+            <button v-if="JUNIT_TYPES.includes(open.type)" class="rp-btn"
+                    title="JUnit XML for a CI test reporter" @click="exportReport(open, 'junit')">Export JUnit</button>
             <button class="rp-btn rp-btn-danger" @click="remove(open)">Delete</button>
             <button class="rp-btn" @click="open = null">Close</button>
           </div>
@@ -163,6 +165,9 @@ function onSearch() {
   searchTimer = setTimeout(load, 250);
 }
 
+// Report types that map onto JUnit test cases (mirrors JUnitExporter::SUPPORTED).
+const JUNIT_TYPES = ['collection_run', 'dataset_run'];
+
 async function exportReport(report, format) {
   try {
     const res = await axios.get(`/api/reports/${report.id}/export`, {
@@ -172,7 +177,7 @@ async function exportReport(report, format) {
     const url = URL.createObjectURL(res.data);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `report-${report.id}.${format}`;
+    a.download = `report-${report.id}.${format === 'junit' ? 'junit.xml' : format}`;
     a.click();
     URL.revokeObjectURL(url);
   } catch {

@@ -158,7 +158,35 @@ class CollectionController extends Controller
             'data' => $result,
         ]);
 
+        if ($this->wantsJUnit($request)) {
+            return $this->junit('collection_run', $result, $report->id);
+        }
+
         return response()->json($result + ['report_id' => $report->id], $result['passed'] ? 200 : 422);
+    }
+
+    /**
+     * Render a run as JUnit XML for a CI test reporter.
+     *
+     * Always 200, unlike the JSON form: the XML *is* the result artifact, and a
+     * non-2xx would make `curl -f` discard the very file the pipeline wants to
+     * publish. The failures are inside the document.
+     */
+    private function junit(string $type, array $result, int $reportId)
+    {
+        $xml = (new \App\Services\Reports\JUnitExporter)->render($type, $result);
+
+        return response($xml, 200, [
+            'Content-Type' => 'application/xml; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="report-'.$reportId.'.junit.xml"',
+            'X-Spi-Report-Id' => (string) $reportId,
+            'X-Spi-Passed' => $result['passed'] ? 'true' : 'false',
+        ]);
+    }
+
+    private function wantsJUnit(Request $request): bool
+    {
+        return $request->input('format') === 'junit' || $request->query('format') === 'junit';
     }
 
     /**
@@ -316,6 +344,10 @@ class CollectionController extends Controller
             'summary' => sprintf('%s — %d/%d rows passed', $collection->name, $passedRows, count($iterations)),
             'data' => $summary,
         ]);
+
+        if ($this->wantsJUnit($request)) {
+            return $this->junit('dataset_run', $summary, $report->id);
+        }
 
         return response()->json($summary + ['report_id' => $report->id], $summary['passed'] ? 200 : 422);
     }

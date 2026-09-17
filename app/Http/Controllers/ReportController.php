@@ -54,15 +54,31 @@ class ReportController extends Controller
     }
 
     /**
-     * Download a report as a JSON record or a Markdown document, for archiving
-     * or pasting into an issue/PR outside Spi.
+     * Download a report as a JSON record, a Markdown document, or JUnit XML,
+     * for archiving, pasting into an issue/PR, or feeding to a CI test reporter.
      */
     public function export(Request $request, InspectionReport $report)
     {
         $this->authorizeOwner($request, $report);
 
-        $format = $request->query('format') === 'md' ? 'md' : 'json';
+        $requested = (string) $request->query('format', 'json');
+        $format = in_array($requested, ['md', 'junit'], true) ? $requested : 'json';
         $base = 'report-'.$report->id;
+
+        if ($format === 'junit') {
+            $exporter = new \App\Services\Reports\JUnitExporter;
+
+            if (! $exporter->supports($report->type)) {
+                return response()->json([
+                    'message' => 'JUnit export covers run reports only ('.implode(', ', \App\Services\Reports\JUnitExporter::SUPPORTED).'); this is a '.$report->type.' report.',
+                ], 422);
+            }
+
+            return response($exporter->render($report->type, $report->data ?? []), 200, [
+                'Content-Type' => 'application/xml; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="'.$base.'.junit.xml"',
+            ]);
+        }
 
         if ($format === 'md') {
             $body = (new \App\Services\Reports\ReportExporter)->markdown($report);

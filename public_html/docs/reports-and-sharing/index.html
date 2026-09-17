@@ -34,6 +34,7 @@
     <article><p>Runs in Spi produce inspection reports you can keep, compare, and — when you choose — share publicly with an unguessable link. You can also publish a status page and export collections to other tools. Browse saved reports in <a href="/reports">Reports</a>.</p>
 <h2 id="inspection-reports">Inspection reports</h2>
 <p>A collection run, a monitor run, and other inspections are saved as reports with a summary and the full result data. You can list them, open one for detail, delete them, and compare two to see what changed between runs.</p>
+<p>Any report exports as <strong>JSON</strong> (the raw record) or <strong>Markdown</strong> (to paste into an issue or PR). A run report — a collection run or a dataset run — also exports as <strong>JUnit XML</strong>, so a run archived in Spi can be replayed into a CI test reporter; see <a href="/docs/api-keys-and-programmatic-access/">running a collection from CI</a>.</p>
 <h2 id="shareable-report-links">Shareable report links</h2>
 <p>Share a report and Spi mints an unguessable token, giving you a public, read-only URL:</p>
 <div class="code"><div class="code-head"><span>text</span><button class="copy" type="button">Copy</button></div><pre><code>https://apispi.com/r/{token}</code></pre></div>
