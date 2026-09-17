@@ -214,6 +214,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/environments', [EnvironmentController::class, 'store']);
     Route::post('/api/environments/import', [EnvironmentController::class, 'import']);
     Route::get('/api/environments/{id}/export', [EnvironmentController::class, 'export']);
+    Route::post('/api/environments/{id}/duplicate', [EnvironmentController::class, 'duplicate']);
     Route::put('/api/environments/{id}', [EnvironmentController::class, 'update']);
     Route::delete('/api/environments/{id}', [EnvironmentController::class, 'destroy']);
 

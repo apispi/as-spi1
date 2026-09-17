@@ -82,6 +82,7 @@
             <button class="primary" @click="save" :disabled="saving || !editing.name.trim()">
               {{ saving ? 'Saving…' : 'Save' }}
             </button>
+            <button v-if="editing.id" class="secondary" @click="duplicateEnv(editing)" :disabled="saving">Duplicate</button>
             <button v-if="editing.id" class="secondary" @click="exportEnv(editing)">Export</button>
             <button v-if="editing.id" class="danger" @click="remove" :disabled="saving">Delete</button>
             <button class="secondary" @click="editing = null" :disabled="saving">Cancel</button>
@@ -132,6 +133,20 @@ const exportEnv = async (env) => {
     toast.success('Environment exported. Secret values are not included.');
   } catch {
     toast.error('Could not export the environment.');
+  }
+};
+
+const duplicateEnv = async (env) => {
+  saving.value = true;
+  try {
+    const res = await axios.post(`/api/environments/${env.id}/duplicate`);
+    await store.fetch();
+    edit(res.data);
+    toast.success(`Duplicated "${env.name}".`);
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Could not duplicate the environment.');
+  } finally {
+    saving.value = false;
   }
 };
 

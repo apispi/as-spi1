@@ -66,6 +66,31 @@ class EnvironmentController extends Controller
     }
 
     /**
+     * Clone an environment into a new one owned by the caller. Unlike export,
+     * this keeps secret values — it stays within the owner's own workspace —
+     * and never makes the copy the default.
+     */
+    public function duplicate(Request $request, int $id)
+    {
+        $user = $request->user();
+        $source = Environment::inWorkspaceOf($user)->findOrFail($id);
+
+        if ($user->environments()->count() >= Environment::MAX_PER_USER) {
+            return response()->json([
+                'message' => 'Environment limit reached ('.Environment::MAX_PER_USER.'). Delete one to add another.',
+            ], 422);
+        }
+
+        $copy = $user->environments()->create([
+            'name' => $this->uniqueName($user, trim($source->name).' (copy)'),
+            'variables' => $source->variables,
+            'is_default' => false,
+        ]);
+
+        return response()->json($copy->fresh()->toClientArray(), 201);
+    }
+
+    /**
      * Download an environment as JSON to share or back up. Secret VALUES are
      * never exported — a secret variable exports its name and secret flag only,
      * so the importer re-enters the credential.
