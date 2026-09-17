@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Importing &amp; exporting · Spi docs</title>
+<meta name="description" content="Bring requests in from cURL, OpenAPI, and Postman; export collections, requests, and environments back out.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/docs/styles.css">
+<script>
+  // Resolve theme before first paint (mirrors the app's spi-theme key).
+  (function(){try{var t=localStorage.getItem('spi-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/docs/">
+    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <span>Spi docs</span>
+  </a>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs…" autocomplete="off" aria-label="Search"><div id="results" class="results" hidden></div></div>
+  <div class="topbar-right">
+    <button id="theme" class="icon-btn" type="button" aria-label="Toggle theme">◐</button>
+    <a class="topbar-link" href="/">Open app →</a>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav><div class="nav-group"><div class="nav-cat">Getting started</div><a href="/docs/introduction/" class="nav-link">What is Spi?</a><a href="/docs/quickstart/" class="nav-link">Quickstart</a></div><div class="nav-group"><div class="nav-cat">Testing &amp; assertions</div><a href="/docs/sending-requests/" class="nav-link">Sending requests</a><a href="/docs/environments-and-variables/" class="nav-link">Environments and variables</a><a href="/docs/assertions/" class="nav-link">Assertions</a><a href="/docs/response-contracts/" class="nav-link">Response contracts</a><a href="/docs/snapshots/" class="nav-link">Response snapshots</a></div><div class="nav-group"><div class="nav-cat">Automation &amp; monitoring</div><a href="/docs/collections/" class="nav-link">Collections</a><a href="/docs/monitors-and-alerts/" class="nav-link">Monitors and alerts</a><a href="/docs/webhooks/" class="nav-link">Webhooks, datasets, and profiling</a></div><div class="nav-group"><div class="nav-cat">MCP &amp; agents</div><a href="/docs/mcp-testing/" class="nav-link">MCP testing</a></div><div class="nav-group"><div class="nav-cat">Sharing &amp; reporting</div><a href="/docs/reports-and-sharing/" class="nav-link">Reports and sharing</a><a href="/docs/import-and-export/" class="nav-link active">Importing &amp; exporting</a></div><div class="nav-group"><div class="nav-cat">Developer &amp; API</div><a href="/docs/api-keys-and-programmatic-access/" class="nav-link">API keys and programmatic access</a></div><div class="nav-group"><div class="nav-cat">Workspace guide</div><a href="/docs/navigating-spi/" class="nav-link">Navigating Spi</a><a href="/docs/home-dashboard/" class="nav-link">Home</a><a href="/docs/ai-lab/" class="nav-link">AI Lab</a><a href="/docs/explorer/" class="nav-link">Explorer</a><a href="/docs/recorder/" class="nav-link">Recorder</a><a href="/docs/mocks/" class="nav-link">Mocks</a><a href="/docs/spi-assistant/" class="nav-link">Spi assistant</a><a href="/docs/usage-and-account-activity/" class="nav-link">Usage &amp; account activity</a><a href="/docs/account-security/" class="nav-link">Account security</a></div></nav></aside>
+  <main class="content">
+    <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Sharing &amp; reporting</span></div>
+    <h1>Importing &amp; exporting</h1>
+    <p class="lead">Bring requests in from cURL, OpenAPI, and Postman; export collections, requests, and environments back out.</p>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#importing">Importing</a><a href="#exporting">Exporting</a><a href="#duplicating">Duplicating</a></nav>
+    <article><p>Spi interoperates with the tools you already use. You can import requests from cURL, OpenAPI, and Postman, and export collections, single requests, environments, and <a href="/docs/reports-and-sharing/">reports</a> back out in the formats other tools understand.</p>
+<h2 id="importing">Importing</h2>
+<p>Open the <strong>Import</strong> dialog in the <a href="/tester">Tester</a> and pick a source:</p>
+<ul><li><strong>cURL</strong> — paste a <code>curl</code> command, including a browser's <strong>Copy as cURL</strong>, and Spi parses the method, URL, headers, and body straight into the tester ready to send.</li><li><strong>OpenAPI 3</strong> — paste or upload a document and each operation becomes a saved request. Optionally also create a <a href="/docs/collections/">collection</a> holding them, and an <a href="/docs/environments-and-variables/">environment</a> with the server URL stored as <code>{{base_url}}</code>.</li><li><strong>Postman Collection v2.x</strong> — each request becomes a saved request, folders are flattened, and you can optionally wrap them in a collection. Postman's <code>{{variable}}</code> syntax carries across unchanged, since Spi uses the same placeholder syntax.</li></ul>
+<p>A cURL command drops straight in:</p>
+<div class="code"><div class="code-head"><span>bash</span><button class="copy" type="button">Copy</button></div><pre><code>curl https://api.example.com/v1/users \
+  -H "Authorization: Bearer {{token}}" \
+  -H "Accept: application/json"</code></pre></div>
+<div class="note">Imports are capped by your saved-request limit, and they are <strong>all-or-nothing</strong> — if a batch would exceed the limit, nothing is imported rather than a partial set.</div>
+<h2 id="exporting">Exporting</h2>
+<p>What you export depends on what you are exporting:</p>
+<ul><li>A <a href="/docs/collections/">collection</a> exports as <strong>Postman v2.1</strong> or <strong>OpenAPI 3.1</strong> — attached <a href="/docs/assertions/">assertions</a> become Postman test scripts, or OpenAPI response schemas, respectively.</li><li>A single saved request exports as a <strong>code snippet</strong> from the Tester's <strong>Export</strong> menu: <strong>cURL</strong>, <strong>JS fetch</strong>, <strong>Python</strong>, or <strong>raw HTTP</strong>.</li><li>An <a href="/docs/environments-and-variables/">environment</a> exports as <strong>JSON</strong> and imports back the same way. Secret values are <strong>never included</strong> in the export — you re-enter them when you import.</li><li>An inspection <a href="/docs/reports-and-sharing/">report</a> exports as <strong>JSON</strong> or <strong>Markdown</strong>.</li></ul>
+<h2 id="duplicating">Duplicating</h2>
+<p>To clone something within Spi rather than move it between tools, use the <strong>Duplicate</strong> action — saved requests and collections each have one, so you can fork a working request or collection and change the copy without touching the original.</p>
+<div class="note">Because secret environment values are dropped on export, sharing an exported environment never leaks a token — the same principle that masks secrets in <a href="/docs/reports-and-sharing/">shared reports</a>.</div></article>
+    <nav class="pager">
+      <a class="pager-link prev" href="/docs/snapshots/"><span>← Previous</span><strong>Response snapshots</strong></a>
+      <a class="pager-link next" href="/docs/account-security/"><span>Next →</span><strong>Account security</strong></a>
+    </nav></main>
+</div>
+<footer class="foot"><p>© 2026 Spi · apispi.com · <a href="/developers">API reference</a> · <a href="/">Open the app</a></p></footer>
+<script src="/docs/app.js" defer></script>
+</body>
+</html>
