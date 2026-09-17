@@ -7,6 +7,7 @@ use App\Services\Export\RequestExporter;
 use App\Services\Import\CurlImporter;
 use App\Services\Import\ImportException;
 use App\Services\Import\OpenApiImporter;
+use App\Services\Import\PostmanImporter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -44,14 +45,40 @@ class ImportController extends Controller
             'create_environment' => 'nullable|boolean',
         ]);
 
-        $user = $request->user();
-
         try {
             $parsed = $importer->parse($validated['document']);
+            return $this->materialise($request->user(), $parsed, $validated, 'OpenAPI');
         } catch (ImportException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+    }
 
+    /**
+     * Import a Postman Collection (v2.x) as saved requests, and optionally a
+     * collection running them in order.
+     */
+    public function postman(Request $request, PostmanImporter $importer)
+    {
+        $validated = $request->validate([
+            'document' => 'required|string|max:2000000',
+            'create_collection' => 'nullable|boolean',
+        ]);
+
+        try {
+            $parsed = $importer->parse($validated['document']);
+            return $this->materialise($request->user(), $parsed, $validated, 'Postman');
+        } catch (ImportException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * Create saved requests (and optionally a collection + environment) from a
+     * normalised {title, base_url, operations, warnings} parse result. Shared
+     * by the OpenAPI and Postman importers. All-or-nothing.
+     */
+    private function materialise($user, array $parsed, array $options, string $source): \Illuminate\Http\JsonResponse
+    {
         $remaining = $this->remainingQuota($user);
 
         if ($remaining <= 0) {
@@ -61,18 +88,17 @@ class ImportController extends Controller
         }
 
         $operations = array_slice($parsed['operations'], 0, $remaining);
-        $warnings = $parsed['warnings'];
+        $warnings = $parsed['warnings'] ?? [];
 
         if (count($operations) < count($parsed['operations'])) {
             $warnings[] = sprintf(
-                'Imported %d of %d operations — the rest would exceed your saved-request limit.',
+                'Imported %d of %d requests — the rest would exceed your saved-request limit.',
                 count($operations),
                 count($parsed['operations'])
             );
         }
 
-        // All-or-nothing: a half-imported spec is worse than a clear failure.
-        $result = DB::transaction(function () use ($user, $parsed, $operations, $validated) {
+        $result = DB::transaction(function () use ($user, $parsed, $operations, $options, $source) {
             $created = [];
 
             foreach ($operations as $operation) {
@@ -81,17 +107,17 @@ class ImportController extends Controller
                     'protocol' => 'rest',
                     'method' => $operation['method'],
                     'url' => $operation['url'],
-                    'headers' => $operation['headers'] ?: null,
-                    'body' => $operation['body'],
-                    'assertions' => $operation['assertions'] ?: null,
+                    'headers' => ($operation['headers'] ?? []) ?: null,
+                    'body' => $operation['body'] ?? null,
+                    'assertions' => ($operation['assertions'] ?? []) ?: null,
                 ]);
             }
 
             $collection = null;
-            if (! empty($validated['create_collection'])) {
+            if (! empty($options['create_collection'])) {
                 $collection = $user->collections()->create([
                     'name' => $this->uniqueCollectionName($user, $parsed['title']),
-                    'description' => 'Imported from OpenAPI',
+                    'description' => 'Imported from '.$source,
                 ]);
 
                 foreach ($created as $position => $saved) {
@@ -103,7 +129,7 @@ class ImportController extends Controller
             }
 
             $environment = null;
-            if (! empty($validated['create_environment']) && $parsed['base_url']) {
+            if (! empty($options['create_environment']) && ($parsed['base_url'] ?? null)) {
                 $environment = $user->environments()->create([
                     'name' => $this->uniqueEnvironmentName($user, $parsed['title']),
                     'variables' => [[
@@ -119,7 +145,7 @@ class ImportController extends Controller
 
         return response()->json([
             'title' => $parsed['title'],
-            'base_url' => $parsed['base_url'],
+            'base_url' => $parsed['base_url'] ?? null,
             'imported' => count($result['created']),
             'requests' => $result['created'],
             'collection' => $result['collection'],

@@ -6,6 +6,7 @@
         <div class="imp-tabs">
           <button :class="['imp-tab', mode === 'curl' ? 'active' : '']" @click="mode = 'curl'">cURL</button>
           <button :class="['imp-tab', mode === 'openapi' ? 'active' : '']" @click="mode = 'openapi'">OpenAPI</button>
+          <button :class="['imp-tab', mode === 'postman' ? 'active' : '']" @click="mode = 'postman'">Postman</button>
         </div>
         <button class="imp-x" @click="$emit('close')" aria-label="Close"><Icon name="close" :size="18" /></button>
       </header>
@@ -24,7 +25,7 @@
           ></textarea>
         </template>
 
-        <template v-else>
+        <template v-else-if="mode === 'openapi'">
           <p class="imp-hint">
             Paste an OpenAPI 3 document (YAML or JSON). Each operation becomes a
             saved request, with the server URL as
@@ -44,6 +45,25 @@
           <label class="imp-check">
             <input type="checkbox" v-model="createEnvironment" />
             <span>Also create an environment holding the server URL</span>
+          </label>
+        </template>
+
+        <template v-else>
+          <p class="imp-hint">
+            Paste a Postman Collection (v2.1 JSON). Each request becomes a saved
+            request; folders are flattened. Postman uses the same
+            <code v-pre>{{variable}}</code> syntax, so variables carry across.
+          </p>
+          <textarea
+            v-model="spec"
+            class="input-field imp-area mono"
+            rows="8"
+            placeholder='{ "info": { "name": "My API" }, "item": [ … ] }'
+          ></textarea>
+
+          <label class="imp-check">
+            <input type="checkbox" v-model="createCollection" />
+            <span>Also create a collection running every request in order</span>
           </label>
         </template>
 
@@ -118,11 +138,11 @@ const submit = async () => {
       if (!warnings.value.length) emit('close');
       else success.value = 'Loaded into the tester.';
     } else {
-      const res = await axios.post('/api/import/openapi', {
-        document: spec.value,
-        create_collection: createCollection.value,
-        create_environment: createEnvironment.value,
-      });
+      const endpoint = mode.value === 'postman' ? '/api/import/postman' : '/api/import/openapi';
+      const payload = { document: spec.value, create_collection: createCollection.value };
+      if (mode.value === 'openapi') payload.create_environment = createEnvironment.value;
+
+      const res = await axios.post(endpoint, payload);
       warnings.value = res.data.warnings || [];
       success.value = `Imported ${res.data.imported} request(s)`
         + (res.data.collection ? ` into “${res.data.collection.name}”` : '')
