@@ -31,7 +31,9 @@ note () {
 }
 
 # Confirm before anything destructive. Returns non-zero if the user declines.
+# Set CX_YES=1 to auto-approve (for scripting routine tasks unattended).
 confirm () {
+  if [ "${CX_YES:-}" = "1" ]; then echo "$1 [auto-yes]"; return 0; fi
   printf '%s [y/N] ' "$1"
   read -r reply
   [ "$reply" = "y" ] || [ "$reply" = "Y" ]
@@ -72,6 +74,14 @@ echo "03 : DEMOTE: remove admin from a user      (email)"
 echo "04 : PASSWORD: reset a user's password     (email)"
 echo "05 : NO-2FA: admins without two-factor on"
 echo "06 : RECENT: newest sign-ups"
+echo "07 : LOOKUP: full detail for a user        (email)"
+echo "08 : DEACTIVATE: soft-delete a user        (email)  [reversible]"
+echo "09 : RESTORE: restore a soft-deleted user  (email)"
+rule
+echo ORGANISATIONS
+echo "40 : ORGS: list organisations with member counts"
+echo "41 : ASSIGN: move a user into an org       (email org-slug)"
+echo "42 : UNASSIGN: remove a user from its org  (email)"
 rule
 echo SECURITY
 echo "10 : FAILED: failed sign-ins, last 24h, by IP"
@@ -92,7 +102,11 @@ echo "32 : WEBHOOKS: run the silence check"
 echo "33 : STATS: platform totals at a glance"
 rule
 echo MAINTENANCE
-echo "90 : PRUNE: delete request history older than N days   [DESTRUCTIVE]"
+echo "90 : PRUNE-HISTORY: delete request history older than N days [DESTRUCTIVE]"
+echo "92 : PRUNE-REPORTS: delete reports older than N days        [DESTRUCTIVE]"
+echo "93 : QUEUE: list failed jobs"
+echo "94 : QUEUE-RETRY: retry all failed jobs"
+echo "95 : MAINTENANCE: toggle maintenance mode (down/up)"
 echo "91 : HISTORY: show this script's log"
 echo "qq : Exit [Quit]"
 echo Enter [Selection] to continue
@@ -163,6 +177,49 @@ case "$SELECTION" in
   banner "NEWEST SIGN-UPS"
   tink "foreach(\App\Models\User::latest()->take(10)->get() as \$u){echo str_pad(\$u->created_at->format('Y-m-d H:i'),18).str_pad(\$u->email,32).(\$u->is_admin?'admin':'').PHP_EOL;}"
   note "Listed recent sign-ups"
+  ;;
+
+  "07" )
+  banner "USER DETAIL"
+  if need_email; then
+    tink "
+      \$u=\App\Models\User::withTrashed()->where('email','$EMAIL')->first();
+      if(!\$u){echo 'No such user';return;}
+      echo 'Name          '.\$u->name.PHP_EOL;
+      echo 'Email         '.\$u->email.(\$u->email_verified_at?' (verified)':' (unverified)').PHP_EOL;
+      echo 'Role          '.(\$u->is_admin?'admin':'user').(\$u->is_demo?' · demo':'').(\$u->trashed()?' · DEACTIVATED':'').PHP_EOL;
+      echo 'Organisation  '.(\$u->organisation->name??'—').PHP_EOL;
+      echo 'Two-factor    '.(\$u->hasTwoFactorEnabled()?'on':'off').PHP_EOL;
+      echo 'Sessions      '.\Illuminate\Support\Facades\DB::table('sessions')->where('user_id',\$u->id)->count().PHP_EOL;
+      echo 'API keys      '.\$u->apiKeys()->whereNull('revoked_at')->count().' active'.PHP_EOL;
+      echo 'Saved reqs    '.\$u->savedRequests()->count().PHP_EOL;
+      echo 'Collections   '.\$u->collections()->count().PHP_EOL;
+      echo 'Monitors      '.\$u->monitors()->count().PHP_EOL;
+      echo 'Requests sent '.\$u->requestHistories()->count().PHP_EOL;
+      echo 'Joined        '.\$u->created_at->format('Y-m-d H:i').PHP_EOL;
+    "
+    note "Looked up $EMAIL"
+  else echo "No email given."; fi
+  ;;
+
+  "08" )
+  banner "DEACTIVATE USER (soft-delete)"
+  # Reversible: the account is blocked from signing in and its live sessions
+  # are ended, but its data is kept and can be restored (option 09).
+  if need_email; then
+    if confirm "Deactivate $EMAIL?"; then
+      tink "\$u=\App\Models\User::where('email','$EMAIL')->first(); if(!\$u){echo 'No such user';return;} if(\$u->is_admin){echo 'Refusing: user is an admin.';return;} \$u->delete(); \Illuminate\Support\Facades\DB::table('sessions')->where('user_id',\$u->id)->delete(); echo 'Deactivated '.\$u->email;"
+      note "Deactivated $EMAIL"
+    else echo "Cancelled."; fi
+  else echo "No email given."; fi
+  ;;
+
+  "09" )
+  banner "RESTORE USER"
+  if need_email; then
+    tink "\$u=\App\Models\User::onlyTrashed()->where('email','$EMAIL')->first(); echo \$u?(\$u->restore()?'Restored '.\$u->email:'Failed'):'No deactivated user with that email';"
+    note "Restored $EMAIL"
+  else echo "No email given."; fi
   ;;
 
   "10" )
@@ -261,6 +318,32 @@ case "$SELECTION" in
   note "Viewed platform stats"
   ;;
 
+  "40" )
+  banner "ORGANISATIONS"
+  tink "\$o=\App\Models\Organisation::withCount('users')->orderBy('name')->get(); echo \$o->isEmpty()?'No organisations.':\$o->map(fn(\$x)=>str_pad(\$x->slug,24).str_pad(\$x->name,28).\$x->users_count.' member(s)')->implode(PHP_EOL); echo PHP_EOL.'Unassigned users: '.\App\Models\User::whereNull('organisation_id')->count();"
+  note "Listed organisations"
+  ;;
+
+  "41" )
+  banner "ASSIGN USER TO ORGANISATION"
+  if need_email; then
+    SLUG="$3"
+    if [ -z "$SLUG" ]; then printf 'Organisation slug: '; read -r SLUG; fi
+    if [ -z "$SLUG" ]; then echo "No org slug given."; else
+      tink "\$u=\App\Models\User::where('email','$EMAIL')->first(); \$o=\App\Models\Organisation::where('slug','$SLUG')->first(); if(!\$u){echo 'No such user';return;} if(!\$o){echo 'No such organisation';return;} \$u->update(['organisation_id'=>\$o->id]); echo \$u->email.' -> '.\$o->name;"
+      note "Assigned $EMAIL to $SLUG"
+    fi
+  else echo "No email given."; fi
+  ;;
+
+  "42" )
+  banner "UNASSIGN USER FROM ORGANISATION"
+  if need_email; then
+    tink "\$u=\App\Models\User::where('email','$EMAIL')->first(); echo \$u?(\$u->update(['organisation_id'=>null])?'Unassigned '.\$u->email:'Failed'):'No such user';"
+    note "Unassigned $EMAIL"
+  else echo "No email given."; fi
+  ;;
+
   "90" )
   banner "PRUNE OLD REQUEST HISTORY [DESTRUCTIVE]"
   DAYS="${PARAM2:-30}"
@@ -272,6 +355,47 @@ case "$SELECTION" in
     note "Pruned request history older than $DAYS days"
   else
     echo "Nothing pruned."
+  fi
+  ;;
+
+  "92" )
+  banner "PRUNE OLD REPORTS [DESTRUCTIVE]"
+  DAYS="${PARAM2:-30}"
+  db_context
+  # Keep shared reports (a public link points at them); prune the rest.
+  COUNT=$(tink "echo \App\Models\InspectionReport::where('created_at','<',now()->subDays($DAYS))->whereNull('share_token')->count();" | tr -dc '0-9')
+  echo "Unshared reports older than $DAYS days: ${COUNT:-0}"
+  if [ "${COUNT:-0}" != "0" ] && confirm "Delete these ${COUNT} report(s)?"; then
+    tink "echo \App\Models\InspectionReport::where('created_at','<',now()->subDays($DAYS))->whereNull('share_token')->delete().' deleted';"
+    note "Pruned reports older than $DAYS days"
+  else
+    echo "Nothing pruned."
+  fi
+  ;;
+
+  "93" )
+  banner "FAILED QUEUE JOBS"
+  php artisan queue:failed
+  note "Listed failed jobs"
+  ;;
+
+  "94" )
+  banner "RETRY FAILED QUEUE JOBS"
+  if confirm "Retry all failed jobs?"; then
+    php artisan queue:retry all
+    note "Retried failed jobs"
+  else echo "Cancelled."; fi
+  ;;
+
+  "95" )
+  banner "MAINTENANCE MODE"
+  db_context
+  if php artisan tinker --execute="echo app()->isDownForMaintenance()?'down':'up';" 2>/dev/null | grep -q down; then
+    echo "Currently: DOWN (maintenance mode on)."
+    if confirm "Bring the app back UP?"; then php artisan up; note "Maintenance mode OFF"; else echo "Left down."; fi
+  else
+    echo "Currently: UP."
+    if confirm "Put the app into maintenance mode (DOWN)?"; then php artisan down; note "Maintenance mode ON"; else echo "Left up."; fi
   fi
   ;;
 
