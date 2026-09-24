@@ -13,6 +13,9 @@ class SavedRequest extends Model
     /** Capturing a snapshot is its own action, not an edit to the request. */
     protected array $activityIgnored = ['snapshot', 'snapshot_taken_at'];
 
+    /** Auth carries a credential, headers may carry one by hand, and a snapshot is a captured response body. */
+    protected array $revisionRedacted = ['auth', 'headers', 'snapshot'];
+
     protected $fillable = [
         'user_id',
         'name',

@@ -597,6 +597,15 @@ export const DOCS = [
         'Activity is scoped to the workspace, so it appears and disappears with membership: what someone did stops being visible once they leave.',
         'It is a **work** log. Sign-ins, password changes and API-key use are security events and stay in the [security log](/docs/account-security).',
       ] },
+      { type: 'h2', text: 'Seeing what a change replaced, and undoing it' },
+      { type: 'p', text: 'Each logged edit keeps the values it replaced. Open **what changed?** on any entry to see them, and press **Undo** to put them back.' },
+      { type: 'ul', items: [
+        'An undo restores **only the fields that entry changed**, so reverting an old URL edit does not also revert a rename made afterwards.',
+        'The undo is itself a change: it is attributed to you, appears in the feed, and can be undone in turn.',
+        'Credential-bearing values — secret environment variables, auth configs, endpoint tokens — are shown as `(hidden)` rather than displayed, but are restored intact.',
+        'A very large replaced value (a big request body, say) is not kept. The change is still logged; only the undo is unavailable.',
+      ] },
+      { type: 'note', text: 'A **deleted** resource is recorded with everything it held, but has no one-click restore: a collection\'s steps and a monitor\'s alert channels live in their own tables and went with it, so re-creating the row alone would look like a restore and behave like an empty shell. The feed shows what it contained so it can be rebuilt deliberately. Undo also reaches only as far back as the feed is kept — it is a recent-changes safety net, not an archive.' },
     ],
   },
 

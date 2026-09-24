@@ -306,7 +306,7 @@
               Nothing yet. Changes to requests, collections, environments and monitors show up here.
             </p>
             <ul v-else class="up-ws-list">
-              <li v-for="a in activity" :key="a.id" class="up-ws-row">
+              <li v-for="a in activity" :key="a.id" class="up-ws-row up-act-row">
                 <div class="up-ws-who">
                   <strong>{{ a.actor || 'Someone' }}</strong>
                   <span class="up-act-verb" :class="'act-' + a.action">{{ a.action }}</span>
@@ -314,8 +314,26 @@
                   <strong>{{ a.subject_name || '#' + a.subject_id }}</strong>
                   <div class="up-muted up-ws-email">
                     {{ shortDateTime(a.created_at) }}<template v-if="a.summary"> · {{ a.summary }}</template>
+                    <button
+                      v-if="Object.keys(a.before || {}).length"
+                      type="button" class="up-act-toggle" @click="toggleActivity(a.id)"
+                    >{{ expandedActivity === a.id ? 'hide' : 'what changed?' }}</button>
                   </div>
+
+                  <table v-if="expandedActivity === a.id" class="up-act-diff">
+                    <tbody>
+                      <tr v-for="(value, field) in a.before" :key="field">
+                        <th>{{ field }}</th>
+                        <td class="up-act-was">{{ value === null ? '(empty)' : value }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
+
+                <button
+                  v-if="a.restorable" type="button" class="up-btn-danger"
+                  :disabled="workspaceBusy" @click="restoreChange(a)"
+                >Undo</button>
               </li>
             </ul>
           </div>
@@ -1052,6 +1070,27 @@ function setActivityFilter(value) {
   loadActivity();
 }
 
+const expandedActivity = ref(null);
+const toggleActivity = (id) => { expandedActivity.value = expandedActivity.value === id ? null : id; };
+
+async function restoreChange(entry) {
+  const fields = Object.keys(entry.before || {}).join(', ');
+  if (!(await confirmDialog(
+    `Put back the previous ${fields} on "${entry.subject_name || entry.subject_label}"? This is itself a change, so it can be undone again.`
+  ))) return;
+
+  workspaceBusy.value = true;
+  try {
+    const res = await axios.post(`/api/workspace/activity/${entry.id}/restore`);
+    toast.success(res.data.message || 'Change undone.');
+    await loadActivity();
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Could not undo that change.');
+  } finally {
+    workspaceBusy.value = false;
+  }
+}
+
 async function loadWorkspace() {
   workspaceLoading.value = true;
   try {
@@ -1447,7 +1486,21 @@ async function copyInviteUrl() {
 }
 .up-ws-chip:hover { color: var(--text-primary); }
 .up-ws-chip.active { background: var(--accent-soft, rgba(88,166,255,.12)); border-color: var(--accent-color); color: var(--accent-color); font-weight: 600; }
+.up-act-row { align-items: flex-start; }
 .up-act-verb { font-weight: 600; }
+.up-act-toggle {
+  background: none; border: none; padding: 0; margin-left: 8px; cursor: pointer;
+  color: var(--accent-color); font-size: 12px; text-decoration: underline;
+}
+.up-act-diff { margin-top: 8px; border-collapse: collapse; font-size: 12px; width: 100%; }
+.up-act-diff th {
+  text-align: left; font-weight: 600; color: var(--text-secondary);
+  padding: 3px 12px 3px 0; vertical-align: top; white-space: nowrap;
+}
+.up-act-was {
+  font-family: 'Courier New', monospace; color: var(--text-primary);
+  padding: 3px 0; word-break: break-word;
+}
 .act-created { color: #3fb950; }
 .act-updated { color: #d29922; }
 .act-deleted { color: #f85149; }

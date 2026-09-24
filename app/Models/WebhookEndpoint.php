@@ -32,6 +32,9 @@ class WebhookEndpoint extends Model
     /** Written when a hook fires, not by anyone editing the endpoint. */
     protected array $activityIgnored = ['last_received_at', 'last_status'];
 
+    /** The token is the endpoint credential. */
+    protected array $revisionRedacted = ['token'];
+
     protected $fillable = [
         'user_id',
         'name',

@@ -22,6 +22,9 @@ class StatusPage extends Model
 
     public const MAX_PER_USER = 5;
 
+    /** The token is what makes the public URL unguessable. */
+    protected array $revisionRedacted = ['token'];
+
     protected $fillable = [
         'user_id',
         'name',

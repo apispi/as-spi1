@@ -21,6 +21,9 @@ class AlertChannel extends Model
 
     public const TYPES = ['slack', 'discord', 'webhook'];
 
+    /** Holds the webhook URL or token the channel posts to. */
+    protected array $revisionRedacted = ['config'];
+
     protected $fillable = [
         'user_id',
         'name',

@@ -20,6 +20,9 @@ class Environment extends Model
      */
     public const MAX_VARIABLES = 100;
 
+    /** Variables carry secret values and auth carries a credential; both are restorable but never echoed. */
+    protected array $revisionRedacted = ['variables', 'auth'];
+
     protected $fillable = [
         'user_id',
         'name',

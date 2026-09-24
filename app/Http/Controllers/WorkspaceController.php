@@ -86,6 +86,67 @@ class WorkspaceController extends Controller
     }
 
     /**
+     * Undo one logged change, putting the replaced values back.
+     *
+     * Restoring is itself an edit, so it is attributed to whoever pressed the
+     * button and shows up in the feed as a change of its own — which also
+     * means it can be undone in turn.
+     */
+    public function restoreActivity(Request $request, int $id)
+    {
+        $user = $request->user();
+
+        $entry = WorkspaceActivity::inWorkspaceOf($user)->findOrFail($id);
+
+        if (! $entry->isRestorable()) {
+            return response()->json([
+                'message' => $entry->action === WorkspaceActivity::ACTION_DELETED
+                    // A collection's steps and a monitor's channel links went
+                    // with it; re-creating the row alone would look like a
+                    // restore and behave like an empty shell.
+                    ? 'A deleted '.$entry->subjectLabel().' cannot be restored automatically — the feed records what it held so it can be rebuilt.'
+                    : 'There is nothing to undo for this entry.',
+            ], 422);
+        }
+
+        $class = $entry->subjectClass();
+
+        // Scoped like any other resource: you can only undo a change to
+        // something your workspace can see in the first place.
+        $subject = $class::inWorkspaceOf($user)->find($entry->subject_id);
+
+        if (! $subject) {
+            return response()->json([
+                'message' => 'That '.$entry->subjectLabel().' no longer exists.',
+            ], 404);
+        }
+
+        // Only the attributes this entry actually replaced, so restoring an
+        // old change does not also revert everything done since.
+        $restore = array_intersect_key(
+            $entry->before,
+            array_flip($entry->changed ?: array_keys($entry->before))
+        );
+
+        if ($restore === []) {
+            return response()->json(['message' => 'There is nothing to undo for this entry.'], 422);
+        }
+
+        $subject->forceFill($restore)->save();
+
+        AuditEvent::record('workspace.change_restored', $user, $request, [
+            'activity_id' => $entry->id,
+            'subject_type' => $entry->subject_type,
+            'subject_id' => $entry->subject_id,
+        ]);
+
+        return response()->json([
+            'message' => 'Restored '.implode(', ', array_keys($restore)).' on '.($entry->subject_name ?: $entry->subjectLabel()).'.',
+            'restored' => array_keys($restore),
+        ]);
+    }
+
+    /**
      * Invite someone by email.
      *
      * A user with no organisation gets one created here — that is how a solo

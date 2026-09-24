@@ -23,6 +23,9 @@ class McpMock extends Model
 
     public const MAX_TOOLS = 100;
 
+    /** Can be large; shown as a summary rather than echoed in full. */
+    protected array $revisionRedacted = ['tools'];
+
     protected $fillable = [
         'user_id',
         'name',
