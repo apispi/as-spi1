@@ -161,6 +161,8 @@ Route::middleware('auth')->group(function () {
     // endpoints and every route writes an audit event.
     Route::get('/api/workspace', [\App\Http\Controllers\WorkspaceController::class, 'show']);
     Route::get('/api/workspace/activity', [\App\Http\Controllers\WorkspaceController::class, 'activity']);
+    Route::get('/api/workspace/export', [\App\Http\Controllers\WorkspaceController::class, 'export']);
+    Route::post('/api/workspace/import', [\App\Http\Controllers\WorkspaceController::class, 'import']);
     Route::post('/api/workspace/activity/{id}/restore', [\App\Http\Controllers\WorkspaceController::class, 'restoreActivity']);
     Route::post('/api/workspace/invitations', [\App\Http\Controllers\WorkspaceController::class, 'invite'])
         ->middleware('throttle:10,1');

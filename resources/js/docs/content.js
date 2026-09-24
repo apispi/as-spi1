@@ -618,6 +618,16 @@ export const DOCS = [
         'Someone already in a workspace with other people must leave it before accepting a new invitation, so nobody is moved out of a team silently.',
       ] },
       { type: 'p', text: 'Joining, leaving, inviting, revoking, and removing a member are all recorded in your [security log](/docs/account-security), and the rest of the workspace is notified when somebody joins.' },
+      { type: 'h2', text: 'Taking the workspace with you' },
+      { type: 'p', text: 'There is per-resource export already — a collection as Postman, an environment on its own — but **Profile → Workspace → Export** gives you the lot in one file: every saved request, every collection with its steps, every environment.' },
+      { type: 'ul', items: [
+        '**No credentials travel.** Secret variable values, bearer tokens and OAuth client secrets all export empty, while their names and shapes survive — so the person importing knows exactly what to re-enter. A bundle is a thing people email to each other.',
+        'Importing is **additive**. Nothing existing is overwritten or deleted, and a name that clashes gets an "(imported)" suffix rather than silently replacing a colleague\'s work.',
+        'A collection\'s steps are re-pointed at the requests the import just created, not at whatever happens to share a name. A step whose request was not in the bundle is dropped and reported rather than pointed somewhere arbitrary.',
+        'An imported environment is never made the default — the account already has one, and moving it would re-point every request that relies on it.',
+        'Anything that cannot be created, usually because a plan limit was reached, is listed back to you instead of vanishing.',
+      ] },
+      { type: 'note', text: 'Because a workspace is shared, an export contains your colleagues\' work too. That is the point when you are backing up a team\'s suite — and worth knowing before you send one on.' },
       { type: 'h2', text: 'Seeing what changed' },
       { type: 'p', text: 'Once colleagues can edit your work, the question that follows is who changed what. **Profile → Workspace → Recent activity** answers it: every create, update and delete of a request, collection, environment, monitor, webhook, mock, alert channel or status page, with who did it and which fields they touched.' },
       { type: 'ul', items: [

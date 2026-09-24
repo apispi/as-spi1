@@ -8,6 +8,7 @@ use App\Models\Organisation;
 use App\Models\User;
 use App\Models\UserNotification;
 use App\Models\WorkspaceActivity;
+use App\Services\Export\WorkspaceBundle;
 use App\Models\WorkspaceInvitation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -144,6 +145,62 @@ class WorkspaceController extends Controller
             'message' => 'Restored '.implode(', ', array_keys($restore)).' on '.($entry->subject_name ?: $entry->subjectLabel()).'.',
             'restored' => array_keys($restore),
         ]);
+    }
+
+    /**
+     * Download the whole workspace as one document.
+     *
+     * Credentials are not in it — see WorkspaceBundle. A bundle is a thing
+     * people email to each other.
+     */
+    public function export(Request $request, WorkspaceBundle $bundle)
+    {
+        $user = $request->user();
+        $document = $bundle->export($user);
+
+        $name = $user->organisation?->slug ?? 'workspace';
+        $filename = $name.'-'.now()->format('Y-m-d').'.spi-workspace.json';
+
+        AuditEvent::record('workspace.exported', $user, $request, [
+            'saved_requests' => count($document['saved_requests']),
+            'collections' => count($document['collections']),
+            'environments' => count($document['environments']),
+        ]);
+
+        return response()->json($document)
+            ->header('Content-Disposition', 'attachment; filename="'.$filename.'"');
+    }
+
+    /**
+     * Create everything in a bundle. Additive: nothing existing is touched,
+     * and anything that cannot be created is reported rather than skipped
+     * silently.
+     */
+    public function import(Request $request, WorkspaceBundle $bundle)
+    {
+        $validated = $request->validate([
+            'document' => 'required|string|max:'.WorkspaceBundle::MAX_BYTES,
+        ], [
+            'document.max' => 'That bundle is too large to import.',
+        ]);
+
+        $decoded = json_decode($validated['document'], true);
+
+        if (! is_array($decoded)) {
+            return response()->json(['message' => 'That file is not valid JSON.'], 422);
+        }
+
+        if (! isset($decoded['spi_workspace'])) {
+            return response()->json([
+                'message' => 'That is not a Spi workspace bundle. Export one from Profile → Workspace.',
+            ], 422);
+        }
+
+        $result = $bundle->import($request->user(), $decoded);
+
+        AuditEvent::record('workspace.imported', $request->user(), $request, $result['created']);
+
+        return response()->json($result);
     }
 
     /**

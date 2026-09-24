@@ -285,6 +285,37 @@
 
           <div class="up-card">
             <div class="up-card-header">
+              <h2 class="up-card-title">Export &amp; import</h2>
+              <p class="up-card-sub">
+                Take the whole workspace with you — every saved request, collection and environment in one file.
+                <strong>Credentials are not included</strong>: secret variable values, tokens and client secrets
+                export empty, so a bundle is safe to send to someone.
+              </p>
+            </div>
+
+            <div class="up-ws-io">
+              <button type="button" class="up-btn-save" :disabled="workspaceBusy" @click="exportWorkspace">
+                Export workspace
+              </button>
+              <button type="button" class="up-btn-save" :disabled="workspaceBusy" @click="$refs.bundleInput.click()">
+                Import a bundle
+              </button>
+              <input ref="bundleInput" type="file" accept="application/json,.json"
+                     class="up-ws-file" @change="importWorkspace" />
+            </div>
+
+            <p class="up-muted up-ws-io-note">
+              Importing only ever adds: nothing existing is overwritten, and a name that clashes gets
+              an "(imported)" suffix.
+            </p>
+
+            <ul v-if="importSkipped.length" class="up-ws-skipped">
+              <li v-for="(line, i) in importSkipped" :key="i">{{ line }}</li>
+            </ul>
+          </div>
+
+          <div class="up-card">
+            <div class="up-card-header">
               <h2 class="up-card-title">Recent activity</h2>
               <p class="up-card-sub">
                 Who changed what across the workspace. Sign-ins and password changes are not here —
@@ -1070,6 +1101,53 @@ function setActivityFilter(value) {
   loadActivity();
 }
 
+const importSkipped = ref([]);
+
+async function exportWorkspace() {
+  workspaceBusy.value = true;
+  try {
+    const res = await axios.get('/api/workspace/export', { responseType: 'blob' });
+    const url = URL.createObjectURL(res.data);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `workspace-${new Date().toISOString().slice(0, 10)}.spi-workspace.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Workspace exported. Secrets are not included.');
+  } catch {
+    toast.error('Could not export the workspace.');
+  } finally {
+    workspaceBusy.value = false;
+  }
+}
+
+async function importWorkspace(event) {
+  const file = event.target.files?.[0];
+  event.target.value = ''; // allow re-selecting the same file later
+  if (!file) return;
+
+  if (!(await confirmDialog(
+    `Import "${file.name}"? Everything in it is added to this workspace. Nothing existing is overwritten.`
+  ))) return;
+
+  workspaceBusy.value = true;
+  importSkipped.value = [];
+  try {
+    const document_ = await file.text();
+    const res = await axios.post('/api/workspace/import', { document: document_ });
+    const c = res.data.created;
+    importSkipped.value = res.data.skipped || [];
+    toast.success(
+      `Imported ${c.saved_requests} request(s), ${c.collections} collection(s), ${c.environments} environment(s).`
+    );
+    await loadActivity();
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Could not import that bundle.');
+  } finally {
+    workspaceBusy.value = false;
+  }
+}
+
 const expandedActivity = ref(null);
 const toggleActivity = (id) => { expandedActivity.value = expandedActivity.value === id ? null : id; };
 
@@ -1478,6 +1556,14 @@ async function copyInviteUrl() {
 .up-ws-sub { font-size: 13px; font-weight: 700; color: var(--text-secondary); margin: 18px 0 4px; }
 .up-ws-link { font-size: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 .up-ws-leave { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-color); font-size: 12px; }
+
+.up-ws-io { display: flex; gap: 10px; flex-wrap: wrap; }
+.up-ws-file { display: none; }
+.up-ws-io-note { font-size: 12px; margin-top: 10px; }
+.up-ws-skipped {
+  margin: 12px 0 0; padding: 10px 12px 10px 28px; font-size: 12px; line-height: 1.6;
+  color: var(--text-secondary); border: 1px solid var(--border-color); border-radius: 8px;
+}
 
 .up-ws-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
 .up-ws-chip {
