@@ -30,7 +30,7 @@
     <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Testing &amp; assertions</span></div>
     <h1>API diff</h1>
     <p class="lead">Diff two OpenAPI documents or GraphQL schemas and flag breaking changes before you ship them.</p>
-    <nav class="toc"><span class="toc-label">On this page</span><a href="#what-counts-as-breaking">What counts as breaking</a><a href="#gating-a-pull-request-on-it">Gating a pull request on it</a><a href="#graphql-schemas">GraphQL schemas</a></nav>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#what-counts-as-breaking">What counts as breaking</a><a href="#gating-a-pull-request-on-it">Gating a pull request on it</a><a href="#graphql-schemas">GraphQL schemas</a><a href="#watching-a-schema-continuously">Watching a schema continuously</a></nav>
     <article><p>Response contracts catch drift in a running API. <strong>API Diff</strong> catches it one step earlier — in the spec itself, before the change ships. Paste the current (baseline) OpenAPI document and the proposed one into <a href="/api-diff">API Diff</a>, and Spi reports every difference, sorted with the changes that break existing clients first. Both JSON and YAML are accepted.</p>
 <h2 id="what-counts-as-breaking">What counts as breaking</h2>
 <p>A change is *breaking* when it could break a client already calling the old version of the API:</p>
@@ -53,6 +53,9 @@
   -d old_url=https://api.example.com/graphql \
   -d new_url=https://staging.example.com/graphql \
   || echo "Breaking schema changes — review before merge."</code></pre></div>
+<h2 id="watching-a-schema-continuously">Watching a schema continuously</h2>
+<p>API Diff answers the question once, when somebody thinks to ask. For an API you do not control, nobody thinks to ask until something is already broken — so a <a href="/docs/monitors-and-alerts/">monitor</a> can ask every hour instead. Create one that watches <strong>a GraphQL endpoint</strong> or <strong>an OpenAPI document</strong> and point it at the URL.</p>
+<ul><li>The first run captures a <strong>baseline</strong>. Each later run fetches the schema and compares it with the last one.</li><li>Only a <strong>breaking</strong> change fails the monitor and alerts. An addition is recorded and passes — paging you because a third party added an optional field is how monitoring gets muted.</li><li>After a break, the new schema becomes the baseline, so <strong>one break alerts once</strong> rather than every hour forever.</li><li>An endpoint that is unreachable, or has introspection disabled, fails as a plain outage without discarding the baseline — so recovery is not misreported as a fresh schema.</li><li>A server that merely reorders its types is not drift: the hash is only a fast path, and the comparison itself decides.</li></ul>
 <div class="note">Every comparison is also saved as a <a href="/docs/reports-and-sharing/">report</a> you can open, share as a read-only link, or compare against a later run. Deep OpenAPI schema comparison (field-level types and enum values) is intentionally left to <a href="/docs/response-contracts/">response contracts</a>, which check them against real traffic.</div></article>
     <nav class="pager">
       <a class="pager-link prev" href="/docs/response-contracts/"><span>← Previous</span><strong>Response contracts</strong></a>

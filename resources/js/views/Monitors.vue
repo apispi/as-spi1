@@ -33,7 +33,7 @@
           </div>
           <div class="mon-meta">
             <em v-if="ownerName(m)" class="mon-owner">{{ ownerName(m) }}</em>
-            {{ m.type === 'mcp_drift' ? (m.target_url || 'MCP drift') : (m.collection?.name || '—') }}
+            {{ isUrlType(m.type) ? (m.target_url || typeLabel(m.type)) : (m.collection?.name || '—') }}
             <template v-if="m.environment"> · {{ m.environment.name }}</template>
             · every {{ intervalLabel(m.interval_minutes) }}
             <template v-if="m.last_run_at"> · last run {{ ago(m.last_run_at) }}</template>
@@ -68,9 +68,24 @@
           <select v-model="editing.type" class="input-field">
             <option value="collection">A collection (run it and check assertions)</option>
             <option value="mcp_drift">An MCP server (alert when its tools change)</option>
+            <option value="graphql_drift">A GraphQL endpoint (alert when its schema breaks)</option>
+            <option value="openapi_drift">An OpenAPI document (alert when its spec breaks)</option>
           </select>
 
-          <template v-if="editing.type === 'mcp_drift'">
+          <template v-if="isSchemaType(editing.type)">
+            <label class="mon-label">{{ editing.type === 'graphql_drift' ? 'GraphQL endpoint' : 'OpenAPI document URL' }}</label>
+            <input v-model="editing.target_url" class="input-field"
+                   :placeholder="editing.type === 'graphql_drift' ? 'https://api.example.com/graphql' : 'https://api.example.com/openapi.json'" />
+            <p class="mon-note">
+              Each run fetches the schema and compares it with the last one. A
+              <strong>breaking</strong> change — a removed field or endpoint, a new required
+              input — fails the monitor and alerts. An addition is recorded and passes, because
+              paging you for a new optional field is how monitoring gets muted. The new schema
+              then becomes the baseline, so one break alerts once.
+            </p>
+          </template>
+
+          <template v-else-if="editing.type === 'mcp_drift'">
             <label class="mon-label">MCP endpoint</label>
             <input v-model="editing.target_url" class="input-field" placeholder="https://mcp.example.com/tools" />
             <p class="mon-note">
@@ -123,7 +138,7 @@
           <p v-if="error" class="mon-error">{{ error }}</p>
 
           <footer class="mon-modal-actions">
-            <button class="mon-primary" @click="save" :disabled="saving || !editing.name.trim() || (editing.type === 'mcp_drift' ? !editing.target_url.trim() : !editing.collection_id)">
+            <button class="mon-primary" @click="save" :disabled="saving || !editing.name.trim() || (isUrlType(editing.type) ? !editing.target_url.trim() : !editing.collection_id)">
               {{ saving ? 'Saving…' : 'Save' }}
             </button>
             <button v-if="editing.id" class="mon-danger" @click="remove" :disabled="saving">Delete</button>
@@ -360,6 +375,19 @@ import axios from 'axios';
 import { confirmDialog } from '../confirm';
 import { useMonitorsStore } from '../store/monitors';
 import { useCollectionsStore } from '../store/collections';
+
+// Mirrors Monitor::URL_TYPES / SCHEMA_TYPES: these watch a target_url instead
+// of running a collection.
+const SCHEMA_TYPES = ['graphql_drift', 'openapi_drift'];
+const URL_TYPES = ['mcp_drift', ...SCHEMA_TYPES];
+const isSchemaType = (t) => SCHEMA_TYPES.includes(t);
+const isUrlType = (t) => URL_TYPES.includes(t);
+const typeLabel = (t) => ({
+  mcp_drift: 'MCP drift',
+  graphql_drift: 'GraphQL schema',
+  openapi_drift: 'OpenAPI schema',
+  collection: 'Collection',
+}[t] || t);
 import { useEnvironmentsStore } from '../store/environments';
 import { useAuthStore } from '../store/auth';
 import Icon from '../components/Icon.vue';
@@ -646,8 +674,8 @@ const save = async () => {
     await store.save({
       name: editing.value.name.trim(),
       type: editing.value.type,
-      target_url: editing.value.type === 'mcp_drift' ? editing.value.target_url.trim() : null,
-      collection_id: editing.value.type === 'mcp_drift' ? null : editing.value.collection_id,
+      target_url: isUrlType(editing.value.type) ? editing.value.target_url.trim() : null,
+      collection_id: isUrlType(editing.value.type) ? null : editing.value.collection_id,
       environment_id: editing.value.environment_id,
       interval_minutes: editing.value.interval_minutes,
       is_enabled: editing.value.is_enabled,

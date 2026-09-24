@@ -26,6 +26,19 @@ class Monitor extends Model
 
     public const TYPE_MCP_DRIFT = 'mcp_drift';
 
+    public const TYPE_GRAPHQL_DRIFT = 'graphql_drift';
+
+    public const TYPE_OPENAPI_DRIFT = 'openapi_drift';
+
+    /** Types that watch a target_url rather than running a collection. */
+    public const URL_TYPES = [self::TYPE_MCP_DRIFT, self::TYPE_GRAPHQL_DRIFT, self::TYPE_OPENAPI_DRIFT];
+
+    /** Schema-watching types, mapped to the flavour the detector understands. */
+    public const SCHEMA_TYPES = [
+        self::TYPE_GRAPHQL_DRIFT => 'graphql',
+        self::TYPE_OPENAPI_DRIFT => 'openapi',
+    ];
+
     public const STATUS_UNKNOWN = 'unknown';
 
     public const STATUS_PASSING = 'passing';

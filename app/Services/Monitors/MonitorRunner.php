@@ -21,10 +21,14 @@ use Throwable;
  */
 class MonitorRunner
 {
+    /** How far back to look for a baseline when recent runs were unreachable. */
+    private const BASELINE_LOOKBACK = 20;
+
     public function __construct(
         private readonly CollectionRunner $runner,
         private readonly AlertDispatcher $alerts,
         private readonly McpDriftDetector $drift = new McpDriftDetector,
+        private readonly ?SchemaDriftDetector $schemaDrift = null,
     ) {
     }
 
@@ -32,6 +36,10 @@ class MonitorRunner
     {
         if ($monitor->type === Monitor::TYPE_MCP_DRIFT) {
             return $this->runDrift($monitor);
+        }
+
+        if (isset(Monitor::SCHEMA_TYPES[$monitor->type])) {
+            return $this->runSchemaDrift($monitor, Monitor::SCHEMA_TYPES[$monitor->type]);
         }
 
         $monitor->loadMissing(['collection', 'environment', 'user']);
@@ -159,6 +167,145 @@ class MonitorRunner
             $monitor->forceFill(['last_status' => Monitor::STATUS_PASSING])->save();
         }
 
+        $this->trim($monitor);
+
+        return $entry;
+    }
+
+    /**
+     * Watch a published schema and report what changed since the last run.
+     *
+     * Only a breaking change fails the monitor. An addition is recorded and
+     * passed: paging somebody because a third party added an optional argument
+     * is how monitoring gets muted.
+     */
+    private function runSchemaDrift(Monitor $monitor, string $flavour): MonitorResult
+    {
+        $monitor->loadMissing('user');
+        $detector = $this->schemaDrift ?? app(SchemaDriftDetector::class);
+        $started = microtime(true);
+
+        try {
+            $current = $detector->fetch((string) $monitor->target_url, $flavour);
+        } catch (Throwable $e) {
+            return $this->schemaFailure($monitor, $flavour, 'Unreachable: '.$e->getMessage(), $started);
+        }
+
+        $previousReport = $this->lastSchemaReport($monitor);
+        $baseline = $previousReport?->data['document'] ?? null;
+        $baselineHash = $previousReport?->data['hash'] ?? null;
+
+        // First run, or a baseline that was too large to keep: record what is
+        // there now and compare from here on.
+        if ($baseline === null) {
+            return $this->recordSchemaRun($monitor, $flavour, $current, [
+                'breaking' => false, 'changed' => false,
+                'breaking_count' => 0, 'non_breaking_count' => 0, 'info_count' => 0,
+                'summary' => $baselineHash === null
+                    ? 'Baseline captured.'
+                    : 'Baseline re-captured — the previous schema was too large to keep.',
+                'changes' => [],
+            ], $started, storeDocument: true);
+        }
+
+        // The hash is a cheap skip; when it differs the diff still decides,
+        // so a server that merely reorders its types is not reported as drift.
+        $diff = $current['hash'] === $baselineHash
+            ? ['breaking' => false, 'changed' => false, 'breaking_count' => 0, 'non_breaking_count' => 0,
+                'info_count' => 0, 'summary' => 'No schema change.', 'changes' => []]
+            : $detector->compare($baseline, $current['document'] ?? [], $flavour);
+
+        // A new baseline is only worth keeping when it actually moved; a
+        // hundred identical copies of a schema is not history, it is waste.
+        return $this->recordSchemaRun($monitor, $flavour, $current, $diff, $started, storeDocument: $diff['changed']);
+    }
+
+    /**
+     * The most recent report holding a usable baseline. A run of unreachable
+     * checks in between must not lose the schema we last saw.
+     */
+    private function lastSchemaReport(Monitor $monitor): ?InspectionReport
+    {
+        foreach ($monitor->results()->take(self::BASELINE_LOOKBACK)->get() as $result) {
+            $report = InspectionReport::find($result->inspection_report_id);
+
+            if ($report && ($report->data['document'] ?? null) !== null) {
+                return $report;
+            }
+        }
+
+        return null;
+    }
+
+    private function recordSchemaRun(
+        Monitor $monitor,
+        string $flavour,
+        array $current,
+        array $diff,
+        float $started,
+        bool $storeDocument,
+    ): MonitorResult {
+        $report = InspectionReport::create([
+            'user_id' => $monitor->user_id,
+            'type' => 'schema_drift',
+            'summary' => $monitor->name.' — '.$diff['summary'],
+            'data' => [
+                'flavour' => $flavour,
+                'target_url' => $monitor->target_url,
+                'hash' => $current['hash'],
+                'size' => $current['size'],
+                'document' => $storeDocument ? $current['document'] : null,
+                'diff' => $diff,
+                'monitor' => ['id' => $monitor->id, 'name' => $monitor->name],
+            ],
+        ]);
+
+        $entry = $monitor->results()->create([
+            'inspection_report_id' => $report->id,
+            'passed' => ! $diff['breaking'],
+            'time_ms' => (int) round((microtime(true) - $started) * 1000),
+            'passed_count' => $diff['changed'] ? 0 : 1,
+            'total' => 1,
+            'summary' => $diff['summary'],
+        ]);
+
+        $this->applyStatus($monitor, ! $diff['breaking'], $entry);
+
+        // The new schema is the contract now; comparing every future run
+        // against the pre-drift shape would re-alert forever.
+        if ($diff['breaking']) {
+            $monitor->forceFill(['last_status' => Monitor::STATUS_PASSING])->save();
+        }
+
+        $this->trim($monitor);
+
+        return $entry;
+    }
+
+    private function schemaFailure(Monitor $monitor, string $flavour, string $summary, float $started): MonitorResult
+    {
+        $report = InspectionReport::create([
+            'user_id' => $monitor->user_id,
+            'type' => 'schema_drift',
+            'summary' => $monitor->name.' — '.$summary,
+            'data' => [
+                'flavour' => $flavour,
+                'target_url' => $monitor->target_url,
+                'error' => $summary,
+                'monitor' => ['id' => $monitor->id, 'name' => $monitor->name],
+            ],
+        ]);
+
+        $entry = $monitor->results()->create([
+            'inspection_report_id' => $report->id,
+            'passed' => false,
+            'time_ms' => (int) round((microtime(true) - $started) * 1000),
+            'passed_count' => 0,
+            'total' => 1,
+            'summary' => $summary,
+        ]);
+
+        $this->applyStatus($monitor, false, $entry);
         $this->trim($monitor);
 
         return $entry;
