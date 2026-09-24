@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\RequestHistory;
 use App\Rules\PubliclyRoutableUrl;
 use App\Services\Security\SsrfException;
+use App\Services\Auth\RequestAuthenticator;
 use App\Services\Security\SsrfGuard;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -22,7 +23,9 @@ class ProxyController extends Controller
             // editor contents verbatim) or a decoded JSON object (the homepage
             // testers build one). Accept both and normalise below.
             'body' => 'nullable',
-        ]);
+            // The auth helper's config: scheme plus its fields. Values arrive
+            // already resolved, so a credential can live in a secret variable.
+        ] + RequestAuthenticator::rules());
 
         $url = $validated['url'];
         $method = strtoupper($validated['method']);
@@ -32,6 +35,12 @@ class ProxyController extends Controller
             return !in_array($k, ['host', 'content-length']);
         })->toArray();
         $body = $validated['body'] ?? null;
+
+        // Bearer/Basic/API-key are assembled here rather than in the browser,
+        // so the credential never has to be built client-side.
+        $authed = (new RequestAuthenticator)->apply($validated['auth'] ?? null, $headers, $url);
+        $headers = $authed['headers'];
+        $url = $authed['url'];
 
         // Normalise a structured body to the JSON string we forward on the wire.
         if (is_array($body)) {

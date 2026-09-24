@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\SavedRequest;
 use App\Rules\TemplatedUrl;
 use App\Services\Assertions\Assertion;
+use App\Services\Auth\RequestAuthenticator;
 use Illuminate\Validation\Rule;
 
 class SavedRequestController extends Controller
@@ -57,7 +58,10 @@ class SavedRequestController extends Controller
             'assertions.*.operator' => ['required', 'string', Rule::in(Assertion::operators())],
             'assertions.*.expected' => 'nullable',
             'assertions.*.description' => 'nullable|string|max:255',
-        ]);
+            // The auth helper's config. Stored as a template: the values are
+            // normally {{variables}}, so the credential stays in a secret
+            // environment variable rather than in this row.
+        ] + RequestAuthenticator::rules());
 
         $validated['protocol'] = $validated['protocol'] ?? 'rest';
 
@@ -96,6 +100,7 @@ class SavedRequestController extends Controller
             'method' => $source->method,
             'url' => $source->url,
             'headers' => $source->headers,
+            'auth' => $source->auth,
             'body' => $source->body,
             'params' => $source->params,
             'assertions' => $source->assertions,

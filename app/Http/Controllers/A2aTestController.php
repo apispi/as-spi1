@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\RequestHistory;
 use App\Rules\PubliclyRoutableUrl;
 use App\Services\A2a\A2aClient;
+use App\Services\Auth\RequestAuthenticator;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -17,11 +18,18 @@ class A2aTestController extends Controller
             'method' => 'required|string',
             'params' => 'nullable|array',
             'headers' => 'nullable|array',
-        ]);
+        ] + RequestAuthenticator::rules());
 
         $headers = collect($validated['headers'] ?? [])->filter(function ($value, $key) {
             return ! in_array(strtolower($key), ['host', 'content-length']);
         })->toArray();
+
+        // The auth helper applies here exactly as it does to a REST request,
+        // so an MCP/A2A server behind a token authenticates the same way in
+        // the tester as it does inside a collection run.
+        $authed = (new RequestAuthenticator)->apply($validated['auth'] ?? null, $headers, $validated['url']);
+        $headers = $authed['headers'];
+        $validated['url'] = $authed['url'];
 
         $client = new A2aClient($validated['url'], null, $headers);
 

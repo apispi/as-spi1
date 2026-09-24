@@ -16,6 +16,7 @@ class SavedRequest extends Model
         'method',
         'url',
         'headers',
+        'auth',
         'body',
         'params',
         'assertions',
@@ -26,6 +27,7 @@ class SavedRequest extends Model
 
     protected $casts = [
         'headers' => 'array',
+        'auth' => 'array',
         'params' => 'array',
         'assertions' => 'array',
         'contract' => 'array',

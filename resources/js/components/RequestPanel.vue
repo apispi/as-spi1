@@ -246,6 +246,11 @@
             @click="activeTab = 'headers'"
           >{{ protocol === 'grpc' ? 'Metadata' : 'Headers' }}</button>
           <button
+            v-if="supportsAuth"
+            :class="['tab', activeTab === 'auth' ? 'active' : '']"
+            @click="activeTab = 'auth'"
+          >Auth<span v-if="auth.scheme !== 'none'" class="tab-dot" title="Authentication is set"></span></button>
+          <button
             :class="['tab', activeTab === 'body' ? 'active' : '']"
             @click="activeTab = 'body'"
           >{{ bodyTabLabel }}</button>
@@ -260,6 +265,46 @@
             </button>
           </div>
           <button class="secondary mt-4 text-sm" @click="addHeader">+ Add Header</button>
+        </div>
+
+        <div class="tab-content mt-4" v-show="activeTab === 'auth'">
+          <select class="input-field auth-scheme" v-model="auth.scheme">
+            <option value="none">No auth</option>
+            <option value="bearer">Bearer token</option>
+            <option value="basic">Basic auth</option>
+            <option value="api_key">API key</option>
+          </select>
+
+          <template v-if="auth.scheme === 'bearer'">
+            <input type="text" class="input-field w-full mt-2 mono" placeholder="Token — or {{token}}" v-model="auth.token" />
+          </template>
+
+          <template v-else-if="auth.scheme === 'basic'">
+            <input type="text" class="input-field w-full mt-2" placeholder="Username" v-model="auth.username" autocomplete="off" />
+            <input type="text" class="input-field w-full mt-2 mono" placeholder="Password — or {{password}}" v-model="auth.password" autocomplete="off" />
+          </template>
+
+          <template v-else-if="auth.scheme === 'api_key'">
+            <div class="header-row flex gap-2 mt-2">
+              <input type="text" class="input-field w-full" placeholder="Name (e.g. X-Api-Key)" v-model="auth.key" />
+              <input type="text" class="input-field w-full mono" placeholder="Value — or {{api_key}}" v-model="auth.value" />
+            </div>
+            <select class="input-field auth-scheme mt-2" v-model="auth.in">
+              <option value="header">Send in header</option>
+              <option value="query">Send in query string</option>
+            </select>
+          </template>
+
+          <p class="auth-hint mt-2">
+            <template v-if="auth.scheme === 'none'">
+              Add authentication without hand-building the header. Spi applies it server-side when the request is sent.
+            </template>
+            <template v-else>
+              Applied server-side at send time, and it replaces any header of the same name set on the Headers tab.
+              Put the credential in a <strong>secret</strong> environment variable and reference it here as
+              <code v-pre>{{name}}</code> — it is then masked in history and reports.
+            </template>
+          </p>
         </div>
 
         <div class="tab-content mt-4" v-show="activeTab === 'body'">
@@ -320,6 +365,26 @@ const agentCard = ref(null);
 const isFetchingCard = ref(false);
 const cardError = ref('');
 const activeTab = ref('headers');
+
+// The auth helper's config. Kept as one object so it travels with the request
+// verbatim; `none` means "send nothing", which is also what an older saved
+// request (with no auth column) resolves to.
+const emptyAuth = () => ({ scheme: 'none', token: '', username: '', password: '', key: '', value: '', in: 'header' });
+const auth = ref(emptyAuth());
+
+// gRPC/MQTT/AMQP carry their credentials in their own connection params, so
+// the HTTP auth helper does not apply to them.
+const supportsAuth = computed(() => ['rest', 'mcp', 'a2a'].includes(protocol.value));
+
+// Only the fields the chosen scheme actually uses are sent, so a half-filled
+// form never ships a stale password from a scheme the user moved away from.
+const collectAuth = () => {
+  const scheme = auth.value.scheme;
+  if (!supportsAuth.value || !scheme || scheme === 'none') return null;
+  if (scheme === 'bearer') return { scheme, token: auth.value.token || '' };
+  if (scheme === 'basic') return { scheme, username: auth.value.username || '', password: auth.value.password || '' };
+  return { scheme, key: auth.value.key || '', value: auth.value.value || '', in: auth.value.in || 'header' };
+};
 
 const headers = ref([
   { key: 'Accept', value: 'application/json' }
@@ -452,6 +517,8 @@ watch(() => props.loadedRequest, (newReq) => {
       body.value = newReq.body || '';
     }
 
+    auth.value = { ...emptyAuth(), ...(newReq.auth || {}) };
+
     headers.value = [];
     if (newReq.headers) {
       Object.entries(newReq.headers).forEach(([key, value]) => {
@@ -499,6 +566,9 @@ watch(protocol, () => {
   agentCard.value = null;
   cardError.value = '';
   // The Headers tab is hidden for MQTT/AMQP; fall back to the Message tab.
+  if (!supportsAuth.value && activeTab.value === 'auth') {
+    activeTab.value = 'body';
+  }
   if ((protocol.value === 'mqtt' || protocol.value === 'amqp') && activeTab.value === 'headers') {
     activeTab.value = 'body';
   }
@@ -750,6 +820,7 @@ const send = () => {
       protocolMethod: protocol.value === 'mcp' ? mcpMethod.value : a2aMethod.value,
       url: url.value,
       headers: collectHeaders(),
+      auth: collectAuth(),
       params
     });
     return;
@@ -772,6 +843,7 @@ const send = () => {
     method: method.value,
     url: url.value,
     headers: headerObj,
+    auth: collectAuth(),
     body: ['GET', 'HEAD'].includes(method.value) ? null : body.value
   });
 };
@@ -828,6 +900,7 @@ const confirmSave = () => {
       method: protocol.value === 'mcp' ? mcpMethod.value : a2aMethod.value,
       url: url.value,
       headers: collectHeaders(),
+      auth: collectAuth(),
       params
     });
     showSave.value = false;
@@ -840,6 +913,7 @@ const confirmSave = () => {
     method: method.value,
     url: url.value,
     headers: collectHeaders(),
+    auth: collectAuth(),
     body: ['GET', 'HEAD'].includes(method.value) ? null : body.value
   });
   showSave.value = false;
@@ -847,6 +921,14 @@ const confirmSave = () => {
 </script>
 
 <style scoped>
+.tab-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent-color); margin-left: 6px; vertical-align: middle;
+}
+.auth-scheme { max-width: 260px; }
+.auth-hint { font-size: 12px; line-height: 1.6; color: var(--text-secondary); }
+.auth-hint code { font-family: 'Courier New', monospace; background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 4px; }
+.mono { font-family: 'Courier New', monospace; }
 .panel {
   display: flex;
   flex-direction: column;

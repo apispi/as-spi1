@@ -6,6 +6,7 @@ use App\Rules\PubliclyRoutableHost;
 use App\Rules\PubliclyRoutableUrl;
 use App\Services\A2a\A2aClient;
 use App\Services\Amqp\AmqpTester;
+use App\Services\Auth\RequestAuthenticator;
 use App\Services\Grpc\GrpcClient;
 use App\Services\Mcp\McpClient;
 use App\Services\Mqtt\MqttTester;
@@ -69,6 +70,13 @@ class RequestExecutor
         $headers = collect($request['headers'] ?? [])
             ->filter(fn ($v, $k) => ! in_array(strtolower((string) $k), ['host', 'content-length']))
             ->all();
+
+        // Auth is applied after the URL has been SSRF-validated but before the
+        // request goes out; an API key placed in the query can only add a
+        // parameter, never change the host.
+        $authed = (new RequestAuthenticator)->apply($request['auth'] ?? null, $headers, $url);
+        $headers = $authed['headers'];
+        $url = $authed['url'];
 
         $started = microtime(true);
 

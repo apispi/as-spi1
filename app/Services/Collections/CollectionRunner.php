@@ -99,6 +99,7 @@ class CollectionRunner
             'method' => $saved->method,
             'url' => $saved->url,
             'headers' => $saved->headers ?? [],
+            'auth' => $saved->auth ?? null,
             'body' => $saved->body,
             'params' => $saved->params ?? [],
         ], $variables);

@@ -179,6 +179,7 @@ const handleRequest = async (requestConfig) => {
         method: requestConfig.protocolMethod,
         params: requestConfig.params,
         headers: requestConfig.headers,
+        auth: requestConfig.auth,
       }));
     } else if (['grpc', 'mqtt', 'amqp'].includes(requestConfig.protocol)) {
       try {
@@ -197,6 +198,7 @@ const handleRequest = async (requestConfig) => {
         url: requestConfig.url,
         method: requestConfig.method,
         headers: requestConfig.headers,
+        auth: requestConfig.auth,
         body: requestConfig.body,
       }));
     }

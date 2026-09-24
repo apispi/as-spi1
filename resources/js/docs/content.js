@@ -199,6 +199,29 @@ export const DOCS = [
   },
 
   {
+    slug: 'authentication',
+    title: 'Authentication',
+    category: 'testing',
+    summary: 'Bearer, Basic, and API-key auth applied server-side, with the credential in a secret variable.',
+    body: [
+      { type: 'p', text: 'Most APIs want a credential, and hand-assembling one — remembering that Basic auth is base64 of `user:password`, or which header a particular service wants its key in — is busywork that goes wrong quietly. The **Auth** tab on a request does it for you. Spi applies the scheme server-side, when the request is sent.' },
+      { type: 'h2', text: 'The schemes' },
+      { type: 'ul', items: [
+        '**Bearer token** — sends `Authorization: Bearer <token>`. If you paste a token that already starts with "Bearer", Spi does not double it.',
+        '**Basic auth** — takes a username and password and sends `Authorization: Basic <base64>`.',
+        '**API key** — a name and a value, sent either as a **header** or appended to the **query string**. Existing query parameters and the fragment are preserved.',
+        '**No auth** — the default; nothing is added.',
+      ] },
+      { type: 'p', text: 'Auth applies to REST, [MCP](/docs/mcp-testing), and A2A requests, in the Tester and inside a [collection run](/docs/collections) alike — the same request authenticates the same way in both. gRPC, MQTT, and AMQP carry their credentials in their own connection settings instead.' },
+      { type: 'h2', text: 'Keep the credential in a secret variable' },
+      { type: 'p', text: 'Type a literal token and it is stored on the request. Instead, put it in a **secret** [environment variable](/docs/environments-and-variables) and reference it in the Auth tab:' },
+      { type: 'code', lang: 'text', code: 'Auth → Bearer token → {{api_token}}' },
+      { type: 'p', text: 'The saved request then holds only the placeholder. The value is substituted server-side at send time, and because it is flagged secret it is masked in request history and in any [shared report](/docs/reports-and-sharing). It also means one request runs against staging or production by switching environment, with a different credential each time.' },
+      { type: 'note', text: 'The Auth tab **replaces** any header of the same name set on the Headers tab — it is the dedicated setting, and the one the UI shows as active, so a stale hand-typed `Authorization` header cannot silently win. Clear the Auth tab to `No auth` if you want to drive the header by hand.' },
+    ],
+  },
+
+  {
     slug: 'dynamic-variables',
     title: 'Dynamic variables',
     category: 'testing',
