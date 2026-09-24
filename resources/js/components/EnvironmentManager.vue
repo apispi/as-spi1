@@ -91,6 +91,66 @@
             </ul>
           </details>
 
+          <details class="env-dyn" v-if="editing.auth">
+            <summary>
+              Authentication
+              <span v-if="editing.auth.scheme !== 'none'" class="env-auth-badge">{{ schemeLabel(editing.auth.scheme) }}</span>
+            </summary>
+            <p class="env-dyn-lead">
+              Set the credential once here and every request that inherits it uses it — no need to configure
+              an OAuth client on twenty saved requests. A request can still override it, or opt out with
+              <strong>No auth</strong>.
+            </p>
+
+            <select class="input-field env-auth-scheme" v-model="editing.auth.scheme">
+              <option value="none">No auth</option>
+              <option value="bearer">Bearer token</option>
+              <option value="basic">Basic auth</option>
+              <option value="api_key">API key</option>
+              <option value="oauth2_client_credentials">OAuth 2.0 (client credentials)</option>
+            </select>
+
+            <template v-if="editing.auth.scheme === 'bearer'">
+              <input type="text" class="input-field mono env-auth-field" autocomplete="off"
+                     :placeholder="secretPlaceholder('token', 'Token — or {{token}}')" v-model="editing.auth.token" />
+            </template>
+
+            <template v-else-if="editing.auth.scheme === 'basic'">
+              <input type="text" class="input-field env-auth-field" placeholder="Username" autocomplete="off" v-model="editing.auth.username" />
+              <input type="text" class="input-field mono env-auth-field" autocomplete="off"
+                     :placeholder="secretPlaceholder('password', 'Password — or {{password}}')" v-model="editing.auth.password" />
+            </template>
+
+            <template v-else-if="editing.auth.scheme === 'api_key'">
+              <input type="text" class="input-field env-auth-field" placeholder="Name (e.g. X-Api-Key)" v-model="editing.auth.key" />
+              <input type="text" class="input-field mono env-auth-field" autocomplete="off"
+                     :placeholder="secretPlaceholder('value', 'Value — or {{api_key}}')" v-model="editing.auth.value" />
+              <select class="input-field env-auth-scheme" v-model="editing.auth.in">
+                <option value="header">Send in header</option>
+                <option value="query">Send in query string</option>
+              </select>
+            </template>
+
+            <template v-else-if="editing.auth.scheme === 'oauth2_client_credentials'">
+              <input type="text" class="input-field mono env-auth-field" placeholder="Token URL — https://issuer/oauth/token" v-model="editing.auth.token_url" />
+              <input type="text" class="input-field env-auth-field" placeholder="Client ID" autocomplete="off" v-model="editing.auth.client_id" />
+              <input type="text" class="input-field mono env-auth-field" autocomplete="off"
+                     :placeholder="secretPlaceholder('client_secret', 'Client secret — or {{client_secret}}')" v-model="editing.auth.client_secret" />
+              <input type="text" class="input-field env-auth-field" placeholder="Scope (optional)" v-model="editing.auth.scope" />
+              <input type="text" class="input-field env-auth-field" placeholder="Audience (optional)" v-model="editing.auth.audience" />
+              <select class="input-field env-auth-scheme" v-model="editing.auth.credentials_in">
+                <option value="basic">Credentials as HTTP Basic</option>
+                <option value="body">Credentials in the form body</option>
+              </select>
+            </template>
+
+            <p class="env-dyn-lead" v-if="editing.auth.scheme !== 'none'">
+              Credentials are never sent back to the browser — leave one blank to keep what is stored.
+              Better still, put it in a <strong>secret</strong> variable above and reference it as
+              <code v-pre>{{name}}</code>.
+            </p>
+          </details>
+
           <p v-if="error" class="env-error">{{ error }}</p>
 
           <footer class="env-actions">
@@ -201,9 +261,20 @@ const onImportFile = async (e) => {
 
 const close = () => emit('close');
 
+// Mirrors the server's auth config. `none` means this environment supplies no
+// auth, which is what a request that inherits then gets.
+const emptyEnvAuth = () => ({
+  scheme: 'none', token: '', username: '', password: '', key: '', value: '', in: 'header',
+  token_url: '', client_id: '', client_secret: '', scope: '', audience: '', credentials_in: 'basic',
+});
+
 const startNew = () => {
   error.value = '';
-  editing.value = { id: null, name: '', is_default: !store.environments.length, variables: [{ key: '', value: '', secret: false }] };
+  editing.value = {
+    id: null, name: '', is_default: !store.environments.length,
+    variables: [{ key: '', value: '', secret: false }],
+    auth: emptyEnvAuth(),
+  };
 };
 
 const edit = (env) => {
@@ -214,10 +285,42 @@ const edit = (env) => {
     name: env.name,
     is_default: env.is_default,
     variables: env.variables.map((v) => ({ ...v, reveal: false })),
+    auth: { ...emptyEnvAuth(), ...(env.auth || {}) },
   };
 };
 
 const addRow = () => editing.value.variables.push({ key: '', value: '', secret: false });
+
+// Only the fields the chosen scheme uses. A blank credential is sent as-is:
+// the server reads that as "unchanged" and keeps the stored one.
+const collectEnvAuth = () => {
+  const a = editing.value.auth || emptyEnvAuth();
+  const scheme = a.scheme;
+  if (!scheme || scheme === 'none') return { scheme: 'none' };
+  if (scheme === 'bearer') return { scheme, token: a.token || '' };
+  if (scheme === 'basic') return { scheme, username: a.username || '', password: a.password || '' };
+  if (scheme === 'oauth2_client_credentials') {
+    return {
+      scheme,
+      token_url: a.token_url || '',
+      client_id: a.client_id || '',
+      client_secret: a.client_secret || '',
+      scope: a.scope || '',
+      audience: a.audience || '',
+      credentials_in: a.credentials_in === 'body' ? 'body' : 'basic',
+    };
+  }
+  return { scheme, key: a.key || '', value: a.value || '', in: a.in || 'header' };
+};
+
+const SCHEME_LABELS = {
+  bearer: 'Bearer', basic: 'Basic', api_key: 'API key', oauth2_client_credentials: 'OAuth 2.0',
+};
+const schemeLabel = (scheme) => SCHEME_LABELS[scheme] || scheme;
+
+// Placeholder text for a credential the server is holding but never sends back.
+const secretPlaceholder = (field, fallback) =>
+  editing.value?.auth?.['has_' + field] ? 'unchanged' : fallback;
 
 const save = async () => {
   saving.value = true;
@@ -228,6 +331,7 @@ const save = async () => {
     variables: editing.value.variables
       .filter((v) => v.key.trim())
       .map((v) => ({ key: v.key.trim(), value: v.value, secret: !!v.secret })),
+    auth: collectEnvAuth(),
   };
 
   try {
@@ -339,6 +443,13 @@ onUnmounted(() => window.removeEventListener('keydown', onKey));
 .env-dyn-list li:hover { background: var(--accent-soft, rgba(88,166,255,.12)); }
 .env-dyn-list code { font-family: 'Courier New', monospace; font-size: 12px; color: var(--accent-color); background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 4px; }
 .env-dyn-desc { font-size: 12px; color: var(--text-secondary); }
+.env-auth-badge {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  background: var(--accent-soft, rgba(88,166,255,.12)); color: var(--accent-color);
+  padding: 2px 7px; border-radius: 5px; margin-left: 8px;
+}
+.env-auth-scheme { max-width: 280px; margin-top: 8px; }
+.env-auth-field { display: block; width: 100%; margin-top: 8px; }
 .env-dyn-eg { font-size: 11px; color: var(--text-secondary); opacity: .8; font-family: 'Courier New', monospace; white-space: nowrap; }
 .env-error { color: #f85149; font-size: 13px; margin: 12px 0 0; }
 .env-actions { display: flex; gap: 8px; margin-top: 20px; }

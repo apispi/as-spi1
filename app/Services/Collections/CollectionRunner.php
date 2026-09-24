@@ -41,6 +41,14 @@ class CollectionRunner
             $this->masker->remember($environment->secretValues());
         }
 
+        // The environment's own auth config, for steps that inherit it.
+        // Resolved once here rather than per step: it is the same config every
+        // time, and an OAuth client secret is not worth re-substituting twenty
+        // times over.
+        $environmentAuth = is_array($environment?->auth) && $environment->auth !== []
+            ? (new VariableResolver)->resolve($environment->auth, $variables)
+            : null;
+
         $steps = [];
         $passed = 0;
         $failed = 0;
@@ -63,7 +71,7 @@ class CollectionRunner
                 continue;
             }
 
-            $result = $this->runStep($step, $saved, $variables, $index, $captureBodies);
+            $result = $this->runStep($step, $saved, $variables, $index, $captureBodies, $environmentAuth);
 
             $steps[] = $result['step'];
             $variables = $result['variables'];
@@ -90,7 +98,7 @@ class CollectionRunner
         ];
     }
 
-    private function runStep($step, $saved, array $variables, int $index, bool $captureBodies = false): array
+    private function runStep($step, $saved, array $variables, int $index, bool $captureBodies = false, mixed $environmentAuth = null): array
     {
         $resolver = new VariableResolver;
 
@@ -103,6 +111,11 @@ class CollectionRunner
             'body' => $saved->body,
             'params' => $saved->params ?? [],
         ], $variables);
+
+        // Already resolved once, for the whole run — added after substitution
+        // so it is not walked again and does not pollute the step's record of
+        // which variables it used.
+        $request['environment_auth'] = $environmentAuth;
 
         $response = $this->executor->send($request);
 

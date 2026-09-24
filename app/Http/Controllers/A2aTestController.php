@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\RequestHistory;
 use App\Rules\PubliclyRoutableUrl;
 use App\Services\A2a\A2aClient;
+use App\Http\Middleware\ResolveEnvironmentVariables;
 use App\Services\Auth\RequestAuthenticator;
 use Illuminate\Http\Request;
 use Throwable;
@@ -27,7 +28,12 @@ class A2aTestController extends Controller
         // The auth helper applies here exactly as it does to a REST request,
         // so an MCP/A2A server behind a token authenticates the same way in
         // the tester as it does inside a collection run.
-        $authed = (new RequestAuthenticator)->apply($validated['auth'] ?? null, $headers, $validated['url']);
+        $authed = (new RequestAuthenticator)->apply(
+            $validated['auth'] ?? null,
+            $headers,
+            $validated['url'],
+            $request->attributes->get(ResolveEnvironmentVariables::ENVIRONMENT_AUTH)
+        );
         if ($authed['error']) {
             return response()->json([
                 'status' => null,

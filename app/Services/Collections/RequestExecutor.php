@@ -74,7 +74,12 @@ class RequestExecutor
         // Auth is applied after the URL has been SSRF-validated but before the
         // request goes out; an API key placed in the query can only add a
         // parameter, never change the host.
-        $authed = (new RequestAuthenticator)->apply($request['auth'] ?? null, $headers, $url);
+        $authed = (new RequestAuthenticator)->apply(
+            $request['auth'] ?? null,
+            $headers,
+            $url,
+            $request['environment_auth'] ?? null
+        );
         if ($authed['error']) {
             return $this->failure($authed['error'], 0);
         }

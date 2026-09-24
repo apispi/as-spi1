@@ -26,6 +26,9 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class ResolveEnvironmentVariables
 {
+    /** Request attribute carrying the selected environment's auth config. */
+    public const ENVIRONMENT_AUTH = 'spi.environment_auth';
+
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
@@ -54,7 +57,19 @@ class ResolveEnvironmentVariables
         }
 
         $resolver = new VariableResolver;
-        $request->replace($resolver->resolve($payload, $environment->map()));
+        $map = $environment->map();
+        $request->replace($resolver->resolve($payload, $map));
+
+        // The environment's own auth config, resolved the same way, for
+        // requests that inherit it. It travels as a request attribute rather
+        // than in the payload: it is ours, not the tester's, and must never be
+        // something a caller can spoof by sending the key itself.
+        if (is_array($environment->auth) && $environment->auth !== []) {
+            $request->attributes->set(
+                self::ENVIRONMENT_AUTH,
+                (new VariableResolver)->resolve($environment->auth, $map)
+            );
+        }
 
         app(SecretMasker::class)->remember($environment->secretValues());
 

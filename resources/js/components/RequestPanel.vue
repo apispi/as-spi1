@@ -249,7 +249,7 @@
             v-if="supportsAuth"
             :class="['tab', activeTab === 'auth' ? 'active' : '']"
             @click="activeTab = 'auth'"
-          >Auth<span v-if="auth.scheme !== 'none'" class="tab-dot" title="Authentication is set"></span></button>
+          >Auth<span v-if="auth.scheme !== 'none' && auth.scheme !== 'inherit'" class="tab-dot" title="Authentication is set"></span></button>
           <button
             :class="['tab', activeTab === 'body' ? 'active' : '']"
             @click="activeTab = 'body'"
@@ -269,7 +269,8 @@
 
         <div class="tab-content mt-4" v-show="activeTab === 'auth'">
           <select class="input-field auth-scheme" v-model="auth.scheme">
-            <option value="none">No auth</option>
+            <option value="inherit">Inherit from environment</option>
+            <option value="none">No auth (override)</option>
             <option value="bearer">Bearer token</option>
             <option value="basic">Basic auth</option>
             <option value="api_key">API key</option>
@@ -313,8 +314,14 @@
           </template>
 
           <p class="auth-hint mt-2">
-            <template v-if="auth.scheme === 'none'">
-              Add authentication without hand-building the header. Spi applies it server-side when the request is sent.
+            <template v-if="auth.scheme === 'inherit'">
+              This request uses whatever the selected environment's auth is set to — configure it once under
+              <strong>Manage&nbsp;&rarr;&nbsp;Environments</strong> and every request that inherits picks it up.
+              If the environment has no auth, nothing is sent.
+            </template>
+            <template v-else-if="auth.scheme === 'none'">
+              This request sends no authentication, even when the environment has some — the opt-out for a public
+              endpoint in an otherwise authenticated environment.
             </template>
             <template v-else-if="auth.scheme === 'oauth2_client_credentials'">
               Spi fetches an access token with the client-credentials grant and sends it as a Bearer token, caching it
@@ -393,7 +400,7 @@ const activeTab = ref('headers');
 // verbatim; `none` means "send nothing", which is also what an older saved
 // request (with no auth column) resolves to.
 const emptyAuth = () => ({
-  scheme: 'none', token: '', username: '', password: '', key: '', value: '', in: 'header',
+  scheme: 'inherit', token: '', username: '', password: '', key: '', value: '', in: 'header',
   token_url: '', client_id: '', client_secret: '', scope: '', audience: '', credentials_in: 'basic',
 });
 const auth = ref(emptyAuth());
@@ -406,7 +413,9 @@ const supportsAuth = computed(() => ['rest', 'mcp', 'a2a'].includes(protocol.val
 // form never ships a stale password from a scheme the user moved away from.
 const collectAuth = () => {
   const scheme = auth.value.scheme;
-  if (!supportsAuth.value || !scheme || scheme === 'none') return null;
+  if (!supportsAuth.value || !scheme || scheme === 'inherit') return null;
+  // `none` is sent explicitly: it is an override, not an absence.
+  if (scheme === 'none') return { scheme: 'none' };
   if (scheme === 'bearer') return { scheme, token: auth.value.token || '' };
   if (scheme === 'basic') return { scheme, username: auth.value.username || '', password: auth.value.password || '' };
   if (scheme === 'oauth2_client_credentials') {

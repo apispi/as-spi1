@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Environment;
+use App\Services\Auth\RequestAuthenticator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -33,6 +34,7 @@ class EnvironmentController extends Controller
         $environment = $user->environments()->create([
             'name' => $validated['name'],
             'variables' => $validated['variables'],
+            'auth' => $validated['auth'],
             'is_default' => $validated['is_default'],
         ]);
 
@@ -50,6 +52,7 @@ class EnvironmentController extends Controller
         $environment->update([
             'name' => $validated['name'],
             'variables' => $validated['variables'],
+            'auth' => $validated['auth'],
             'is_default' => $validated['is_default'],
         ]);
 
@@ -84,6 +87,7 @@ class EnvironmentController extends Controller
         $copy = $user->environments()->create([
             'name' => $this->uniqueName($user, trim($source->name).' (copy)'),
             'variables' => $source->variables,
+            'auth' => $source->auth,
             'is_default' => false,
         ]);
 
@@ -196,7 +200,7 @@ class EnvironmentController extends Controller
             'variables.*.key' => ['required', 'string', 'max:64', 'regex:/^[A-Za-z0-9_.-]+$/'],
             'variables.*.value' => 'nullable|string|max:4096',
             'variables.*.secret' => 'nullable|boolean',
-        ], [
+        ] + RequestAuthenticator::rules(), [
             'variables.*.key.regex' => 'Variable names may use letters, numbers, dot, dash, and underscore only.',
         ]);
 
@@ -225,8 +229,40 @@ class EnvironmentController extends Controller
         return [
             'name' => $data['name'],
             'variables' => $variables,
+            'auth' => $this->mergedAuth($data['auth'] ?? null, $existing),
             'is_default' => (bool) ($data['is_default'] ?? false),
         ];
+    }
+
+    /**
+     * Credential fields are never sent to the client, so an unchanged one comes
+     * back empty. Carry the stored value forward in that case — otherwise every
+     * save would quietly wipe the OAuth client secret.
+     */
+    private function mergedAuth(mixed $submitted, ?Environment $existing): ?array
+    {
+        if (! is_array($submitted) || $submitted === []) {
+            return null;
+        }
+
+        $scheme = (string) ($submitted['scheme'] ?? 'none');
+
+        // "inherit" has no meaning on an environment — there is nothing above
+        // it — so it is stored as no auth at all.
+        if ($scheme === 'none' || $scheme === 'inherit') {
+            return null;
+        }
+
+        $stored = is_array($existing?->auth) ? $existing->auth : [];
+
+        foreach (RequestAuthenticator::SECRET_FIELDS as $field) {
+            if (($submitted[$field] ?? '') === '' && ($stored[$field] ?? '') !== '') {
+                $submitted[$field] = $stored[$field];
+            }
+            unset($submitted['has_'.$field]);
+        }
+
+        return $submitted;
     }
 
     /**

@@ -23,11 +23,13 @@ class Environment extends Model
         'user_id',
         'name',
         'variables',
+        'auth',
         'is_default',
     ];
 
     protected $casts = [
         'variables' => 'array',
+        'auth' => 'array',
         'is_default' => 'boolean',
     ];
 
@@ -45,6 +47,29 @@ class Environment extends Model
             ->filter(fn ($v) => is_array($v) && isset($v['key']) && $v['key'] !== '')
             ->mapWithKeys(fn ($v) => [(string) $v['key'] => (string) ($v['value'] ?? '')])
             ->all();
+    }
+
+    /**
+     * The environment's auth config with its credential fields blanked, plus a
+     * has_* marker for each — the same treatment secret variables get, so an
+     * OAuth client secret typed in literally is not handed back to the browser.
+     */
+    public function authForClient(): ?array
+    {
+        if (! is_array($this->auth) || $this->auth === []) {
+            return null;
+        }
+
+        $auth = $this->auth;
+
+        foreach (\App\Services\Auth\RequestAuthenticator::SECRET_FIELDS as $field) {
+            if (array_key_exists($field, $auth)) {
+                $auth['has_'.$field] = (string) $auth[$field] !== '';
+                $auth[$field] = '';
+            }
+        }
+
+        return $auth;
     }
 
     /**
@@ -82,6 +107,7 @@ class Environment extends Model
             'name' => $this->name,
             'is_default' => (bool) $this->is_default,
             'variables' => $variables,
+            'auth' => $this->authForClient(),
             'owner' => $this->relationLoaded('owner') && $this->owner
                 ? ['id' => $this->owner->id, 'name' => $this->owner->name]
                 : null,

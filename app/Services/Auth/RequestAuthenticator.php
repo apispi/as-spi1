@@ -15,10 +15,17 @@ namespace App\Services\Auth;
  */
 class RequestAuthenticator
 {
-    public const SCHEMES = ['none', 'bearer', 'basic', 'api_key', 'oauth2_client_credentials'];
+    public const SCHEMES = ['inherit', 'none', 'bearer', 'basic', 'api_key', 'oauth2_client_credentials'];
 
     /** Where an API key may be placed. */
     public const LOCATIONS = ['header', 'query'];
+
+    /**
+     * Fields holding a credential. They are never echoed back to the client and
+     * are carried forward when a save leaves them blank — the same discipline
+     * an environment's secret variables already get.
+     */
+    public const SECRET_FIELDS = ['token', 'password', 'value', 'client_secret'];
 
     public function __construct(private readonly ?OAuth2TokenProvider $oauth = null)
     {
@@ -66,13 +73,16 @@ class RequestAuthenticator
      * far more confusing failure than "the token request was refused".
      *
      * @param  mixed  $auth  the (already variable-resolved) auth config, or null
+     * @param  mixed  $environmentAuth  the selected environment's own config, used when the request inherits
      * @return array{headers: array, url: string, error: ?string}
      */
-    public function apply(mixed $auth, array $headers, string $url): array
+    public function apply(mixed $auth, array $headers, string $url, mixed $environmentAuth = null): array
     {
+        $auth = $this->effective($auth, $environmentAuth);
+
         $scheme = is_array($auth) ? (string) ($auth['scheme'] ?? 'none') : 'none';
 
-        if (! in_array($scheme, self::SCHEMES, true) || $scheme === 'none') {
+        if (! in_array($scheme, self::SCHEMES, true) || $scheme === 'none' || $scheme === 'inherit') {
             return $this->result($headers, $url);
         }
 
@@ -91,6 +101,33 @@ class RequestAuthenticator
             'basic' => $this->result($this->basic($auth, $headers), $url),
             default => $this->apiKey($auth, $headers, $url),
         };
+    }
+
+    /**
+     * Which config actually applies.
+     *
+     * A request that says `inherit` — and one that says nothing at all, which
+     * is what every request saved before environment auth existed says — takes
+     * the environment's config. `none` is the explicit opt-out, and is how a
+     * single request opts out of a credential the rest of the environment uses.
+     *
+     * The environment's own config is never allowed to inherit in turn: there
+     * is nothing above it, and treating it as a no-op is clearer than pretending
+     * a chain exists.
+     */
+    private function effective(mixed $auth, mixed $environmentAuth): mixed
+    {
+        $scheme = is_array($auth) ? (string) ($auth['scheme'] ?? 'inherit') : 'inherit';
+
+        if ($scheme !== 'inherit') {
+            return $auth;
+        }
+
+        if (! is_array($environmentAuth) || ($environmentAuth['scheme'] ?? 'inherit') === 'inherit') {
+            return null;
+        }
+
+        return $environmentAuth;
     }
 
     /**
