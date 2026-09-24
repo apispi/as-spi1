@@ -197,6 +197,15 @@ class User extends Authenticatable
     /** @var array<int>|null cache for workspaceUserIds() */
     protected ?array $workspaceUserIds = null;
 
+    /**
+     * Drop the memoised workspace, after this user's organisation changes
+     * within a single request — joining, leaving, or being removed.
+     */
+    public function refreshWorkspaceUserIds(): void
+    {
+        $this->workspaceUserIds = null;
+    }
+
     public function webhookEndpoints()
     {
         return $this->hasMany(WebhookEndpoint::class);

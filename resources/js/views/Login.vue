@@ -51,6 +51,15 @@ import GoogleButton from '../components/GoogleButton.vue';
 
 const route = useRoute();
 const router = useRouter();
+
+// Where to land after signing in. Only same-site paths are honoured, so a
+// crafted ?redirect= cannot bounce someone off to another host.
+const afterLogin = () => {
+  const target = route.query.redirect;
+  return typeof target === 'string' && target.startsWith('/') && !target.startsWith('//')
+    ? target
+    : '/';
+};
 const authStore = useAuthStore();
 
 const form = reactive({
@@ -86,7 +95,7 @@ const handleLogin = async () => {
       twoFactor.value = true;   // switch to the code step
       return;
     }
-    router.push('/');
+    router.push(afterLogin());
   } catch (err) {
     error.value = err.response?.data?.message || 'Failed to login. Please check your credentials.';
   } finally {
@@ -99,7 +108,7 @@ const handleTwoFactor = async () => {
   isLoading.value = true;
   try {
     await authStore.loginTwoFactor(code.value.trim());
-    router.push('/');
+    router.push(afterLogin());
   } catch (err) {
     error.value = err.response?.data?.message || 'That code is not valid.';
   } finally {

@@ -26,6 +26,7 @@
           <button :class="['up-tab', { active: activeTab === 'usage' }]" @click="activeTab = 'usage'">Usage</button>
           <button :class="['up-tab', { active: activeTab === 'tokens' }]" @click="activeTab = 'tokens'">Token Bank</button>
           <button :class="['up-tab', { active: activeTab === 'payment' }]" @click="activeTab = 'payment'">Payment</button>
+          <button :class="['up-tab', { active: activeTab === 'workspace' }]" @click="activeTab = 'workspace'">Workspace</button>
           <button :class="['up-tab', { active: activeTab === 'api-keys' }]" @click="activeTab = 'api-keys'">API Keys</button>
           <button :class="['up-tab', { active: activeTab === 'helpdesk' }]" @click="activeTab = 'helpdesk'">Helpdesk</button>
         </div>
@@ -212,6 +213,74 @@
                 <span class="up-toggle-track"><span class="up-toggle-thumb"></span></span>
               </label>
             </div>
+          </div>
+        </template>
+
+        <!-- ── Workspace tab ── -->
+        <template v-else-if="activeTab === 'workspace'">
+          <div class="up-card">
+            <div class="up-card-header">
+              <h2 class="up-card-title">{{ workspace.organisation ? workspace.organisation.name : 'Your workspace' }}</h2>
+              <p class="up-card-sub">
+                Everyone in a workspace shares its saved requests, collections, environments, monitors and reports —
+                in both directions. Invite someone only if you mean them to see your work, and to share theirs.
+              </p>
+            </div>
+
+            <div v-if="workspaceLoading" class="up-muted">Loading…</div>
+
+            <template v-else>
+              <ul class="up-ws-list">
+                <li v-for="m in workspace.members" :key="m.id" class="up-ws-row">
+                  <div class="up-ws-who">
+                    <strong>{{ m.name }}</strong>
+                    <span v-if="m.is_you" class="up-ws-tag">you</span>
+                    <span v-if="m.is_owner" class="up-ws-tag up-ws-tag-owner">owner</span>
+                    <div class="up-muted up-ws-email">{{ m.email }}</div>
+                  </div>
+                  <button
+                    v-if="workspace.is_owner && !m.is_you"
+                    type="button" class="up-btn-danger" :disabled="workspaceBusy"
+                    @click="removeMember(m)"
+                  >Remove</button>
+                </li>
+              </ul>
+
+              <form class="up-key-create" @submit.prevent="invite">
+                <input
+                  v-model="inviteEmail" class="up-input" type="email" maxlength="255"
+                  placeholder="Invite by email address" :disabled="workspaceBusy"
+                >
+                <button type="submit" class="up-btn-save" :disabled="workspaceBusy || !inviteEmail.trim()">
+                  {{ workspaceBusy ? 'Sending…' : 'Send invitation' }}
+                </button>
+              </form>
+
+              <template v-if="workspace.invitations.length">
+                <h3 class="up-ws-sub">Pending invitations</h3>
+                <ul class="up-ws-list">
+                  <li v-for="inv in workspace.invitations" :key="inv.id" class="up-ws-row">
+                    <div class="up-ws-who">
+                      <strong>{{ inv.email }}</strong>
+                      <div class="up-muted up-ws-email">Invited by {{ inv.invited_by }} · expires {{ shortDate(inv.expires_at) }}</div>
+                    </div>
+                    <button type="button" class="up-btn-danger" :disabled="workspaceBusy" @click="revokeInvite(inv)">Revoke</button>
+                  </li>
+                </ul>
+              </template>
+
+              <p v-if="lastInviteUrl" class="up-ws-link">
+                Invitation link (also emailed) — <code class="up-inline-code">{{ lastInviteUrl }}</code>
+                <button type="button" class="up-btn-save" @click="copyInviteUrl">{{ copiedInvite ? 'Copied!' : 'Copy' }}</button>
+              </p>
+
+              <p v-if="workspace.organisation" class="up-ws-leave">
+                <button type="button" class="up-btn-danger" :disabled="workspaceBusy" @click="leaveWorkspace">
+                  Leave this workspace
+                </button>
+                <span class="up-muted"> Your own requests, collections and environments stay with you.</span>
+              </p>
+            </template>
           </div>
         </template>
 
@@ -548,6 +617,7 @@ import { useAuthStore } from '../store/auth';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 import { confirmDialog } from '../confirm';
+import { toast } from '../toast';
 import { restartTour } from '../onboarding';
 import TwoFactorSettings from '../components/TwoFactorSettings.vue';
 import SessionsSettings from '../components/SessionsSettings.vue';
@@ -574,6 +644,7 @@ onMounted(() => {
   loadMonitors();
   loadNotifyPrefs();
   loadPreferences();
+  loadWorkspace();
 });
 
 const userInitial = computed(() => {
@@ -581,7 +652,7 @@ const userInitial = computed(() => {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 });
 
-const VALID_TABS = ['account', 'preferences', 'usage', 'tokens', 'payment', 'api-keys', 'helpdesk'];
+const VALID_TABS = ['account', 'preferences', 'usage', 'tokens', 'payment', 'workspace', 'api-keys', 'helpdesk'];
 
 // Deep-linkable via ?tab=… (e.g. the notifications "Preferences" link).
 const activeTab = ref(VALID_TABS.includes(route.query.tab) ? route.query.tab : 'account');
@@ -901,6 +972,105 @@ const deleteAccount = async () => {
     deleting.value = false;
   }
 };
+
+// ── Workspace ──────────────────────────────────────────────────────────────
+const workspace = reactive({ organisation: null, is_owner: true, members: [], invitations: [] });
+const workspaceLoading = ref(true);
+const workspaceBusy = ref(false);
+const inviteEmail = ref('');
+const lastInviteUrl = ref('');
+const copiedInvite = ref(false);
+
+const shortDate = (value) => (value ? new Date(value).toLocaleDateString() : '');
+
+async function loadWorkspace() {
+  workspaceLoading.value = true;
+  try {
+    const res = await axios.get('/api/workspace');
+    Object.assign(workspace, res.data);
+  } catch {
+    // A workspace that will not load should not break the rest of Profile.
+  } finally {
+    workspaceLoading.value = false;
+  }
+}
+
+async function invite() {
+  const email = inviteEmail.value.trim();
+  if (!email) return;
+  if (!(await confirmDialog(
+    `Invite ${email}? They will be able to see and edit this workspace's saved requests, collections and environments — and you will see theirs.`
+  ))) return;
+
+  workspaceBusy.value = true;
+  try {
+    const res = await axios.post('/api/workspace/invitations', { email });
+    lastInviteUrl.value = res.data.url;
+    inviteEmail.value = '';
+    toast.success(`Invitation sent to ${email}.`);
+    await loadWorkspace();
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Could not send the invitation.');
+  } finally {
+    workspaceBusy.value = false;
+  }
+}
+
+async function revokeInvite(invitation) {
+  if (!(await confirmDialog(`Revoke the invitation to ${invitation.email}? The link stops working immediately.`))) return;
+  workspaceBusy.value = true;
+  try {
+    await axios.delete(`/api/workspace/invitations/${invitation.id}`);
+    toast.success('Invitation revoked.');
+    await loadWorkspace();
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Could not revoke the invitation.');
+  } finally {
+    workspaceBusy.value = false;
+  }
+}
+
+async function removeMember(member) {
+  if (!(await confirmDialog(
+    `Remove ${member.name} from the workspace? They lose access to everything shared here; their own work stays with them.`
+  ))) return;
+  workspaceBusy.value = true;
+  try {
+    await axios.delete(`/api/workspace/members/${member.id}`);
+    toast.success(`${member.name} was removed.`);
+    await loadWorkspace();
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Could not remove that member.');
+  } finally {
+    workspaceBusy.value = false;
+  }
+}
+
+async function leaveWorkspace() {
+  if (!(await confirmDialog(
+    'Leave this workspace? You lose access to everything shared here. Your own requests, collections and environments stay with you.'
+  ))) return;
+  workspaceBusy.value = true;
+  try {
+    await axios.post('/api/workspace/leave');
+    toast.success('You have left the workspace.');
+    await loadWorkspace();
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Could not leave the workspace.');
+  } finally {
+    workspaceBusy.value = false;
+  }
+}
+
+async function copyInviteUrl() {
+  try {
+    await navigator.clipboard.writeText(lastInviteUrl.value);
+    copiedInvite.value = true;
+    setTimeout(() => { copiedInvite.value = false; }, 1500);
+  } catch {
+    toast.error('Could not copy the link.');
+  }
+}
 </script>
 
 <style scoped>
@@ -1182,6 +1352,24 @@ const deleteAccount = async () => {
 .up-toggle input:checked + .up-toggle-track::before {
   transform: translateX(20px); background: var(--accent-color);
 }
+
+/* Workspace tab */
+.up-ws-list { list-style: none; margin: 0 0 16px; padding: 0; }
+.up-ws-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--border-color);
+}
+.up-ws-row:last-child { border-bottom: none; }
+.up-ws-email { font-size: 12px; margin-top: 2px; }
+.up-ws-tag {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  background: var(--border-color); color: var(--text-secondary);
+  padding: 2px 6px; border-radius: 5px; margin-left: 7px; vertical-align: middle;
+}
+.up-ws-tag-owner { background: var(--accent-soft, rgba(88,166,255,.12)); color: var(--accent-color); }
+.up-ws-sub { font-size: 13px; font-weight: 700; color: var(--text-secondary); margin: 18px 0 4px; }
+.up-ws-link { font-size: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.up-ws-leave { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-color); font-size: 12px; }
 
 /* API Keys tab */
 .up-key-banner { margin-bottom: 1.5rem; background: var(--accent-soft); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.25rem 1.5rem; }

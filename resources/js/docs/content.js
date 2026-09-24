@@ -560,6 +560,39 @@ export const DOCS = [
   },
 
   {
+    slug: 'workspaces-and-teams',
+    title: 'Workspaces and teams',
+    category: 'workspace',
+    summary: 'Invite colleagues into a shared workspace, and what sharing actually means.',
+    body: [
+      { type: 'p', text: 'A **workspace** is a group of people who share their work in Spi. On your own, your workspace is just you. Invite someone from [Profile → Workspace](/profile?tab=workspace) and you both work in the same one.' },
+      { type: 'h2', text: 'What a workspace shares' },
+      { type: 'p', text: 'Sharing runs **in both directions**, and it is not a read-only view. Every member can see *and edit*:' },
+      { type: 'ul', items: [
+        'Saved requests, collections, and environments — including the values of **secret variables**, since a member can run any request that uses them.',
+        'Monitors, alert channels, webhook endpoints, and mocks.',
+        'Inspection reports, and the run history behind them.',
+      ] },
+      { type: 'note', text: 'A workspace is a **sharing** boundary, not an isolation one. Invite people you would be comfortable handing your API credentials to — because in effect you are. If you only want to show someone a result, share a [report link](/docs/reports-and-sharing) instead; that is read-only and revocable.' },
+      { type: 'h2', text: 'Inviting someone' },
+      { type: 'ol', items: [
+        'Go to **Profile → Workspace** and enter their email address. If you were working alone, this is the point your workspace is created, and you become its owner.',
+        'They get an email with a link. The link is the only copy of its token — Spi stores just a hash — and it expires after seven days.',
+        'They open it, sign in **as the address you invited**, and are shown exactly what joining will share before anything happens.',
+      ] },
+      { type: 'p', text: 'Pending invitations are listed on the same screen and can be revoked at any time, which kills the link immediately. If the email does not arrive, the invitation link is shown in Spi so you can pass it on yourself.' },
+      { type: 'h2', text: 'Leaving, and removing people' },
+      { type: 'ul', items: [
+        'The **owner** — whoever created the workspace — can remove any other member.',
+        'Anyone can **leave** a workspace they are in. The owner cannot leave while other people are still in it.',
+        'Removing someone, or leaving, takes away access to what the workspace shares. **Your own requests, collections and environments always stay with you** — they are yours, and they simply stop being visible to the others.',
+        'Someone already in a workspace with other people must leave it before accepting a new invitation, so nobody is moved out of a team silently.',
+      ] },
+      { type: 'p', text: 'Joining, leaving, inviting, revoking, and removing a member are all recorded in your [security log](/docs/account-security), and the rest of the workspace is notified when somebody joins.' },
+    ],
+  },
+
+  {
     slug: 'navigating-spi',
     title: 'Navigating Spi',
     category: 'workspace',

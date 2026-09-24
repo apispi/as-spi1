@@ -24,6 +24,7 @@ import Recorder from './views/Recorder.vue';
 import Mocks from './views/Mocks.vue';
 import Collections from './views/Collections.vue';
 import ApiDiff from './views/ApiDiff.vue';
+import AcceptInvitation from './views/AcceptInvitation.vue';
 import AdminOrganisations from './views/AdminOrganisations.vue';
 import AdminMonitoring from './views/AdminMonitoring.vue';
 import AdminLogs from './views/AdminLogs.vue';
@@ -124,6 +125,13 @@ const routes = [
         name: 'reports',
         component: Reports,
         meta: { requiresAuth: true }
+    },
+    {
+        // Neither guest-only nor auth-required: the page explains the
+        // invitation either way, and sends you to sign in if you need to.
+        path: '/invite/:token',
+        name: 'accept-invitation',
+        component: AcceptInvitation
     },
     {
         path: '/r/:token',

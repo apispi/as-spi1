@@ -79,6 +79,11 @@ Route::post('/api/gateway/tools', [McpGatewayController::class, 'handle'])
 Route::get('/api/status/{token}', [StatusPageController::class, 'show'])
     ->middleware('throttle:proxy');
 
+// Public preview of a workspace invitation: enough to decide whether to sign
+// in and accept, and nothing that identifies anyone beyond the inviter.
+Route::get('/api/invitations/{token}', [\App\Http\Controllers\WorkspaceController::class, 'showInvitation'])
+    ->middleware('throttle:6,1');
+
 // Public, read-only view of a shared inspection report (token-gated, no auth).
 Route::get('/api/reports/shared/{token}', [ReportController::class, 'showShared'])
     ->middleware('throttle:proxy');
@@ -148,6 +153,18 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/import/postman', [ImportController::class, 'postman']);
     Route::post('/api/diff/openapi', [\App\Http\Controllers\ApiDiffController::class, 'openapi']);
     Route::get('/api/dynamic-variables', [\App\Http\Controllers\DynamicVariableController::class, 'index']);
+
+    // Self-serve team membership. Joining a workspace grants access in both
+    // directions, so accepting is rate-limited like the other credential-ish
+    // endpoints and every route writes an audit event.
+    Route::get('/api/workspace', [\App\Http\Controllers\WorkspaceController::class, 'show']);
+    Route::post('/api/workspace/invitations', [\App\Http\Controllers\WorkspaceController::class, 'invite'])
+        ->middleware('throttle:10,1');
+    Route::delete('/api/workspace/invitations/{id}', [\App\Http\Controllers\WorkspaceController::class, 'revokeInvitation']);
+    Route::post('/api/workspace/invitations/{token}/accept', [\App\Http\Controllers\WorkspaceController::class, 'acceptInvitation'])
+        ->middleware('throttle:10,1');
+    Route::delete('/api/workspace/members/{id}', [\App\Http\Controllers\WorkspaceController::class, 'removeMember']);
+    Route::post('/api/workspace/leave', [\App\Http\Controllers\WorkspaceController::class, 'leave']);
     Route::post('/api/export', [ImportController::class, 'exportDraft']);
     Route::get('/api/saved-requests/{id}/export', [ImportController::class, 'export']);
     Route::post('/api/saved-requests/{id}/fuzz', [\App\Http\Controllers\FuzzController::class, 'fuzz'])

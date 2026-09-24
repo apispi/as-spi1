@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workspaces and teams · Spi docs</title>
+<meta name="description" content="Invite colleagues into a shared workspace, and what sharing actually means.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/docs/styles.css">
+<script>
+  // Resolve theme before first paint (mirrors the app's spi-theme key).
+  (function(){try{var t=localStorage.getItem('spi-theme');if(!t){t=(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/docs/">
+    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    <span>Spi docs</span>
+  </a>
+  <div class="search"><input id="q" type="search" placeholder="Search the docs…" autocomplete="off" aria-label="Search"><div id="results" class="results" hidden></div></div>
+  <div class="topbar-right">
+    <button id="theme" class="icon-btn" type="button" aria-label="Toggle theme">◐</button>
+    <a class="topbar-link" href="/">Open app →</a>
+  </div>
+</header>
+<div class="layout">
+  <aside class="sidebar"><nav><div class="nav-group"><div class="nav-cat">Getting started</div><a href="/docs/introduction/" class="nav-link">What is Spi?</a><a href="/docs/quickstart/" class="nav-link">Quickstart</a></div><div class="nav-group"><div class="nav-cat">Testing &amp; assertions</div><a href="/docs/sending-requests/" class="nav-link">Sending requests</a><a href="/docs/environments-and-variables/" class="nav-link">Environments and variables</a><a href="/docs/authentication/" class="nav-link">Authentication</a><a href="/docs/dynamic-variables/" class="nav-link">Dynamic variables</a><a href="/docs/assertions/" class="nav-link">Assertions</a><a href="/docs/response-contracts/" class="nav-link">Response contracts</a><a href="/docs/api-diff/" class="nav-link">API diff</a><a href="/docs/snapshots/" class="nav-link">Response snapshots</a></div><div class="nav-group"><div class="nav-cat">Automation &amp; monitoring</div><a href="/docs/collections/" class="nav-link">Collections</a><a href="/docs/monitors-and-alerts/" class="nav-link">Monitors and alerts</a><a href="/docs/webhooks/" class="nav-link">Webhooks, datasets, and profiling</a></div><div class="nav-group"><div class="nav-cat">MCP &amp; agents</div><a href="/docs/mcp-testing/" class="nav-link">MCP testing</a></div><div class="nav-group"><div class="nav-cat">Sharing &amp; reporting</div><a href="/docs/reports-and-sharing/" class="nav-link">Reports and sharing</a><a href="/docs/import-and-export/" class="nav-link">Importing &amp; exporting</a></div><div class="nav-group"><div class="nav-cat">Developer &amp; API</div><a href="/docs/api-keys-and-programmatic-access/" class="nav-link">API keys and programmatic access</a></div><div class="nav-group"><div class="nav-cat">Workspace guide</div><a href="/docs/workspaces-and-teams/" class="nav-link active">Workspaces and teams</a><a href="/docs/navigating-spi/" class="nav-link">Navigating Spi</a><a href="/docs/home-dashboard/" class="nav-link">Home</a><a href="/docs/ai-lab/" class="nav-link">AI Lab</a><a href="/docs/explorer/" class="nav-link">Explorer</a><a href="/docs/recorder/" class="nav-link">Recorder</a><a href="/docs/mocks/" class="nav-link">Mocks</a><a href="/docs/spi-assistant/" class="nav-link">Spi assistant</a><a href="/docs/usage-and-account-activity/" class="nav-link">Usage &amp; account activity</a><a href="/docs/account-security/" class="nav-link">Account security</a></div></nav></aside>
+  <main class="content">
+    <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Workspace guide</span></div>
+    <h1>Workspaces and teams</h1>
+    <p class="lead">Invite colleagues into a shared workspace, and what sharing actually means.</p>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#what-a-workspace-shares">What a workspace shares</a><a href="#inviting-someone">Inviting someone</a><a href="#leaving-and-removing-people">Leaving, and removing people</a></nav>
+    <article><p>A <strong>workspace</strong> is a group of people who share their work in Spi. On your own, your workspace is just you. Invite someone from <a href="/profile?tab=workspace">Profile → Workspace</a> and you both work in the same one.</p>
+<h2 id="what-a-workspace-shares">What a workspace shares</h2>
+<p>Sharing runs <strong>in both directions</strong>, and it is not a read-only view. Every member can see *and edit*:</p>
+<ul><li>Saved requests, collections, and environments — including the values of <strong>secret variables</strong>, since a member can run any request that uses them.</li><li>Monitors, alert channels, webhook endpoints, and mocks.</li><li>Inspection reports, and the run history behind them.</li></ul>
+<div class="note">A workspace is a <strong>sharing</strong> boundary, not an isolation one. Invite people you would be comfortable handing your API credentials to — because in effect you are. If you only want to show someone a result, share a <a href="/docs/reports-and-sharing/">report link</a> instead; that is read-only and revocable.</div>
+<h2 id="inviting-someone">Inviting someone</h2>
+<ol><li>Go to <strong>Profile → Workspace</strong> and enter their email address. If you were working alone, this is the point your workspace is created, and you become its owner.</li><li>They get an email with a link. The link is the only copy of its token — Spi stores just a hash — and it expires after seven days.</li><li>They open it, sign in <strong>as the address you invited</strong>, and are shown exactly what joining will share before anything happens.</li></ol>
+<p>Pending invitations are listed on the same screen and can be revoked at any time, which kills the link immediately. If the email does not arrive, the invitation link is shown in Spi so you can pass it on yourself.</p>
+<h2 id="leaving-and-removing-people">Leaving, and removing people</h2>
+<ul><li>The <strong>owner</strong> — whoever created the workspace — can remove any other member.</li><li>Anyone can <strong>leave</strong> a workspace they are in. The owner cannot leave while other people are still in it.</li><li>Removing someone, or leaving, takes away access to what the workspace shares. <strong>Your own requests, collections and environments always stay with you</strong> — they are yours, and they simply stop being visible to the others.</li><li>Someone already in a workspace with other people must leave it before accepting a new invitation, so nobody is moved out of a team silently.</li></ul>
+<p>Joining, leaving, inviting, revoking, and removing a member are all recorded in your <a href="/docs/account-security/">security log</a>, and the rest of the workspace is notified when somebody joins.</p></article>
+    <nav class="pager">
+      <a class="pager-link prev" href="/docs/api-keys-and-programmatic-access/"><span>← Previous</span><strong>API keys and programmatic access</strong></a>
+      <a class="pager-link next" href="/docs/navigating-spi/"><span>Next →</span><strong>Navigating Spi</strong></a>
+    </nav></main>
+</div>
+<footer class="foot"><p>© 2026 Spi · apispi.com · <a href="/developers">API reference</a> · <a href="/">Open the app</a></p></footer>
+<script src="/docs/app.js" defer></script>
+</body>
+</html>
