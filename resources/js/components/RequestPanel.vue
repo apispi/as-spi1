@@ -273,6 +273,7 @@
             <option value="bearer">Bearer token</option>
             <option value="basic">Basic auth</option>
             <option value="api_key">API key</option>
+            <option value="oauth2_client_credentials">OAuth 2.0 (client credentials)</option>
           </select>
 
           <template v-if="auth.scheme === 'bearer'">
@@ -295,9 +296,31 @@
             </select>
           </template>
 
+          <template v-else-if="auth.scheme === 'oauth2_client_credentials'">
+            <input type="text" class="input-field w-full mt-2 mono" placeholder="Token URL — https://issuer/oauth/token" v-model="auth.token_url" />
+            <div class="header-row flex gap-2 mt-2">
+              <input type="text" class="input-field w-full" placeholder="Client ID" v-model="auth.client_id" autocomplete="off" />
+              <input type="text" class="input-field w-full mono" placeholder="Client secret — or {{client_secret}}" v-model="auth.client_secret" autocomplete="off" />
+            </div>
+            <div class="header-row flex gap-2 mt-2">
+              <input type="text" class="input-field w-full" placeholder="Scope (optional)" v-model="auth.scope" />
+              <input type="text" class="input-field w-full" placeholder="Audience (optional)" v-model="auth.audience" />
+            </div>
+            <select class="input-field auth-scheme mt-2" v-model="auth.credentials_in">
+              <option value="basic">Credentials as HTTP Basic</option>
+              <option value="body">Credentials in the form body</option>
+            </select>
+          </template>
+
           <p class="auth-hint mt-2">
             <template v-if="auth.scheme === 'none'">
               Add authentication without hand-building the header. Spi applies it server-side when the request is sent.
+            </template>
+            <template v-else-if="auth.scheme === 'oauth2_client_credentials'">
+              Spi fetches an access token with the client-credentials grant and sends it as a Bearer token, caching it
+              until shortly before it expires so a whole collection run costs one token request. If the token cannot be
+              obtained the request fails rather than going out unauthenticated. Keep the client secret in a
+              <strong>secret</strong> environment variable and reference it as <code v-pre>{{name}}</code>.
             </template>
             <template v-else>
               Applied server-side at send time, and it replaces any header of the same name set on the Headers tab.
@@ -369,7 +392,10 @@ const activeTab = ref('headers');
 // The auth helper's config. Kept as one object so it travels with the request
 // verbatim; `none` means "send nothing", which is also what an older saved
 // request (with no auth column) resolves to.
-const emptyAuth = () => ({ scheme: 'none', token: '', username: '', password: '', key: '', value: '', in: 'header' });
+const emptyAuth = () => ({
+  scheme: 'none', token: '', username: '', password: '', key: '', value: '', in: 'header',
+  token_url: '', client_id: '', client_secret: '', scope: '', audience: '', credentials_in: 'basic',
+});
 const auth = ref(emptyAuth());
 
 // gRPC/MQTT/AMQP carry their credentials in their own connection params, so
@@ -383,6 +409,17 @@ const collectAuth = () => {
   if (!supportsAuth.value || !scheme || scheme === 'none') return null;
   if (scheme === 'bearer') return { scheme, token: auth.value.token || '' };
   if (scheme === 'basic') return { scheme, username: auth.value.username || '', password: auth.value.password || '' };
+  if (scheme === 'oauth2_client_credentials') {
+    return {
+      scheme,
+      token_url: auth.value.token_url || '',
+      client_id: auth.value.client_id || '',
+      client_secret: auth.value.client_secret || '',
+      scope: auth.value.scope || '',
+      audience: auth.value.audience || '',
+      credentials_in: auth.value.credentials_in === 'body' ? 'body' : 'basic',
+    };
+  }
   return { scheme, key: auth.value.key || '', value: auth.value.value || '', in: auth.value.in || 'header' };
 };
 

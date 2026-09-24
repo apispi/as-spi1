@@ -28,6 +28,15 @@ class A2aTestController extends Controller
         // so an MCP/A2A server behind a token authenticates the same way in
         // the tester as it does inside a collection run.
         $authed = (new RequestAuthenticator)->apply($validated['auth'] ?? null, $headers, $validated['url']);
+        if ($authed['error']) {
+            return response()->json([
+                'status' => null,
+                'headers' => [],
+                'body' => $authed['error'],
+                'time_ms' => 0,
+                'error' => $authed['error'],
+            ], 422);
+        }
         $headers = $authed['headers'];
         $validated['url'] = $authed['url'];
 

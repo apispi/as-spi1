@@ -75,6 +75,9 @@ class RequestExecutor
         // request goes out; an API key placed in the query can only add a
         // parameter, never change the host.
         $authed = (new RequestAuthenticator)->apply($request['auth'] ?? null, $headers, $url);
+        if ($authed['error']) {
+            return $this->failure($authed['error'], 0);
+        }
         $headers = $authed['headers'];
         $url = $authed['url'];
 

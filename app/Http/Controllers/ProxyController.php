@@ -39,6 +39,9 @@ class ProxyController extends Controller
         // Bearer/Basic/API-key are assembled here rather than in the browser,
         // so the credential never has to be built client-side.
         $authed = (new RequestAuthenticator)->apply($validated['auth'] ?? null, $headers, $url);
+        if ($authed['error']) {
+            return response()->json(['error' => $authed['error']], 422);
+        }
         $headers = $authed['headers'];
         $url = $authed['url'];
 
