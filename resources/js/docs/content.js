@@ -589,6 +589,14 @@ export const DOCS = [
         'Someone already in a workspace with other people must leave it before accepting a new invitation, so nobody is moved out of a team silently.',
       ] },
       { type: 'p', text: 'Joining, leaving, inviting, revoking, and removing a member are all recorded in your [security log](/docs/account-security), and the rest of the workspace is notified when somebody joins.' },
+      { type: 'h2', text: 'Seeing what changed' },
+      { type: 'p', text: 'Once colleagues can edit your work, the question that follows is who changed what. **Profile → Workspace → Recent activity** answers it: every create, update and delete of a request, collection, environment, monitor, webhook, mock, alert channel or status page, with who did it and which fields they touched.' },
+      { type: 'ul', items: [
+        'A deleted item keeps its **name** in the feed — the log outlives what it records, and "deleted request #17" would tell you nothing.',
+        'Machine-written updates are left out. A monitor rewrites its own last-run bookkeeping on every tick; logging that would bury everything a person actually did.',
+        'Activity is scoped to the workspace, so it appears and disappears with membership: what someone did stops being visible once they leave.',
+        'It is a **work** log. Sign-ins, password changes and API-key use are security events and stay in the [security log](/docs/account-security).',
+      ] },
     ],
   },
 

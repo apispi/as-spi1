@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RecordsActivity;
 use App\Models\Concerns\SharedInWorkspace;
 use Illuminate\Database\Eloquent\Model;
 
 class SavedRequest extends Model
 {
-    use SharedInWorkspace;
+    use RecordsActivity, SharedInWorkspace;
+
+    /** Capturing a snapshot is its own action, not an edit to the request. */
+    protected array $activityIgnored = ['snapshot', 'snapshot_taken_at'];
 
     protected $fillable = [
         'user_id',

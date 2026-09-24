@@ -7,6 +7,7 @@ use App\Models\AuditEvent;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\UserNotification;
+use App\Models\WorkspaceActivity;
 use App\Models\WorkspaceInvitation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -59,6 +60,29 @@ class WorkspaceController extends Controller
                     ->get()->map->toClientArray()->values()
                 : [],
         ]);
+    }
+
+    /**
+     * What the workspace has been doing: who changed what, newest first.
+     *
+     * A work log, not a security log — sign-ins and password changes live in
+     * the security log on the Account tab.
+     */
+    public function activity(Request $request)
+    {
+        $validated = $request->validate([
+            'type' => 'nullable|string|max:40',
+            'limit' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $entries = WorkspaceActivity::inWorkspaceOf($request->user())
+            ->when($validated['type'] ?? null, fn ($q, $type) => $q->where('subject_type', $type))
+            ->with('actor:id,name')
+            ->latest('id')
+            ->limit($validated['limit'] ?? 30)
+            ->get();
+
+        return response()->json(['activity' => $entries->map->toClientArray()->values()]);
     }
 
     /**

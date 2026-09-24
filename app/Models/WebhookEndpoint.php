@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RecordsActivity;
 use App\Models\Concerns\SharedInWorkspace;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -15,7 +16,7 @@ use Illuminate\Support\Str;
  */
 class WebhookEndpoint extends Model
 {
-    use SharedInWorkspace;
+    use RecordsActivity, SharedInWorkspace;
 
     public const MAX_PER_USER = 10;
 
@@ -27,6 +28,9 @@ class WebhookEndpoint extends Model
     public const STATUS_RECEIVING = 'receiving';
 
     public const STATUS_SILENT = 'silent';
+
+    /** Written when a hook fires, not by anyone editing the endpoint. */
+    protected array $activityIgnored = ['last_received_at', 'last_status'];
 
     protected $fillable = [
         'user_id',

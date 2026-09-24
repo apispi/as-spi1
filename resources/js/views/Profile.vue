@@ -282,6 +282,43 @@
               </p>
             </template>
           </div>
+
+          <div class="up-card">
+            <div class="up-card-header">
+              <h2 class="up-card-title">Recent activity</h2>
+              <p class="up-card-sub">
+                Who changed what across the workspace. Sign-ins and password changes are not here —
+                those are in the security log on the Account tab.
+              </p>
+            </div>
+
+            <div class="up-ws-filters">
+              <button
+                v-for="f in ACTIVITY_FILTERS" :key="f.value"
+                type="button"
+                :class="['up-ws-chip', { active: activityType === f.value }]"
+                @click="setActivityFilter(f.value)"
+              >{{ f.label }}</button>
+            </div>
+
+            <p v-if="activityLoading" class="up-muted">Loading…</p>
+            <p v-else-if="!activity.length" class="up-muted">
+              Nothing yet. Changes to requests, collections, environments and monitors show up here.
+            </p>
+            <ul v-else class="up-ws-list">
+              <li v-for="a in activity" :key="a.id" class="up-ws-row">
+                <div class="up-ws-who">
+                  <strong>{{ a.actor || 'Someone' }}</strong>
+                  <span class="up-act-verb" :class="'act-' + a.action">{{ a.action }}</span>
+                  the {{ a.subject_label }}
+                  <strong>{{ a.subject_name || '#' + a.subject_id }}</strong>
+                  <div class="up-muted up-ws-email">
+                    {{ shortDateTime(a.created_at) }}<template v-if="a.summary"> · {{ a.summary }}</template>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
         </template>
 
         <!-- ── API Keys tab ── -->
@@ -645,6 +682,7 @@ onMounted(() => {
   loadNotifyPrefs();
   loadPreferences();
   loadWorkspace();
+  loadActivity();
 });
 
 const userInitial = computed(() => {
@@ -982,6 +1020,37 @@ const lastInviteUrl = ref('');
 const copiedInvite = ref(false);
 
 const shortDate = (value) => (value ? new Date(value).toLocaleDateString() : '');
+const shortDateTime = (value) => (value ? new Date(value).toLocaleString() : '');
+
+const ACTIVITY_FILTERS = [
+  { value: '', label: 'Everything' },
+  { value: 'saved_request', label: 'Requests' },
+  { value: 'collection', label: 'Collections' },
+  { value: 'environment', label: 'Environments' },
+  { value: 'monitor', label: 'Monitors' },
+];
+const activity = ref([]);
+const activityType = ref('');
+const activityLoading = ref(true);
+
+async function loadActivity() {
+  activityLoading.value = true;
+  try {
+    const res = await axios.get('/api/workspace/activity', {
+      params: activityType.value ? { type: activityType.value } : {},
+    });
+    activity.value = res.data.activity || [];
+  } catch {
+    activity.value = [];
+  } finally {
+    activityLoading.value = false;
+  }
+}
+
+function setActivityFilter(value) {
+  activityType.value = value;
+  loadActivity();
+}
 
 async function loadWorkspace() {
   workspaceLoading.value = true;
@@ -1038,7 +1107,7 @@ async function removeMember(member) {
   try {
     await axios.delete(`/api/workspace/members/${member.id}`);
     toast.success(`${member.name} was removed.`);
-    await loadWorkspace();
+    await Promise.all([loadWorkspace(), loadActivity()]);
   } catch (e) {
     toast.error(e.response?.data?.message || 'Could not remove that member.');
   } finally {
@@ -1370,6 +1439,18 @@ async function copyInviteUrl() {
 .up-ws-sub { font-size: 13px; font-weight: 700; color: var(--text-secondary); margin: 18px 0 4px; }
 .up-ws-link { font-size: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 .up-ws-leave { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-color); font-size: 12px; }
+
+.up-ws-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.up-ws-chip {
+  padding: 4px 11px; border-radius: 999px; font-size: 12px; cursor: pointer;
+  border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary);
+}
+.up-ws-chip:hover { color: var(--text-primary); }
+.up-ws-chip.active { background: var(--accent-soft, rgba(88,166,255,.12)); border-color: var(--accent-color); color: var(--accent-color); font-weight: 600; }
+.up-act-verb { font-weight: 600; }
+.act-created { color: #3fb950; }
+.act-updated { color: #d29922; }
+.act-deleted { color: #f85149; }
 
 /* API Keys tab */
 .up-key-banner { margin-bottom: 1.5rem; background: var(--accent-soft); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.25rem 1.5rem; }

@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RecordsActivity;
 use App\Models\Concerns\SharedInWorkspace;
 use Illuminate\Database\Eloquent\Model;
 
 class Environment extends Model
 {
-    use SharedInWorkspace;
+    use RecordsActivity, SharedInWorkspace;
 
     /**
      * Environments per user. Keeps the picker usable and the table bounded.

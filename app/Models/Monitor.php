@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RecordsActivity;
 use App\Models\Concerns\SharedInWorkspace;
 use Illuminate\Database\Eloquent\Model;
 
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Monitor extends Model
 {
-    use SharedInWorkspace;
+    use RecordsActivity, SharedInWorkspace;
 
     public const MAX_PER_USER = 20;
 
@@ -33,6 +34,9 @@ class Monitor extends Model
 
     /** Allowed intervals, in minutes. Bounded so a monitor cannot hammer a target. */
     public const INTERVALS = [5, 15, 30, 60, 180, 360, 720, 1440];
+
+    /** Written by every scheduled run, not by anyone editing the monitor. */
+    protected array $activityIgnored = ['last_run_at', 'last_status', 'consecutive_failures'];
 
     protected $fillable = [
         'user_id',

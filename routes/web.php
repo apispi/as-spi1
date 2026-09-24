@@ -158,6 +158,7 @@ Route::middleware('auth')->group(function () {
     // directions, so accepting is rate-limited like the other credential-ish
     // endpoints and every route writes an audit event.
     Route::get('/api/workspace', [\App\Http\Controllers\WorkspaceController::class, 'show']);
+    Route::get('/api/workspace/activity', [\App\Http\Controllers\WorkspaceController::class, 'activity']);
     Route::post('/api/workspace/invitations', [\App\Http\Controllers\WorkspaceController::class, 'invite'])
         ->middleware('throttle:10,1');
     Route::delete('/api/workspace/invitations/{id}', [\App\Http\Controllers\WorkspaceController::class, 'revokeInvitation']);

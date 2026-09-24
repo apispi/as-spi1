@@ -30,7 +30,7 @@
     <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Workspace guide</span></div>
     <h1>Workspaces and teams</h1>
     <p class="lead">Invite colleagues into a shared workspace, and what sharing actually means.</p>
-    <nav class="toc"><span class="toc-label">On this page</span><a href="#what-a-workspace-shares">What a workspace shares</a><a href="#inviting-someone">Inviting someone</a><a href="#leaving-and-removing-people">Leaving, and removing people</a></nav>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#what-a-workspace-shares">What a workspace shares</a><a href="#inviting-someone">Inviting someone</a><a href="#leaving-and-removing-people">Leaving, and removing people</a><a href="#seeing-what-changed">Seeing what changed</a></nav>
     <article><p>A <strong>workspace</strong> is a group of people who share their work in Spi. On your own, your workspace is just you. Invite someone from <a href="/profile?tab=workspace">Profile → Workspace</a> and you both work in the same one.</p>
 <h2 id="what-a-workspace-shares">What a workspace shares</h2>
 <p>Sharing runs <strong>in both directions</strong>, and it is not a read-only view. Every member can see *and edit*:</p>
@@ -41,7 +41,10 @@
 <p>Pending invitations are listed on the same screen and can be revoked at any time, which kills the link immediately. If the email does not arrive, the invitation link is shown in Spi so you can pass it on yourself.</p>
 <h2 id="leaving-and-removing-people">Leaving, and removing people</h2>
 <ul><li>The <strong>owner</strong> — whoever created the workspace — can remove any other member.</li><li>Anyone can <strong>leave</strong> a workspace they are in. The owner cannot leave while other people are still in it.</li><li>Removing someone, or leaving, takes away access to what the workspace shares. <strong>Your own requests, collections and environments always stay with you</strong> — they are yours, and they simply stop being visible to the others.</li><li>Someone already in a workspace with other people must leave it before accepting a new invitation, so nobody is moved out of a team silently.</li></ul>
-<p>Joining, leaving, inviting, revoking, and removing a member are all recorded in your <a href="/docs/account-security/">security log</a>, and the rest of the workspace is notified when somebody joins.</p></article>
+<p>Joining, leaving, inviting, revoking, and removing a member are all recorded in your <a href="/docs/account-security/">security log</a>, and the rest of the workspace is notified when somebody joins.</p>
+<h2 id="seeing-what-changed">Seeing what changed</h2>
+<p>Once colleagues can edit your work, the question that follows is who changed what. <strong>Profile → Workspace → Recent activity</strong> answers it: every create, update and delete of a request, collection, environment, monitor, webhook, mock, alert channel or status page, with who did it and which fields they touched.</p>
+<ul><li>A deleted item keeps its <strong>name</strong> in the feed — the log outlives what it records, and "deleted request #17" would tell you nothing.</li><li>Machine-written updates are left out. A monitor rewrites its own last-run bookkeeping on every tick; logging that would bury everything a person actually did.</li><li>Activity is scoped to the workspace, so it appears and disappears with membership: what someone did stops being visible once they leave.</li><li>It is a <strong>work</strong> log. Sign-ins, password changes and API-key use are security events and stay in the <a href="/docs/account-security/">security log</a>.</li></ul></article>
     <nav class="pager">
       <a class="pager-link prev" href="/docs/api-keys-and-programmatic-access/"><span>← Previous</span><strong>API keys and programmatic access</strong></a>
       <a class="pager-link next" href="/docs/navigating-spi/"><span>Next →</span><strong>Navigating Spi</strong></a>
