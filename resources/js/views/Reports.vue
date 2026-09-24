@@ -137,6 +137,8 @@ const filters = [
   { value: 'collection_run', label: 'Collection runs' },
   { value: 'mcp_drift', label: 'MCP drift' },
   { value: 'parity', label: 'Env parity' },
+  { value: 'api_diff', label: 'API diffs' },
+  { value: 'graphql_diff', label: 'GraphQL diffs' },
   { value: 'exploration', label: 'Explorations' },
   { value: 'fuzz', label: 'Fuzz runs' },
   { value: 'replay', label: 'Replays' },
@@ -202,7 +204,7 @@ async function load() {
 }
 
 function setFilter(v) { typeFilter.value = v; cancelCompare(); load(); }
-const typeName = (t) => ({ conformance: 'Conformance', security: 'Security', agent_loop: 'Agent run', collection_run: 'Collection run', mcp_drift: 'MCP drift', parity: 'Env parity', exploration: 'Exploration', fuzz: 'Fuzz', replay: 'Replay', dataset_run: 'Dataset run', perf: 'Performance', snapshot: 'Snapshot' }[t] || t);
+const typeName = (t) => ({ conformance: 'Conformance', security: 'Security', agent_loop: 'Agent run', collection_run: 'Collection run', mcp_drift: 'MCP drift', parity: 'Env parity', exploration: 'Exploration', fuzz: 'Fuzz', replay: 'Replay', dataset_run: 'Dataset run', perf: 'Performance', snapshot: 'Snapshot', api_diff: 'API diff', graphql_diff: 'GraphQL diff' }[t] || t);
 
 function rowClick(r) {
   if (compareMode.value) { toggleSelect(r); return; }

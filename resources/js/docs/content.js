@@ -338,7 +338,7 @@ export const DOCS = [
     slug: 'api-diff',
     title: 'API diff',
     category: 'testing',
-    summary: 'Diff two OpenAPI documents and flag breaking changes before you ship them.',
+    summary: 'Diff two OpenAPI documents or GraphQL schemas and flag breaking changes before you ship them.',
     body: [
       { type: 'p', text: 'Response contracts catch drift in a running API. **API Diff** catches it one step earlier — in the spec itself, before the change ships. Paste the current (baseline) OpenAPI document and the proposed one into [API Diff](/api-diff), and Spi reports every difference, sorted with the changes that break existing clients first. Both JSON and YAML are accepted.' },
       { type: 'h2', text: 'What counts as breaking' },
@@ -353,7 +353,17 @@ export const DOCS = [
       { type: 'h2', text: 'Gating a pull request on it' },
       { type: 'p', text: 'The diff is also an API endpoint. Post the two documents to `/api/diff/openapi` with an [API key](/docs/api-keys-and-programmatic-access); it returns `200` when there are no breaking changes and `422` when there are, so a CI step can fail the build on a breaking spec change:' },
       { type: 'code', lang: 'bash', code: 'curl -sf -X POST https://apispi.com/api/diff/openapi \\\n  -H "Authorization: Bearer $SPI_TOKEN" \\\n  --data-urlencode "old@openapi.main.json" \\\n  --data-urlencode "new@openapi.branch.json" \\\n  || echo "Breaking API changes — review before merge."' },
-      { type: 'note', text: 'Every comparison is also saved as a [report](/docs/reports-and-sharing) you can open, share as a read-only link, or compare against a later run. Deep schema comparison (field-level types and enum values) is intentionally left to [response contracts](/docs/response-contracts), which check them against real traffic.' },
+      { type: 'h2', text: 'GraphQL schemas' },
+      { type: 'p', text: 'Switch [API Diff](/api-diff) to **GraphQL** to compare two schemas. Paste an introspection document on either side, or just give an endpoint URL and Spi introspects it for you — so "does staging still match production?" is two URLs and a button.' },
+      { type: 'p', text: 'GraphQL has no status codes to soften a change: a removed field is a query that stops parsing. Breaking covers a removed type, field, argument, input field, enum value or union member; a changed type; and a new **required** argument or input field — one that is non-null with no default, so existing documents no longer satisfy it.' },
+      { type: 'p', text: 'Nullability is the subtle case, and it cuts opposite ways depending on direction:' },
+      { type: 'ul', items: [
+        'An **output** field going `String` → `String!` only promises a client more, so it is safe. Going `String!` → `String` can hand it a null it never had to handle, so it is **breaking**.',
+        'An **argument or input field** is the reverse: newly non-null rejects requests that used to be accepted, so `String` → `String!` is **breaking**, while `String!` → `String` is safe.',
+        'A new enum value is reported as non-breaking rather than merely informational — it is safe for the wire, but it will surprise any client switching exhaustively over the enum.',
+      ] },
+      { type: 'code', lang: 'bash', code: 'curl -sf -X POST https://apispi.com/api/diff/graphql \\\n  -H "Authorization: Bearer $SPI_TOKEN" \\\n  -d old_url=https://api.example.com/graphql \\\n  -d new_url=https://staging.example.com/graphql \\\n  || echo "Breaking schema changes — review before merge."' },
+      { type: 'note', text: 'Every comparison is also saved as a [report](/docs/reports-and-sharing) you can open, share as a read-only link, or compare against a later run. Deep OpenAPI schema comparison (field-level types and enum values) is intentionally left to [response contracts](/docs/response-contracts), which check them against real traffic.' },
     ],
   },
 

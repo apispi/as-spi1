@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>API diff · Spi docs</title>
-<meta name="description" content="Diff two OpenAPI documents and flag breaking changes before you ship them.">
+<meta name="description" content="Diff two OpenAPI documents or GraphQL schemas and flag breaking changes before you ship them.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="stylesheet" href="/docs/styles.css">
 <script>
@@ -29,8 +29,8 @@
   <main class="content">
     <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Testing &amp; assertions</span></div>
     <h1>API diff</h1>
-    <p class="lead">Diff two OpenAPI documents and flag breaking changes before you ship them.</p>
-    <nav class="toc"><span class="toc-label">On this page</span><a href="#what-counts-as-breaking">What counts as breaking</a><a href="#gating-a-pull-request-on-it">Gating a pull request on it</a></nav>
+    <p class="lead">Diff two OpenAPI documents or GraphQL schemas and flag breaking changes before you ship them.</p>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#what-counts-as-breaking">What counts as breaking</a><a href="#gating-a-pull-request-on-it">Gating a pull request on it</a><a href="#graphql-schemas">GraphQL schemas</a></nav>
     <article><p>Response contracts catch drift in a running API. <strong>API Diff</strong> catches it one step earlier — in the spec itself, before the change ships. Paste the current (baseline) OpenAPI document and the proposed one into <a href="/api-diff">API Diff</a>, and Spi reports every difference, sorted with the changes that break existing clients first. Both JSON and YAML are accepted.</p>
 <h2 id="what-counts-as-breaking">What counts as breaking</h2>
 <p>A change is *breaking* when it could break a client already calling the old version of the API:</p>
@@ -43,7 +43,17 @@
   --data-urlencode "old@openapi.main.json" \
   --data-urlencode "new@openapi.branch.json" \
   || echo "Breaking API changes — review before merge."</code></pre></div>
-<div class="note">Every comparison is also saved as a <a href="/docs/reports-and-sharing/">report</a> you can open, share as a read-only link, or compare against a later run. Deep schema comparison (field-level types and enum values) is intentionally left to <a href="/docs/response-contracts/">response contracts</a>, which check them against real traffic.</div></article>
+<h2 id="graphql-schemas">GraphQL schemas</h2>
+<p>Switch <a href="/api-diff">API Diff</a> to <strong>GraphQL</strong> to compare two schemas. Paste an introspection document on either side, or just give an endpoint URL and Spi introspects it for you — so "does staging still match production?" is two URLs and a button.</p>
+<p>GraphQL has no status codes to soften a change: a removed field is a query that stops parsing. Breaking covers a removed type, field, argument, input field, enum value or union member; a changed type; and a new <strong>required</strong> argument or input field — one that is non-null with no default, so existing documents no longer satisfy it.</p>
+<p>Nullability is the subtle case, and it cuts opposite ways depending on direction:</p>
+<ul><li>An <strong>output</strong> field going <code>String</code> → <code>String!</code> only promises a client more, so it is safe. Going <code>String!</code> → <code>String</code> can hand it a null it never had to handle, so it is <strong>breaking</strong>.</li><li>An <strong>argument or input field</strong> is the reverse: newly non-null rejects requests that used to be accepted, so <code>String</code> → <code>String!</code> is <strong>breaking</strong>, while <code>String!</code> → <code>String</code> is safe.</li><li>A new enum value is reported as non-breaking rather than merely informational — it is safe for the wire, but it will surprise any client switching exhaustively over the enum.</li></ul>
+<div class="code"><div class="code-head"><span>bash</span><button class="copy" type="button">Copy</button></div><pre><code>curl -sf -X POST https://apispi.com/api/diff/graphql \
+  -H "Authorization: Bearer $SPI_TOKEN" \
+  -d old_url=https://api.example.com/graphql \
+  -d new_url=https://staging.example.com/graphql \
+  || echo "Breaking schema changes — review before merge."</code></pre></div>
+<div class="note">Every comparison is also saved as a <a href="/docs/reports-and-sharing/">report</a> you can open, share as a read-only link, or compare against a later run. Deep OpenAPI schema comparison (field-level types and enum values) is intentionally left to <a href="/docs/response-contracts/">response contracts</a>, which check them against real traffic.</div></article>
     <nav class="pager">
       <a class="pager-link prev" href="/docs/response-contracts/"><span>← Previous</span><strong>Response contracts</strong></a>
       <a class="pager-link next" href="/docs/collections/"><span>Next →</span><strong>Collections</strong></a>

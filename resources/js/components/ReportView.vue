@@ -59,20 +59,23 @@
       </div>
     </template>
 
-    <!-- OpenAPI diff -->
-    <template v-else-if="type === 'api_diff'">
+    <!-- Spec diffs: OpenAPI and GraphQL share a change shape -->
+    <template v-else-if="type === 'api_diff' || type === 'graphql_diff'">
       <div class="rv-hero">
         <span class="rv-grade" :class="data.breaking ? 'g-f' : 'g-a'">{{ data.breaking ? '✗' : '✓' }}</span>
         <div>
           <div class="rv-score">{{ data.breaking ? (data.breaking_count + ' breaking change' + (data.breaking_count === 1 ? '' : 's')) : 'No breaking changes' }}</div>
-          <div class="rv-muted">{{ data.new_title }} · {{ data.old_version || '—' }} → {{ data.new_version || '—' }}</div>
+          <div v-if="type === 'graphql_diff'" class="rv-muted">
+            {{ data.type_count }} type(s) · {{ data.new_source || 'GraphQL schema' }}
+          </div>
+          <div v-else class="rv-muted">{{ data.new_title }} · {{ data.old_version || '—' }} → {{ data.new_version || '—' }}</div>
         </div>
       </div>
       <p v-if="!data.changes || !data.changes.length" class="rv-clean">Identical — nothing changed. ✅</p>
       <div v-for="(c, i) in data.changes" :key="i" class="rv-row" :class="'diff-' + c.severity">
         <span class="rv-badge">{{ severityLabel(c.severity) }}</span>
         <div>
-          <strong v-if="c.operation" class="rv-mono">{{ c.operation }}</strong>
+          <strong v-if="c.operation || c.location" class="rv-mono">{{ c.operation || c.location }}</strong>
           <div class="rv-muted">{{ c.detail }}</div>
         </div>
       </div>

@@ -2,29 +2,43 @@
   <main class="ad">
     <header class="ad-head">
       <h1 class="ad-title">API Diff</h1>
-      <p class="ad-sub">
+      <p v-if="mode === 'openapi'" class="ad-sub">
         Compare two OpenAPI 3 documents and see what changed — before you ship it or approve a pull request.
         Breaking changes (a removed endpoint, a new required input, a dropped success response) are called out, so a
         CI job can gate a merge on the result. Paste JSON or YAML.
       </p>
+      <p v-else class="ad-sub">
+        Compare two GraphQL schemas. Paste an introspection document, or give an endpoint URL and Spi will
+        introspect it — so "does staging still match production?" takes two URLs. A removed field, a new required
+        argument or a dropped enum value is called out as breaking.
+      </p>
+
+      <div class="ad-modes">
+        <button :class="['ad-mode', { active: mode === 'openapi' }]" @click="setMode('openapi')">OpenAPI</button>
+        <button :class="['ad-mode', { active: mode === 'graphql' }]" @click="setMode('graphql')">GraphQL</button>
+      </div>
     </header>
 
     <div class="ad-grid">
       <div class="ad-pane">
-        <label class="ad-label" for="ad-old">Baseline (old) spec</label>
+        <label class="ad-label" for="ad-old">Baseline (old) {{ mode === 'graphql' ? 'schema' : 'spec' }}</label>
+        <input v-if="mode === 'graphql'" v-model="oldUrl" class="ad-url" type="url" spellcheck="false"
+               placeholder="https://api.example.com/graphql — or paste below" />
         <textarea id="ad-old" v-model="oldDoc" class="ad-area" spellcheck="false"
-                  placeholder="openapi: 3.0.0&#10;info: …&#10;paths: …"></textarea>
+                  :placeholder="docPlaceholder"></textarea>
       </div>
       <div class="ad-pane">
-        <label class="ad-label" for="ad-new">Candidate (new) spec</label>
+        <label class="ad-label" for="ad-new">Candidate (new) {{ mode === 'graphql' ? 'schema' : 'spec' }}</label>
+        <input v-if="mode === 'graphql'" v-model="newUrl" class="ad-url" type="url" spellcheck="false"
+               placeholder="https://staging.example.com/graphql — or paste below" />
         <textarea id="ad-new" v-model="newDoc" class="ad-area" spellcheck="false"
-                  placeholder="openapi: 3.0.0&#10;info: …&#10;paths: …"></textarea>
+                  :placeholder="docPlaceholder"></textarea>
       </div>
     </div>
 
     <div class="ad-actions">
-      <button class="ad-btn ad-btn-primary" :disabled="busy || !oldDoc.trim() || !newDoc.trim()" @click="run">
-        {{ busy ? 'Comparing…' : 'Compare specs' }}
+      <button class="ad-btn ad-btn-primary" :disabled="busy || !canCompare" @click="run">
+        {{ busy ? 'Comparing…' : (mode === 'graphql' ? 'Compare schemas' : 'Compare specs') }}
       </button>
       <button class="ad-btn" :disabled="busy" @click="reset">Clear</button>
       <span v-if="result" class="ad-report">Saved as report #{{ result.report_id }} · see Reports to share.</span>
@@ -36,8 +50,10 @@
       <div class="ad-summary" :class="result.breaking ? 'is-breaking' : 'is-clean'">
         <span class="ad-verdict">{{ result.breaking ? '✗ Breaking' : '✓ Compatible' }}</span>
         <div>
-          <strong>{{ result.new_title }}</strong>
-          <span class="ad-muted"> · {{ result.old_version || '—' }} → {{ result.new_version || '—' }}</span>
+          <strong v-if="mode === 'openapi'">{{ result.new_title }}</strong>
+          <strong v-else>GraphQL schema</strong>
+          <span v-if="mode === 'openapi'" class="ad-muted"> · {{ result.old_version || '—' }} → {{ result.new_version || '—' }}</span>
+          <span v-else class="ad-muted"> · {{ result.type_count }} type(s)</span>
           <div class="ad-counts">
             <span class="ad-count c-breaking">{{ result.breaking_count }} breaking</span>
             <span class="ad-count c-safe">{{ result.non_breaking_count }} non-breaking</span>
@@ -46,12 +62,14 @@
         </div>
       </div>
 
-      <p v-if="!result.changes.length" class="ad-clean">The two specs are identical. ✅</p>
+      <p v-if="!result.changes.length" class="ad-clean">
+        The two {{ mode === 'graphql' ? 'schemas' : 'specs' }} are identical. ✅
+      </p>
 
       <ul v-else class="ad-changes">
         <li v-for="(c, i) in result.changes" :key="i" class="ad-change" :class="'sev-' + c.severity">
           <span class="ad-sev">{{ label(c.severity) }}</span>
-          <span v-if="c.operation" class="ad-op">{{ c.operation }}</span>
+          <span v-if="c.operation || c.location" class="ad-op">{{ c.operation || c.location }}</span>
           <span class="ad-detail">{{ c.detail }}</span>
         </li>
       </ul>
@@ -60,17 +78,39 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import axios from 'axios';
 import { toast } from '../toast';
 
+const mode = ref('openapi');
 const oldDoc = ref('');
 const newDoc = ref('');
+const oldUrl = ref('');
+const newUrl = ref('');
+
+const docPlaceholder = computed(() => mode.value === 'graphql'
+  ? '{ "data": { "__schema": { … } } }'
+  : 'openapi: 3.0.0\ninfo: …\npaths: …');
+
+// GraphQL accepts a URL in place of a document on either side.
+const sideReady = (doc, url) => doc.trim() !== '' || (mode.value === 'graphql' && url.trim() !== '');
+const canCompare = computed(() =>
+  sideReady(oldDoc.value, oldUrl.value) && sideReady(newDoc.value, newUrl.value));
+
 const busy = ref(false);
 const error = ref('');
 const result = ref(null);
 
 const label = (s) => ({ breaking: 'breaking', non_breaking: 'safe', info: 'info' }[s] || s);
+
+// Switching mode drops the previous result: the two shapes are not comparable
+// and leaving one on screen under the other heading would misread badly.
+function setMode(value) {
+  if (mode.value === value) return;
+  mode.value = value;
+  result.value = null;
+  error.value = '';
+}
 
 async function run() {
   busy.value = true;
@@ -78,8 +118,11 @@ async function run() {
   try {
     // A breaking diff comes back as 422 with the full body — that is a
     // successful comparison, not an error, so read it from the response.
-    const res = await axios.post('/api/diff/openapi',
-      { old: oldDoc.value, new: newDoc.value },
+    const payload = mode.value === 'graphql'
+      ? { old: oldDoc.value, new: newDoc.value, old_url: oldUrl.value, new_url: newUrl.value }
+      : { old: oldDoc.value, new: newDoc.value };
+
+    const res = await axios.post(`/api/diff/${mode.value}`, payload,
       { validateStatus: (s) => s === 200 || s === 422 });
 
     if (res.data && Array.isArray(res.data.changes)) {
@@ -104,6 +147,8 @@ async function run() {
 function reset() {
   oldDoc.value = '';
   newDoc.value = '';
+  oldUrl.value = '';
+  newUrl.value = '';
   result.value = null;
   error.value = '';
 }
@@ -113,6 +158,20 @@ function reset() {
 .ad { padding: 24px 28px; max-width: 1100px; margin: 0 auto; }
 .ad-title { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin: 0 0 4px; }
 .ad-sub { color: var(--text-secondary); max-width: 70ch; margin: 0 0 20px; line-height: 1.5; }
+
+.ad-modes { display: flex; gap: 6px; margin-bottom: 18px; }
+.ad-mode {
+  padding: 6px 16px; border-radius: 999px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary);
+}
+.ad-mode:hover { color: var(--text-primary); }
+.ad-mode.active { background: var(--accent-soft, rgba(88,166,255,.12)); border-color: var(--accent-color); color: var(--accent-color); }
+.ad-url {
+  margin-bottom: 8px; padding: 8px 11px; font-size: 0.82rem;
+  border: 1px solid var(--border-color); border-radius: 8px;
+  background: var(--panel-bg, var(--bg-secondary)); color: var(--text-primary);
+}
+.ad-url:focus { outline: none; border-color: var(--accent-color); }
 
 .ad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 720px) { .ad-grid { grid-template-columns: 1fr; } }

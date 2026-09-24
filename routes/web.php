@@ -152,6 +152,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/import/openapi', [ImportController::class, 'openapi']);
     Route::post('/api/import/postman', [ImportController::class, 'postman']);
     Route::post('/api/diff/openapi', [\App\Http\Controllers\ApiDiffController::class, 'openapi']);
+    Route::post('/api/diff/graphql', [\App\Http\Controllers\ApiDiffController::class, 'graphql'])
+        ->middleware('throttle:outbound-test');
     Route::get('/api/dynamic-variables', [\App\Http\Controllers\DynamicVariableController::class, 'index']);
 
     // Self-serve team membership. Joining a workspace grants access in both

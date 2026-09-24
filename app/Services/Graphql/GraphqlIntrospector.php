@@ -36,6 +36,51 @@ class GraphqlIntrospector
     GQL;
 
     /**
+     * A fuller introspection query, for comparing two schemas.
+     *
+     * The summary query above deliberately fetches only what the schema panel
+     * shows. A diff has to see everything a client could depend on — argument
+     * defaults, input object fields, enum members, union members — because
+     * each of them is something whose removal breaks somebody.
+     */
+    public const DIFF_QUERY = <<<'GQL'
+    query SpiSchemaDiff {
+      __schema {
+        queryType { name }
+        mutationType { name }
+        subscriptionType { name }
+        types {
+          kind
+          name
+          fields(includeDeprecated: true) {
+            name
+            type { ...TypeRef }
+            args { name defaultValue type { ...TypeRef } }
+          }
+          inputFields { name defaultValue type { ...TypeRef } }
+          enumValues(includeDeprecated: true) { name }
+          possibleTypes { name }
+          interfaces { name }
+        }
+      }
+    }
+    fragment TypeRef on __Type {
+      kind name
+      ofType { kind name ofType { kind name ofType { kind name
+        ofType { kind name ofType { kind name ofType { kind name } } } } } }
+    }
+    GQL;
+
+    /**
+     * Render a nested type reference into a GraphQL signature. Public so the
+     * schema differ describes types exactly as the schema panel does.
+     */
+    public function signature(array $ref): string
+    {
+        return $this->renderType($ref);
+    }
+
+    /**
      * @param  array  $schema  the decoded `data.__schema` object
      * @return array{query_type: ?string, mutation_type: ?string, type_count: int, operations: array<int,array<string,mixed>>}
      */
