@@ -10,8 +10,9 @@
 #   ./cx.sh              menu, then pick an option
 #   ./cx.sh 33           run one option directly
 #   ./cx.sh 02 a@b.com   pass a parameter (e.g. an email) to the option
+#   CX_YES=1 ./cx.sh 92  auto-approve confirmations (unattended runs)
 #
-# Version 1.0
+# Version 1.2
 #================================================================
 clear
 
@@ -82,6 +83,14 @@ echo ORGANISATIONS
 echo "40 : ORGS: list organisations with member counts"
 echo "41 : ASSIGN: move a user into an org       (email org-slug)"
 echo "42 : UNASSIGN: remove a user from its org  (email)"
+echo "43 : OWNER: set an org's owner            (org-slug email)"
+rule
+echo WORKSPACES
+echo "44 : WORKSPACE: members + invites for a user's team (email)"
+echo "45 : INVITES: pending workspace invitations platform-wide"
+echo "46 : INVITE-KILL: revoke pending invites to an address (email)"
+echo "47 : INVITE-SWEEP: delete expired invitations     [DESTRUCTIVE]"
+echo "48 : ACTIVITY: recent workspace activity          (email|blank=all)"
 rule
 echo SECURITY
 echo "10 : FAILED: failed sign-ins, last 24h, by IP"
@@ -94,12 +103,20 @@ echo "20 : DEMO-SEED: seed the demo workspace (idempotent)"
 echo "21 : DEMO-CLEAR: remove all demo data            [DESTRUCTIVE]"
 echo "22 : CATALOG-SEED: (re)seed the catalog (idempotent)"
 echo "23 : CATALOG: counts by type"
+echo "24 : REPORTS: inspection reports by type"
 rule
 echo OPERATIONS
 echo "30 : MONITORS: run those that are due"
 echo "31 : FAILING: monitors currently failing"
 echo "32 : WEBHOOKS: run the silence check"
 echo "33 : STATS: platform totals at a glance"
+echo "34 : MAIL-TEST: send a test email             (email)"
+rule
+echo CREDENTIALS
+echo "50 : KEYS: API keys, with scopes and last use"
+echo "51 : KEY-REVOKE: revoke a user's API keys    (email)"
+echo "52 : AUTH-SCHEMES: which auth schemes are in use"
+echo "53 : TOKEN-CACHE: clear cached OAuth access tokens"
 rule
 echo MAINTENANCE
 echo "90 : PRUNE-HISTORY: delete request history older than N days [DESTRUCTIVE]"
@@ -356,6 +373,123 @@ case "$SELECTION" in
   else
     echo "Nothing pruned."
   fi
+  ;;
+
+  "43" )
+  banner "SET ORGANISATION OWNER"
+  SLUG="$PARAM2"
+  if [ -z "$SLUG" ]; then printf 'Organisation slug: '; read -r SLUG; fi
+  OWNER="$3"
+  if [ -z "$OWNER" ]; then printf 'Owner email: '; read -r OWNER; fi
+  if [ -z "$SLUG" ] || [ -z "$OWNER" ]; then echo "Need both an org slug and an email."; else
+    tink "\$o=\App\Models\Organisation::where('slug','$SLUG')->first(); \$u=\App\Models\User::where('email','$OWNER')->first(); if(!\$o){echo 'No such organisation';return;} if(!\$u){echo 'No such user';return;} if(\$u->organisation_id!==\$o->id){echo 'That user is not a member of '.\$o->name;return;} \$o->update(['owner_user_id'=>\$u->id]); echo 'Owner of '.\$o->name.' is now '.\$u->email;"
+    note "Set owner of $SLUG to $OWNER"
+  fi
+  ;;
+
+  "44" )
+  banner "WORKSPACE FOR A USER"
+  if need_email; then
+    tink "\$u=\App\Models\User::where('email','$EMAIL')->first(); if(!\$u){echo 'No such user';return;} \$o=\$u->organisation; echo 'Workspace     '.(\$o?\$o->name.' ('.\$o->slug.')':'solo - no organisation').PHP_EOL; \$ownerId=\$o?\$o->ownerId():\$u->id; echo 'Owner         '.(\App\Models\User::find(\$ownerId)?->email ?? '-').PHP_EOL; echo 'Members'.PHP_EOL; foreach(\App\Models\User::whereIn('id',\$u->workspaceUserIds())->orderBy('id')->get() as \$m){echo '  '.str_pad(\$m->email,34).(\$m->id===\$ownerId?'owner':'').PHP_EOL;} if(\$o){\$p=\App\Models\WorkspaceInvitation::where('organisation_id',\$o->id)->pending()->get(); echo 'Pending invites'.PHP_EOL; echo \$p->isEmpty()?'  none':\$p->map(fn(\$i)=>'  '.str_pad(\$i->email,34).'expires '.\$i->expires_at->format('Y-m-d'))->implode(PHP_EOL);}"
+    note "Inspected workspace for $EMAIL"
+  else echo "No email given."; fi
+  ;;
+
+  "45" )
+  banner "PENDING WORKSPACE INVITATIONS"
+  tink "\$i=\App\Models\WorkspaceInvitation::pending()->with(['organisation:id,name','invitedBy:id,email'])->orderBy('id')->get(); echo \$i->isEmpty()?'No pending invitations.':\$i->map(fn(\$x)=>str_pad(\$x->email,34).str_pad(\$x->organisation?->name ?? '-',22).'by '.str_pad(\$x->invitedBy?->email ?? '-',30).'expires '.\$x->expires_at->format('Y-m-d'))->implode(PHP_EOL); echo PHP_EOL.'Expired, not swept: '.\App\Models\WorkspaceInvitation::whereNull('accepted_at')->where('expires_at','<=',now())->count();"
+  note "Listed pending invitations"
+  ;;
+
+  "46" )
+  banner "REVOKE INVITATIONS TO AN ADDRESS"
+  # For a mistaken invite, or one sent to someone who has left the company.
+  if need_email; then
+    COUNT=$(tink "echo \App\Models\WorkspaceInvitation::pending()->whereRaw('LOWER(email) = ?',[strtolower('$EMAIL')])->count();" | tr -dc '0-9')
+    echo "Pending invitations to $EMAIL: ${COUNT:-0}"
+    if [ "${COUNT:-0}" != "0" ] && confirm "Revoke them? The links stop working immediately."; then
+      tink "echo \App\Models\WorkspaceInvitation::pending()->whereRaw('LOWER(email) = ?',[strtolower('$EMAIL')])->delete().' revoked';"
+      note "Revoked invitations to $EMAIL"
+    else echo "Nothing revoked."; fi
+  else echo "No email given."; fi
+  ;;
+
+  "47" )
+  banner "SWEEP EXPIRED INVITATIONS [DESTRUCTIVE]"
+  db_context
+  COUNT=$(tink "echo \App\Models\WorkspaceInvitation::whereNull('accepted_at')->where('expires_at','<=',now())->count();" | tr -dc '0-9')
+  echo "Expired, unaccepted invitations: ${COUNT:-0}"
+  if [ "${COUNT:-0}" != "0" ] && confirm "Delete them? They already cannot be accepted."; then
+    tink "echo \App\Models\WorkspaceInvitation::whereNull('accepted_at')->where('expires_at','<=',now())->delete().' deleted';"
+    note "Swept expired invitations"
+  else echo "Nothing swept."; fi
+  ;;
+
+  "48" )
+  banner "RECENT WORKSPACE ACTIVITY"
+  if [ -n "$PARAM2" ]; then
+    tink "\$u=\App\Models\User::where('email','$PARAM2')->first(); if(!\$u){echo 'No such user';return;} \$a=\App\Models\WorkspaceActivity::inWorkspaceOf(\$u)->with('actor:id,email')->latest('id')->take(25)->get(); echo \$a->isEmpty()?'No activity.':\$a->map(fn(\$x)=>str_pad(\$x->created_at->format('Y-m-d H:i'),18).str_pad(\$x->actor?->email ?? '-',30).str_pad(\$x->action,9).\$x->subjectLabel().' '.\$x->subject_name)->implode(PHP_EOL);"
+    note "Listed workspace activity for $PARAM2"
+  else
+    tink "\$a=\App\Models\WorkspaceActivity::with('actor:id,email')->latest('id')->take(25)->get(); echo \$a->isEmpty()?'No activity.':\$a->map(fn(\$x)=>str_pad(\$x->created_at->format('Y-m-d H:i'),18).str_pad(\$x->actor?->email ?? '-',30).str_pad(\$x->action,9).\$x->subjectLabel().' '.\$x->subject_name)->implode(PHP_EOL);"
+    note "Listed recent workspace activity"
+  fi
+  ;;
+
+  "24" )
+  banner "INSPECTION REPORTS BY TYPE"
+  tink "\$r=\App\Models\InspectionReport::selectRaw('type, count(*) as c')->groupBy('type')->orderByDesc('c')->get(); echo \$r->isEmpty()?'No reports.':\$r->map(fn(\$x)=>str_pad(\$x->type,22).\$x->c)->implode(PHP_EOL); echo PHP_EOL.'Shared (public link): '.\App\Models\InspectionReport::whereNotNull('share_token')->count();"
+  note "Listed reports by type"
+  ;;
+
+  "34" )
+  banner "SEND A TEST EMAIL"
+  # Proves the mailer actually works, before someone reports that invitations
+  # or monitor alerts never arrive.
+  if need_email; then
+    echo "Mailer: $(tink "echo config('mail.default');")"
+    if confirm "Send a test email to $EMAIL?"; then
+      tink "\Illuminate\Support\Facades\Mail::raw('Test email from the Spi admin console at '.now()->toDateTimeString().'. If you can read this, outbound mail works.', fn(\$m)=>\$m->to('$EMAIL')->subject('Spi test email')); echo 'Sent (check the inbox, or the log mailer output).';"
+      note "Sent test email to $EMAIL"
+    else echo "Cancelled."; fi
+  else echo "No email given."; fi
+  ;;
+
+  "50" )
+  banner "API KEYS"
+  tink "\$k=\App\Models\ApiKey::with('user:id,email')->orderByDesc('id')->take(30)->get(); echo \$k->isEmpty()?'No API keys.':\$k->map(function(\$x){\$state=\$x->revoked_at?'revoked':((\$x->expires_at&&\$x->expires_at->isPast())?'expired':'active'); \$scopes=empty(\$x->scopes)?'full access':implode('+',\$x->scopes); return str_pad(\$x->user?->email ?? '-',30).str_pad(\$x->name,22).str_pad(\$state,9).str_pad(\$scopes,22).'last used '.(\$x->last_used_at?\$x->last_used_at->format('Y-m-d'):'never');})->implode(PHP_EOL);"
+  note "Listed API keys"
+  ;;
+
+  "51" )
+  banner "REVOKE A USER'S API KEYS"
+  if need_email; then
+    COUNT=$(tink "\$u=\App\Models\User::where('email','$EMAIL')->first(); echo \$u?\App\Models\ApiKey::where('user_id',\$u->id)->whereNull('revoked_at')->count():0;" | tr -dc '0-9')
+    echo "Active keys for $EMAIL: ${COUNT:-0}"
+    if [ "${COUNT:-0}" != "0" ] && confirm "Revoke them all? Anything using them stops working immediately."; then
+      # Revoked, not deleted, so the last-used history and audit trail survive.
+      tink "\$u=\App\Models\User::where('email','$EMAIL')->first(); echo \App\Models\ApiKey::where('user_id',\$u->id)->whereNull('revoked_at')->update(['revoked_at'=>now()]).' revoked';"
+      note "Revoked API keys for $EMAIL"
+    else echo "Nothing revoked."; fi
+  else echo "No email given."; fi
+  ;;
+
+  "52" )
+  banner "AUTH SCHEMES IN USE"
+  tink "\$tally=function(\$rows){\$t=[]; foreach(\$rows as \$a){\$s=is_array(\$a)?(\$a['scheme'] ?? 'none'):'none'; \$t[\$s]=(\$t[\$s] ?? 0)+1;} return \$t;}; \$r=\$tally(\App\Models\SavedRequest::whereNotNull('auth')->pluck('auth')); \$e=\$tally(\App\Models\Environment::whereNotNull('auth')->pluck('auth')); echo 'Saved requests with their own auth'.PHP_EOL; echo (empty(\$r)?'  none':collect(\$r)->map(fn(\$c,\$s)=>'  '.str_pad(\$s,30).\$c)->implode(PHP_EOL)).PHP_EOL; echo 'Environments supplying auth'.PHP_EOL; echo (empty(\$e)?'  none':collect(\$e)->map(fn(\$c,\$s)=>'  '.str_pad(\$s,30).\$c)->implode(PHP_EOL)).PHP_EOL; echo 'Requests inheriting (no auth of their own): '.\App\Models\SavedRequest::whereNull('auth')->count();"
+  note "Listed auth schemes in use"
+  ;;
+
+  "53" )
+  banner "CLEAR CACHED OAUTH ACCESS TOKENS"
+  # OAuth tokens are cached under hashed keys with no scannable prefix, so
+  # there is no way to drop only those - this flushes the whole cache.
+  echo "Cache store: $(tink "echo config('cache.default');")"
+  echo "This flushes the ENTIRE application cache, not only OAuth tokens."
+  if confirm "Flush the cache?"; then
+    php artisan cache:clear
+    note "Flushed the application cache"
+  else echo "Cancelled."; fi
   ;;
 
   "92" )
