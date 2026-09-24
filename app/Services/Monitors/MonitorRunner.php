@@ -164,7 +164,14 @@ class MonitorRunner
         // passing after the alert also prevents a bogus "recovered" email on
         // the next quiet run.
         if ($diff['drifted']) {
-            $monitor->forceFill(['last_status' => Monitor::STATUS_PASSING])->save();
+            // Both statuses, not just the observed one: alerting keys off
+            // last_alerted_status, so leaving that at "failing" would make the
+            // next quiet run look like a recovery and send the very message
+            // this reset exists to prevent.
+            $monitor->forceFill([
+                'last_status' => Monitor::STATUS_PASSING,
+                'last_alerted_status' => Monitor::STATUS_PASSING,
+            ])->save();
         }
 
         $this->trim($monitor);
@@ -274,7 +281,10 @@ class MonitorRunner
         // The new schema is the contract now; comparing every future run
         // against the pre-drift shape would re-alert forever.
         if ($diff['breaking']) {
-            $monitor->forceFill(['last_status' => Monitor::STATUS_PASSING])->save();
+            $monitor->forceFill([
+                'last_status' => Monitor::STATUS_PASSING,
+                'last_alerted_status' => Monitor::STATUS_PASSING,
+            ])->save();
         }
 
         $this->trim($monitor);
@@ -316,14 +326,27 @@ class MonitorRunner
      */
     private function applyStatus(Monitor $monitor, bool $passed, MonitorResult $entry): void
     {
-        $previous = $monitor->last_status;
+        // What was last *announced*, which is not the same as what was last
+        // observed once a monitor has been snoozed through a change.
+        $previous = $monitor->last_alerted_status ?? $monitor->last_status;
         $next = $passed ? Monitor::STATUS_PASSING : Monitor::STATUS_FAILING;
+        $snoozed = $monitor->isSnoozed();
 
         $monitor->forceFill([
+            // Always current: the results list and uptime stay honest through
+            // a snooze, which is the difference between muting a monitor and
+            // turning it off.
             'last_status' => $next,
             'last_run_at' => now(),
             'consecutive_failures' => $passed ? 0 : $monitor->consecutive_failures + 1,
-        ])->save();
+        ] + ($snoozed ? [] : ['last_alerted_status' => $next]))->save();
+
+        // While snoozed nothing is announced, and the announced status is left
+        // alone — so a failure that begins during a deploy is reported when
+        // the snooze ends, rather than never.
+        if ($snoozed) {
+            return;
+        }
 
         // The first run establishes a baseline rather than announcing a
         // "recovery" or a brand-new outage.

@@ -230,6 +230,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/monitors', [MonitorController::class, 'store']);
     Route::put('/api/monitors/{id}', [MonitorController::class, 'update']);
     Route::delete('/api/monitors/{id}', [MonitorController::class, 'destroy']);
+    Route::post('/api/monitors/{id}/snooze', [MonitorController::class, 'snooze']);
+    Route::delete('/api/monitors/{id}/snooze', [MonitorController::class, 'wake']);
     Route::post('/api/monitors/{id}/run', [MonitorController::class, 'run'])
         ->middleware('throttle:outbound-test');
 

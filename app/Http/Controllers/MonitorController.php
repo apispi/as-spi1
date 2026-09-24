@@ -106,6 +106,35 @@ class MonitorController extends Controller
         $monitor->alertChannels()->sync($owned);
     }
 
+    /**
+     * Mute alerts for a while without turning the monitor off.
+     *
+     * The distinction matters: a disabled monitor stops checking, and its
+     * uptime silently stops meaning anything. A snoozed one keeps checking and
+     * keeps its history honest — it just does not wake anyone during a deploy.
+     */
+    public function snooze(Request $request, int $id)
+    {
+        $monitor = Monitor::inWorkspaceOf($request->user())->findOrFail($id);
+
+        $validated = $request->validate([
+            'minutes' => ['required', 'integer', 'min:1', 'max:'.Monitor::MAX_SNOOZE_MINUTES],
+        ]);
+
+        $monitor->update(['snoozed_until' => now()->addMinutes($validated['minutes'])]);
+
+        return response()->json($this->present($monitor->fresh()->load(['collection', 'environment', 'owner'])));
+    }
+
+    /** End a snooze early. The next run alerts if it is still failing. */
+    public function wake(Request $request, int $id)
+    {
+        $monitor = Monitor::inWorkspaceOf($request->user())->findOrFail($id);
+        $monitor->update(['snoozed_until' => null]);
+
+        return response()->json($this->present($monitor->fresh()->load(['collection', 'environment', 'owner'])));
+    }
+
     private function present(Monitor $monitor): array
     {
         return [
@@ -118,6 +147,8 @@ class MonitorController extends Controller
             'interval_minutes' => $monitor->interval_minutes,
             'is_enabled' => $monitor->is_enabled,
             'alerts_enabled' => $monitor->alerts_enabled,
+            'snoozed_until' => $monitor->snoozed_until,
+            'is_snoozed' => $monitor->isSnoozed(),
             'last_status' => $monitor->last_status,
             'last_run_at' => $monitor->last_run_at,
             'consecutive_failures' => $monitor->consecutive_failures,

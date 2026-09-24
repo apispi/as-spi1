@@ -49,7 +49,9 @@ class Monitor extends Model
     public const INTERVALS = [5, 15, 30, 60, 180, 360, 720, 1440];
 
     /** Written by every scheduled run, not by anyone editing the monitor. */
-    protected array $activityIgnored = ['last_run_at', 'last_status', 'consecutive_failures'];
+    protected array $activityIgnored = [
+        'last_run_at', 'last_status', 'last_alerted_status', 'consecutive_failures',
+    ];
 
     protected $fillable = [
         'user_id',
@@ -62,6 +64,8 @@ class Monitor extends Model
         'is_enabled',
         'alerts_enabled',
         'last_status',
+        'last_alerted_status',
+        'snoozed_until',
         'last_run_at',
         'consecutive_failures',
     ];
@@ -78,6 +82,7 @@ class Monitor extends Model
         'is_enabled' => true,
         'alerts_enabled' => true,
         'last_status' => self::STATUS_UNKNOWN,
+        'last_alerted_status' => self::STATUS_UNKNOWN,
         'consecutive_failures' => 0,
     ];
 
@@ -85,6 +90,7 @@ class Monitor extends Model
         'is_enabled' => 'boolean',
         'alerts_enabled' => 'boolean',
         'last_run_at' => 'datetime',
+        'snoozed_until' => 'datetime',
     ];
 
     public function user()
@@ -124,6 +130,22 @@ class Monitor extends Model
     public function scopeEnabled($query)
     {
         return $query->where('is_enabled', true)->orderByRaw('last_run_at is null desc')->oldest('last_run_at');
+    }
+
+    /** Longest a monitor may be muted for. A week is a deploy, not a decision. */
+    public const MAX_SNOOZE_MINUTES = 10080;
+
+    /**
+     * Alerts muted, but checks still running.
+     *
+     * Deliberately not the same as disabling the monitor: the history and
+     * uptime figure stay honest through a deploy, and the transition that
+     * happens while muted is announced when the snooze ends rather than being
+     * swallowed by it.
+     */
+    public function isSnoozed(): bool
+    {
+        return $this->snoozed_until !== null && $this->snoozed_until->isFuture();
     }
 
     public function isDue(): bool

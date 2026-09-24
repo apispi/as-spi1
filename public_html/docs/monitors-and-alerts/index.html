@@ -30,7 +30,7 @@
     <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Automation &amp; monitoring</span></div>
     <h1>Monitors and alerts</h1>
     <p class="lead">Schedule a collection, track uptime, and get alerted when status changes.</p>
-    <nav class="toc"><span class="toc-label">On this page</span><a href="#setting-up-a-monitor">Setting up a monitor</a><a href="#alert-on-transition-not-on-repeat">Alert on transition, not on repeat</a><a href="#alert-channels">Alert channels</a><a href="#mcp-drift-monitors">MCP drift monitors</a><a href="#uptime-and-status">Uptime and status</a></nav>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#setting-up-a-monitor">Setting up a monitor</a><a href="#alert-on-transition-not-on-repeat">Alert on transition, not on repeat</a><a href="#alert-channels">Alert channels</a><a href="#muting-alerts-during-a-deploy">Muting alerts during a deploy</a><a href="#schema-drift-monitors">Schema drift monitors</a><a href="#mcp-drift-monitors">MCP drift monitors</a><a href="#uptime-and-status">Uptime and status</a></nav>
     <article><p>A monitor runs a <a href="/docs/collections/">collection</a> on a schedule, records each run as a history point, and alerts you when its pass/fail status changes. It is how you turn a suite of checks into continuous confidence that an API is healthy. Manage monitors in <a href="/monitors">Monitors</a>.</p>
 <h2 id="setting-up-a-monitor">Setting up a monitor</h2>
 <ol><li>Pick the collection to run and the environment to run it against.</li><li>Choose how often it should run.</li><li>Enable alerts and choose the channels to notify.</li></ol>
@@ -41,6 +41,13 @@
 <p>Alerts go to your email plus any enabled alert channels. A channel is a reusable destination, shared across all your monitors. Supported channel types:</p>
 <ul><li><strong>Slack</strong> — an incoming-webhook URL; the alert is posted as a message.</li><li><strong>Discord</strong> — an incoming-webhook URL; the alert is posted as a message.</li><li><strong>Webhook</strong> — a generic URL that receives a structured JSON payload describing the event.</li></ul>
 <div class="note">Webhook, Slack, and Discord channels work with no SMTP configured at all, and one failing destination never stops the others. Channel URLs are credentials — anyone holding one can post to your channel — so they are treated as secrets.</div>
+<h2 id="muting-alerts-during-a-deploy">Muting alerts during a deploy</h2>
+<p>A deploy that trips every monitor teaches people to ignore monitors. <strong>Mute alerts</strong> silences one for a set time — and that is deliberately not the same as pausing it:</p>
+<ul><li>A <strong>paused</strong> monitor stops checking. Its uptime quietly stops meaning anything, because nothing was measured.</li><li>A <strong>muted</strong> monitor keeps checking and keeps recording. The history and the uptime figure stay honest through the deploy; it just does not wake anybody.</li></ul>
+<p>Crucially, a failure that begins while muted is <strong>delayed, not swallowed</strong>. Spi tracks what it last *announced* separately from what it last *observed*, so when the mute expires and the target is still down, the alert fires then. If it broke and recovered entirely within the mute, nothing is sent — nobody needed to know.</p>
+<div class="note">Unmute at any time from the monitor list; the next run alerts if it is still failing. A mute lasts at most a week — beyond that it is not a deploy, it is a decision, and the monitor should be paused or deleted.</div>
+<h2 id="schema-drift-monitors">Schema drift monitors</h2>
+<p>A monitor can watch a <strong>GraphQL endpoint</strong> or an <strong>OpenAPI document</strong> and compare its schema with the last run. Only a breaking change fails the monitor; an addition is recorded and passes. See <a href="/docs/api-diff/">API diff</a> for what counts as breaking.</p>
 <h2 id="mcp-drift-monitors">MCP drift monitors</h2>
 <p>A monitor can instead watch an MCP server for <strong>drift</strong>: it snapshots the server's tool list and compares each run against the previous snapshot. When the surface changes it records a failing result and alerts once; the new shape then becomes the baseline, so it does not re-alert forever or send a misleading "recovered" message. See <a href="/docs/mcp-testing/">MCP testing</a>.</p>
 <h2 id="uptime-and-status">Uptime and status</h2>

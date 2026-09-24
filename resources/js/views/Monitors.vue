@@ -30,6 +30,9 @@
             <span class="mon-name">{{ m.name }}</span>
             <span class="mon-pill" :class="m.last_status">{{ statusLabel(m) }}</span>
             <span v-if="!m.is_enabled" class="mon-pill paused">paused</span>
+            <span v-if="m.is_snoozed" class="mon-pill snoozed" :title="'Alerts muted until ' + when(m.snoozed_until)">
+              alerts muted
+            </span>
           </div>
           <div class="mon-meta">
             <em v-if="ownerName(m)" class="mon-owner">{{ ownerName(m) }}</em>
@@ -39,6 +42,7 @@
             <template v-if="m.last_run_at"> · last run {{ ago(m.last_run_at) }}</template>
             <template v-if="m.uptime !== null"> · {{ m.uptime }}% uptime</template>
             <template v-if="m.consecutive_failures > 1"> · {{ m.consecutive_failures }} failures in a row</template>
+            <template v-if="m.is_snoozed"> · still checking, alerts muted until {{ when(m.snoozed_until) }}</template>
           </div>
         </div>
 
@@ -46,6 +50,8 @@
           <button class="mon-btn" @click="runNow(m)" :disabled="busy === m.id">
             {{ busy === m.id ? 'Running…' : 'Run now' }}
           </button>
+          <button v-if="m.is_snoozed" class="mon-btn" @click="wake(m)" :disabled="busy === m.id">Unmute</button>
+          <button v-else class="mon-btn" @click="snooze(m)" :disabled="busy === m.id">Mute alerts</button>
           <button class="mon-btn" @click="openHistory(m)">History</button>
           <button class="mon-btn" @click="edit(m)">Edit</button>
         </div>
@@ -373,6 +379,7 @@
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { confirmDialog } from '../confirm';
+import { toast } from '../toast';
 import { useMonitorsStore } from '../store/monitors';
 import { useCollectionsStore } from '../store/collections';
 
@@ -418,6 +425,54 @@ const busyChannel = ref(null);
 const history = ref(null);
 const saving = ref(false);
 const busy = ref(null);
+
+const SNOOZE_CHOICES = [
+  { minutes: 60, label: '1 hour' },
+  { minutes: 240, label: '4 hours' },
+  { minutes: 1440, label: '1 day' },
+];
+
+// Muting is not the same as pausing: the monitor keeps checking, so the
+// history and uptime stay honest through a deploy. Said out loud here because
+// the two buttons sit next to each other.
+async function snooze(m) {
+  const choice = window.prompt(
+    `Mute alerts for "${m.name}" for how long?\n\n${SNOOZE_CHOICES.map(c => c.minutes + ' = ' + c.label).join('\n')}\n\nMinutes:`,
+    '60'
+  );
+  if (choice === null) return;
+
+  const minutes = parseInt(choice, 10);
+  if (!Number.isInteger(minutes) || minutes < 1) {
+    toast.error('Enter a number of minutes.');
+    return;
+  }
+
+  busy.value = m.id;
+  try {
+    await axios.post(`/api/monitors/${m.id}/snooze`, { minutes });
+    await store.fetch();
+    toast.success(`Alerts muted for "${m.name}". It keeps checking.`);
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Could not mute alerts.');
+  } finally {
+    busy.value = null;
+  }
+}
+
+async function wake(m) {
+  busy.value = m.id;
+  try {
+    await axios.delete(`/api/monitors/${m.id}/snooze`);
+    await store.fetch();
+    toast.success(`Alerts back on for "${m.name}".`);
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Could not unmute alerts.');
+  } finally {
+    busy.value = null;
+  }
+}
+
 const error = ref('');
 
 onMounted(() => {
@@ -593,9 +648,9 @@ const ago = (iso) => {
   return `${Math.floor(s / 86400)}d ago`;
 };
 
-const when = (iso) => new Date(iso).toLocaleString('en-AU', {
+const when = (iso) => (iso ? new Date(iso).toLocaleString('en-AU', {
   day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
-});
+}) : '');
 
 const medianLatency = computed(() => {
   const times = (history.value?.results || []).map((r) => r.time_ms).sort((a, b) => a - b);
@@ -752,6 +807,7 @@ const openHistory = async (m) => {
 .mon-pill.passing { color: #3fb950; background: rgba(63,185,80,.16); }
 .mon-pill.failing { color: #f85149; background: rgba(248,81,73,.14); }
 .mon-pill.unknown { color: var(--text-secondary); background: rgba(255,255,255,.07); }
+.mon-pill.snoozed { background: rgba(210,153,34,.18); color: #d29922; }
 .mon-pill.paused { color: #d29922; background: rgba(210,153,34,.14); }
 .mon-meta { font-size: 12px; color: var(--text-secondary); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mon-actions { display: flex; gap: 6px; flex-shrink: 0; }
