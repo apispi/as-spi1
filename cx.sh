@@ -12,7 +12,7 @@
 #   ./cx.sh 02 a@b.com   pass a parameter (e.g. an email) to the option
 #   CX_YES=1 ./cx.sh 92  auto-approve confirmations (unattended runs)
 #
-# Version 1.2
+# Version 1.3
 #================================================================
 clear
 
@@ -104,6 +104,7 @@ echo "21 : DEMO-CLEAR: remove all demo data            [DESTRUCTIVE]"
 echo "22 : CATALOG-SEED: (re)seed the catalog (idempotent)"
 echo "23 : CATALOG: counts by type"
 echo "24 : REPORTS: inspection reports by type"
+echo "25 : BACKUP: export a user's workspace to ./log  (email)"
 rule
 echo OPERATIONS
 echo "30 : MONITORS: run those that are due"
@@ -112,11 +113,20 @@ echo "32 : WEBHOOKS: run the silence check"
 echo "33 : STATS: platform totals at a glance"
 echo "34 : MAIL-TEST: send a test email             (email)"
 rule
+echo MONITORING
+echo "35 : MONITORS-LIST: every monitor, with type and state"
+echo "36 : MUTED: monitors with alerts muted (flags stale mutes)"
+echo "37 : UNMUTE: clear a mute                     (id|all)"
+echo "38 : SCHEDULER: is schedule:run actually firing?"
+rule
 echo CREDENTIALS
 echo "50 : KEYS: API keys, with scopes and last use"
 echo "51 : KEY-REVOKE: revoke a user's API keys    (email)"
 echo "52 : AUTH-SCHEMES: which auth schemes are in use"
 echo "53 : TOKEN-CACHE: clear cached OAuth access tokens"
+rule
+echo DIAGNOSTICS
+echo "54 : HEALTH: configuration and background-work sanity check"
 rule
 echo MAINTENANCE
 echo "90 : PRUNE-HISTORY: delete request history older than N days [DESTRUCTIVE]"
@@ -490,6 +500,87 @@ case "$SELECTION" in
     php artisan cache:clear
     note "Flushed the application cache"
   else echo "Cancelled."; fi
+  ;;
+
+  "25" )
+  banner "BACKUP A WORKSPACE"
+  # The same bundle the Workspace screen exports, written to ./log. Secret
+  # values and credentials are stripped by the exporter, so a backup is safe
+  # to copy around — and restoring one means re-entering them.
+  if need_email; then
+    tink "\$u=\App\Models\User::where('email','$EMAIL')->first(); if(!\$u){echo 'No such user';return;} \$b=app(\App\Services\Export\WorkspaceBundle::class)->export(\$u); \$slug=\$u->organisation?->slug ?? 'solo-'.\$u->id; \$path='log/backup-'.\$slug.'-'.now()->format('Y-m-d-His').'.spi-workspace.json'; file_put_contents(\$path, json_encode(\$b, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES)); echo 'Wrote '.\$path.PHP_EOL; echo count(\$b['saved_requests']).' request(s), '.count(\$b['collections']).' collection(s), '.count(\$b['environments']).' environment(s)'.PHP_EOL; echo 'Credentials are NOT included.';"
+    note "Backed up the workspace of $EMAIL"
+  else echo "No email given."; fi
+  ;;
+
+  "35" )
+  banner "MONITORS"
+  tink "\$m=\App\Models\Monitor::with('user:id,email')->orderBy('id')->get(); echo \$m->isEmpty()?'No monitors.':\$m->map(function(\$x){ \$state=!\$x->is_enabled?'paused':(\$x->isSnoozed()?'muted':\$x->last_status); return str_pad(\$x->id,5).str_pad(mb_substr(\$x->name,0,26),28).str_pad(\$x->type,15).str_pad(\$state,9).str_pad(\$x->interval_minutes.'m',6).'last '.(\$x->last_run_at?\$x->last_run_at->diffForHumans():'never'); })->implode(PHP_EOL); echo PHP_EOL.'Enabled: '.\App\Models\Monitor::where('is_enabled',true)->count().'  failing: '.\App\Models\Monitor::where('last_status','failing')->count();"
+  note "Listed monitors"
+  ;;
+
+  "36" )
+  banner "MONITORS WITH ALERTS MUTED"
+  # A forgotten mute is a monitor that runs, fails, and tells nobody — worth
+  # looking at deliberately rather than discovering after an incident.
+  tink "\$m=\App\Models\Monitor::whereNotNull('snoozed_until')->with('user:id,email')->orderBy('snoozed_until')->get(); if(\$m->isEmpty()){echo 'No mutes set.';return;} \$active=\$m->filter(fn(\$x)=>\$x->isSnoozed()); \$expired=\$m->reject(fn(\$x)=>\$x->isSnoozed()); echo 'Currently muted'.PHP_EOL; echo (\$active->isEmpty()?'  none':\$active->map(fn(\$x)=>'  '.str_pad(\$x->id,5).str_pad(mb_substr(\$x->name,0,26),28).str_pad(\$x->last_status,9).'until '.\$x->snoozed_until->format('Y-m-d H:i').' ('.\$x->snoozed_until->diffForHumans().')'.(\$x->last_status==='failing'?'  <-- FAILING SILENTLY':''))->implode(PHP_EOL)).PHP_EOL; echo 'Mutes that have expired (alerting again)'.PHP_EOL; echo (\$expired->isEmpty()?'  none':\$expired->map(fn(\$x)=>'  '.str_pad(\$x->id,5).str_pad(mb_substr(\$x->name,0,26),28).'expired '.\$x->snoozed_until->diffForHumans())->implode(PHP_EOL));"
+  note "Listed muted monitors"
+  ;;
+
+  "37" )
+  banner "UNMUTE A MONITOR"
+  TARGET="$PARAM2"
+  if [ -z "$TARGET" ]; then printf 'Monitor id, or "all": '; read -r TARGET; fi
+  if [ -z "$TARGET" ]; then echo "Nothing given."; else
+    if [ "$TARGET" = "all" ]; then
+      COUNT=$(tink "echo \App\Models\Monitor::whereNotNull('snoozed_until')->where('snoozed_until','>',now())->count();" | tr -dc '0-9')
+      echo "Monitors currently muted: ${COUNT:-0}"
+      if [ "${COUNT:-0}" != "0" ] && confirm "Unmute all of them? Alerting resumes on the next run."; then
+        tink "echo \App\Models\Monitor::whereNotNull('snoozed_until')->update(['snoozed_until'=>null]).' unmuted';"
+        note "Unmuted all monitors"
+      else echo "Nothing unmuted."; fi
+    else
+      tink "\$m=\App\Models\Monitor::find((int)'$TARGET'); if(!\$m){echo 'No monitor with that id';return;} \$m->update(['snoozed_until'=>null]); echo 'Unmuted '.\$m->name.' (alerting resumes on its next run)';"
+      note "Unmuted monitor $TARGET"
+    fi
+  fi
+  ;;
+
+  "38" )
+  banner "SCHEDULER HEALTH"
+  # Monitors are only as good as the cron entry running schedule:run. If that
+  # stops, nothing fails loudly — the checks just quietly stop happening.
+  tink "\$m=\App\Models\Monitor::where('is_enabled',true)->get(); if(\$m->isEmpty()){echo 'No enabled monitors to judge by.';return;} \$last=\$m->max('last_run_at'); echo 'Enabled monitors      '.\$m->count().PHP_EOL; echo 'Last run of any       '.(\$last?\$last->format('Y-m-d H:i').' ('.\$last->diffForHumans().')':'never').PHP_EOL; \$never=\$m->whereNull('last_run_at'); echo 'Never run             '.\$never->count().PHP_EOL; \$overdue=\$m->filter(fn(\$x)=>\$x->last_run_at && \$x->last_run_at->addMinutes(\$x->interval_minutes*2)->isPast()); echo 'Overdue (2x interval) '.\$overdue->count().PHP_EOL; if(\$overdue->isNotEmpty()){echo \$overdue->map(fn(\$x)=>'  '.str_pad(mb_substr(\$x->name,0,28),30).'every '.\$x->interval_minutes.'m, last '.\$x->last_run_at->diffForHumans())->implode(PHP_EOL).PHP_EOL;} echo PHP_EOL.((\$last===null || \$last->diffInMinutes(now())>15) ? 'VERDICT: schedule:run does not look like it is firing. Check the cron entry.' : 'VERDICT: the scheduler looks healthy.');"
+  note "Checked scheduler health"
+  ;;
+
+  "54" )
+  banner "HEALTH CHECK"
+  tink "
+    \$rows=[];
+    \$rows[]=['Environment', config('app.env')];
+    \$rows[]=['Debug mode', config('app.debug')?'ON':'off'];
+    \$rows[]=['URL', config('app.url')];
+    \$rows[]=['Database', config('database.default').' / '.\Illuminate\Support\Facades\DB::connection()->getDatabaseName()];
+    \$rows[]=['Mailer', config('mail.default')];
+    \$rows[]=['Cache store', config('cache.default')];
+    \$rows[]=['Queue', config('queue.default')];
+    \$rows[]=['Failed jobs', (string)\Illuminate\Support\Facades\DB::table('failed_jobs')->count()];
+    \$rows[]=['Users', (string)\App\Models\User::count()];
+    \$rows[]=['Enabled monitors', (string)\App\Models\Monitor::where('is_enabled',true)->count()];
+    \$rows[]=['Muted monitors', (string)\App\Models\Monitor::whereNotNull('snoozed_until')->where('snoozed_until','>',now())->count()];
+    \$last=\App\Models\Monitor::max('last_run_at');
+    \$rows[]=['Last monitor run', \$last ? \Illuminate\Support\Carbon::parse(\$last)->diffForHumans() : 'never'];
+    \$rows[]=['Pending invitations', (string)\App\Models\WorkspaceInvitation::pending()->count()];
+    foreach(\$rows as \$r){ echo str_pad(\$r[0],22).\$r[1].PHP_EOL; }
+    \$warn=[];
+    if(config('app.env')==='production' && config('app.debug')) \$warn[]='Debug mode is ON in production - it leaks stack traces and config.';
+    if(config('mail.default')==='log') \$warn[]='Mail is going to the log, so no email actually reaches anyone.';
+    if(\Illuminate\Support\Facades\DB::table('failed_jobs')->count()>0) \$warn[]='There are failed queue jobs (see option 93).';
+    if(\$last===null || \Illuminate\Support\Carbon::parse(\$last)->diffInMinutes(now())>15) \$warn[]='No monitor has run recently - check the schedule:run cron entry (option 38).';
+    echo PHP_EOL.(\$warn===[] ? 'No warnings.' : 'WARNINGS'.PHP_EOL.'  - '.implode(PHP_EOL.'  - ', \$warn));
+  "
+  note "Ran the health check"
   ;;
 
   "92" )
