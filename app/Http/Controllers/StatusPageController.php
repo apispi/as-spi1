@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Monitor;
 use App\Models\StatusPage;
+use App\Models\StatusPageIncident;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -111,15 +112,116 @@ class StatusPageController extends Controller
 
         $states = $monitors->pluck('status');
 
+        $incidents = $page->incidents()->published()->get();
+
         return response()->json([
             'name' => $page->name,
             'description' => $page->description,
+            // Monitor-derived, deliberately: the dot keeps meaning "what the
+            // checks say". An incident is the owner's commentary alongside it,
+            // and conflating the two would make a green page with a posted
+            // incident read as a failing one.
             'overall' => $states->contains(Monitor::STATUS_FAILING)
                 ? 'failing'
                 : ($states->contains(Monitor::STATUS_PASSING) ? 'passing' : 'unknown'),
             'monitors' => $monitors,
+            'incidents' => $incidents->map->toPublicArray()->values(),
+            'has_open_incident' => $incidents->contains(fn ($i) => ! $i->isResolved()),
             'generated_at' => now(),
         ]);
+    }
+
+    // -------------------------------------------------------------- incidents
+
+    public function incidents(Request $request, int $id)
+    {
+        $page = StatusPage::inWorkspaceOf($request->user())->findOrFail($id);
+
+        return response()->json(
+            $page->incidents()->with('user:id,name')->orderByDesc('started_at')
+                ->get()->map->toClientArray()->values()
+        );
+    }
+
+    /**
+     * Open an incident. The opening note becomes the first timeline entry, so
+     * every incident starts with a statement rather than a bare title.
+     */
+    public function openIncident(Request $request, int $id)
+    {
+        $page = StatusPage::inWorkspaceOf($request->user())->findOrFail($id);
+
+        if ($page->incidents()->open()->count() >= StatusPageIncident::MAX_OPEN) {
+            return response()->json([
+                'message' => 'There are already '.StatusPageIncident::MAX_OPEN.' open incidents on this page. Resolve one first.',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:160',
+            'body' => 'required|string|max:2000',
+            'status' => ['nullable', Rule::in(StatusPageIncident::STATUSES)],
+            'started_at' => 'nullable|date',
+        ]);
+
+        $status = $validated['status'] ?? StatusPageIncident::STATUS_INVESTIGATING;
+
+        $incident = $page->incidents()->create([
+            'user_id' => $request->user()->id,
+            'title' => $validated['title'],
+            'status' => $status,
+            // Backdating is allowed: an incident is usually written up once
+            // somebody has stopped firefighting, and saying it began then is
+            // more honest than saying it began when it got typed.
+            'started_at' => $validated['started_at'] ?? now(),
+            'resolved_at' => $status === StatusPageIncident::STATUS_RESOLVED ? now() : null,
+            'updates' => [[
+                'at' => now()->toIso8601String(),
+                'status' => $status,
+                'body' => $validated['body'],
+            ]],
+        ]);
+
+        return response()->json($incident->load('user:id,name')->toClientArray(), 201);
+    }
+
+    /** Append to the timeline, moving the incident's status with it. */
+    public function updateIncident(Request $request, int $id, int $incidentId)
+    {
+        $incident = $this->findIncident($request, $id, $incidentId);
+
+        $validated = $request->validate([
+            'status' => ['required', Rule::in(StatusPageIncident::STATUSES)],
+            'body' => 'required|string|max:2000',
+        ]);
+
+        $incident->addUpdate($validated['status'], $validated['body']);
+
+        return response()->json($incident->fresh()->load('user:id,name')->toClientArray());
+    }
+
+    /** Correct the title. The timeline itself is append-only. */
+    public function renameIncident(Request $request, int $id, int $incidentId)
+    {
+        $incident = $this->findIncident($request, $id, $incidentId);
+
+        $incident->update($request->validate(['title' => 'required|string|max:160']));
+
+        return response()->json($incident->fresh()->load('user:id,name')->toClientArray());
+    }
+
+    public function deleteIncident(Request $request, int $id, int $incidentId)
+    {
+        $this->findIncident($request, $id, $incidentId)->delete();
+
+        return response()->json(['message' => 'Incident removed.']);
+    }
+
+    private function findIncident(Request $request, int $id, int $incidentId): StatusPageIncident
+    {
+        $page = StatusPage::inWorkspaceOf($request->user())->findOrFail($id);
+
+        return $page->incidents()->findOrFail($incidentId);
     }
 
     // ---------------------------------------------------------------- helpers
@@ -134,6 +236,9 @@ class StatusPageController extends Controller
             'is_enabled' => $page->is_enabled,
             'monitor_ids' => $page->monitors->pluck('id')->values(),
             'monitors' => $page->monitors->pluck('name')->values(),
+            // Surfaced on the owner's list so an incident left open on a public
+            // page is visible without opening the page itself.
+            'open_incidents' => $page->incidents()->open()->count(),
         ];
     }
 

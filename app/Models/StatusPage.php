@@ -55,4 +55,9 @@ class StatusPage extends Model
     {
         return $this->belongsToMany(Monitor::class)->orderByPivot('position');
     }
+
+    public function incidents()
+    {
+        return $this->hasMany(StatusPageIncident::class);
+    }
 }

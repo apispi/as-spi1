@@ -17,6 +17,32 @@
           <p v-if="page.description" class="sp-desc">{{ page.description }}</p>
         </header>
 
+        <!-- Incidents come before the dots: when something is wrong, what the
+             owner has said about it is the thing a visitor came for. -->
+        <section v-if="(page.incidents || []).length" class="sp-incidents">
+          <h2 class="sp-section-title">
+            {{ page.has_open_incident ? 'Active incidents' : 'Recent incidents' }}
+          </h2>
+
+          <article v-for="(inc, i) in page.incidents" :key="i" class="sp-incident" :class="{ resolved: inc.resolved }">
+            <div class="sp-inc-head">
+              <span class="sp-inc-status" :class="'is-' + inc.status">{{ statusLabel(inc.status) }}</span>
+              <h3 class="sp-inc-title">{{ inc.title }}</h3>
+            </div>
+            <p class="sp-inc-when">
+              Started {{ ago(inc.started_at) }}<template v-if="inc.resolved_at"> · resolved {{ ago(inc.resolved_at) }}</template>
+            </p>
+
+            <ol class="sp-inc-timeline">
+              <li v-for="(u, j) in [...inc.updates].reverse()" :key="j">
+                <span class="sp-inc-u-status">{{ statusLabel(u.status) }}</span>
+                <span class="sp-inc-u-at">{{ ago(u.at) }}</span>
+                <p class="sp-inc-u-body">{{ u.body }}</p>
+              </li>
+            </ol>
+          </article>
+        </section>
+
         <section v-for="m in page.monitors" :key="m.name" class="sp-monitor">
           <div class="sp-mon-head">
             <span class="sp-dot" :class="m.status"></span>
@@ -95,6 +121,14 @@ onMounted(() => {
 });
 onUnmounted(() => clearInterval(timer));
 
+const STATUS_LABELS = {
+  investigating: 'Investigating',
+  identified: 'Identified',
+  monitoring: 'Monitoring',
+  resolved: 'Resolved',
+};
+const statusLabel = (v) => STATUS_LABELS[v] || v;
+
 const overallLabel = computed(() => ({
   passing: 'All systems operational',
   failing: 'Some checks are failing',
@@ -112,6 +146,32 @@ const when = (iso) => new Date(iso).toLocaleString('en-AU', { day: '2-digit', mo
 </script>
 
 <style scoped>
+/* Incidents */
+.sp-incidents { margin-bottom: 28px; }
+.sp-section-title { font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin: 0 0 12px; }
+.sp-incident {
+  border: 1px solid var(--border-color); border-left: 3px solid #d29922;
+  border-radius: 10px; padding: 14px 16px; margin-bottom: 12px;
+}
+.sp-incident.resolved { border-left-color: #3fb950; }
+.sp-inc-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sp-inc-title { font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0; }
+.sp-inc-status {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .05em; font-weight: 700;
+  padding: 3px 8px; border-radius: 5px; background: var(--border-color); color: var(--text-secondary);
+}
+.is-investigating { background: rgba(248,81,73,.16); color: #f85149; }
+.is-identified { background: rgba(210,153,34,.18); color: #d29922; }
+.is-monitoring { background: rgba(88,166,255,.16); color: #58a6ff; }
+.is-resolved { background: rgba(63,185,80,.16); color: #3fb950; }
+.sp-inc-when { font-size: 12px; color: var(--text-secondary); margin: 6px 0 10px; }
+.sp-inc-timeline { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--border-color); }
+.sp-inc-timeline li { padding: 0 0 10px 14px; position: relative; }
+.sp-inc-timeline li:last-child { padding-bottom: 0; }
+.sp-inc-u-status { font-size: 11px; font-weight: 700; color: var(--text-primary); }
+.sp-inc-u-at { font-size: 11px; color: var(--text-secondary); margin-left: 8px; }
+.sp-inc-u-body { margin: 3px 0 0; font-size: 13px; line-height: 1.55; color: var(--text-secondary); }
+
 .sp { min-height: 100%; background: var(--bg-color); color: var(--text-primary); overflow-y: auto; }
 .sp-container { max-width: 720px; margin: 0 auto; padding: 48px 24px 64px; }
 .sp-muted { color: var(--text-secondary); }

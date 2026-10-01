@@ -542,6 +542,15 @@ export const DOCS = [
       { type: 'p', text: 'A status page publishes the health of one or more [monitors](/docs/monitors-and-alerts) at a public URL:' },
       { type: 'code', lang: 'text', code: 'https://apispi.com/status/{token}' },
       { type: 'p', text: 'It is token-gated and unauthenticated, renders current status and recent uptime from monitor history, and can be enabled or disabled. It is the page you point customers or teammates at instead of answering "is it down?" by hand.' },
+      { type: 'h3', text: 'Incidents' },
+      { type: 'p', text: 'Monitors answer "is it up?". They cannot answer "do you know, and what are you doing about it?" — and a red dot with no commentary is the least useful kind of status page. Post an **incident** from Monitors → Status pages → Incidents and it appears on the public page immediately, above the monitor list.' },
+      { type: 'ul', items: [
+        'An incident moves through **investigating → identified → monitoring → resolved**, and each step is an **appended** timeline entry. Visitors see how the picture changed, which is most of what makes a status page trustworthy afterwards.',
+        'It is **independent of monitor state**. That is the point: a partial outage, a slow third party or a planned window all need saying even when every check is green. The status dot keeps meaning "what the checks say" and is never overridden by a note.',
+        'Incidents can be **backdated** — they are usually written up once the firefighting has stopped — and **reopened**, so something called resolved too early does not need a second incident to correct it.',
+        'A resolved incident stays on the page for **seven days**, then drops off. A page that forgets an outage the moment it ends gives a visitor no way to tell "fine now" from "fine all along".',
+      ] },
+      { type: 'note', text: 'The public page carries the title, the status and the timeline — never who opened or is handling it. Your own view names them; the visitor\'s does not.' },
       { type: 'h2', text: 'Exporting collections' },
       { type: 'p', text: 'A [collection](/docs/collections) can be exported so it lives on outside Spi:' },
       { type: 'ul', items: [

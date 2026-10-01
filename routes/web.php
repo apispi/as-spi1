@@ -227,6 +227,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/status-pages', [StatusPageController::class, 'store']);
     Route::put('/api/status-pages/{id}', [StatusPageController::class, 'update']);
     Route::delete('/api/status-pages/{id}', [StatusPageController::class, 'destroy']);
+    Route::get('/api/status-pages/{id}/incidents', [StatusPageController::class, 'incidents']);
+    Route::post('/api/status-pages/{id}/incidents', [StatusPageController::class, 'openIncident']);
+    Route::post('/api/status-pages/{id}/incidents/{incidentId}/updates', [StatusPageController::class, 'updateIncident']);
+    Route::put('/api/status-pages/{id}/incidents/{incidentId}', [StatusPageController::class, 'renameIncident']);
+    Route::delete('/api/status-pages/{id}/incidents/{incidentId}', [StatusPageController::class, 'deleteIncident']);
 
     Route::get('/api/monitors', [MonitorController::class, 'index']);
     Route::get('/api/monitors/{id}', [MonitorController::class, 'show']);

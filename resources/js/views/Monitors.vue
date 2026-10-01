@@ -256,10 +256,82 @@
               </div>
               <div class="mon-actions">
                 <a :href="p.url" target="_blank" rel="noopener" class="mon-btn">Open</a>
+                <button class="mon-btn" @click="openIncidents(p)">
+                  Incidents<span v-if="p.open_incidents" class="mon-pill failing">{{ p.open_incidents }}</span>
+                </button>
                 <button class="mon-btn" @click="editPage(p)">Edit</button>
               </div>
             </li>
           </ul>
+
+          <!-- Incidents for one page -->
+          <div v-if="incidentsFor" class="mon-chan-form">
+            <h3 class="mon-sub">Incidents — {{ incidentsFor.name }}</h3>
+            <p class="mon-note">
+              Monitors say whether it is up. An incident is you saying whether you know, and what you are
+              doing — including for things no check can see, like a slow third party or a planned window.
+              Updates append, so visitors can see how the picture changed.
+            </p>
+
+            <ul v-if="incidents.length" class="mon-chan-list">
+              <li v-for="inc in incidents" :key="inc.id" class="mon-chan">
+                <div class="mon-chan-main">
+                  <div>
+                    <span class="mon-chan-name">{{ inc.title }}</span>
+                    <span class="mon-pill" :class="inc.resolved ? 'passing' : 'failing'">{{ inc.status }}</span>
+                  </div>
+                  <div class="mon-chan-url">
+                    {{ inc.updates.length }} update(s) · opened by {{ inc.opened_by || '—' }}
+                  </div>
+                </div>
+                <div class="mon-actions">
+                  <button class="mon-btn" @click="replyTo = replyTo === inc.id ? null : inc.id">
+                    {{ replyTo === inc.id ? 'Close' : 'Post update' }}
+                  </button>
+                  <button class="mon-danger" @click="removeIncident(inc)" :disabled="savingIncident">Delete</button>
+                </div>
+              </li>
+            </ul>
+            <p v-else class="mon-note">No incidents on this page.</p>
+
+            <template v-if="replyTo">
+              <label class="mon-label">Update</label>
+              <select v-model="updateForm.status" class="input-field">
+                <option value="investigating">Investigating</option>
+                <option value="identified">Identified</option>
+                <option value="monitoring">Monitoring</option>
+                <option value="resolved">Resolved</option>
+              </select>
+              <textarea v-model="updateForm.body" class="input-field mon-inc-body" maxlength="2000"
+                        placeholder="What has changed since the last update?"></textarea>
+              <div class="mon-chan-actions">
+                <button class="mon-primary" @click="postUpdate" :disabled="savingIncident || !updateForm.body.trim()">
+                  Post update
+                </button>
+              </div>
+            </template>
+
+            <template v-else>
+              <label class="mon-label">New incident</label>
+              <input v-model="incidentForm.title" class="input-field" maxlength="160"
+                     placeholder="Elevated error rates on checkout" />
+              <textarea v-model="incidentForm.body" class="input-field mon-inc-body" maxlength="2000"
+                        placeholder="What visitors should know right now."></textarea>
+              <select v-model="incidentForm.status" class="input-field">
+                <option value="investigating">Investigating</option>
+                <option value="identified">Identified</option>
+                <option value="monitoring">Monitoring</option>
+                <option value="resolved">Resolved (post-hoc note)</option>
+              </select>
+              <div class="mon-chan-actions">
+                <button class="mon-primary" @click="createIncident"
+                        :disabled="savingIncident || !incidentForm.title.trim() || !incidentForm.body.trim()">
+                  Publish incident
+                </button>
+                <button class="mon-btn" @click="incidentsFor = null" :disabled="savingIncident">Done</button>
+              </div>
+            </template>
+          </div>
 
           <div v-if="pageForm" class="mon-chan-form">
             <label class="mon-label">Name</label>
@@ -415,6 +487,76 @@ const channels = ref([]);
 const pages = ref([]);
 const showPages = ref(false);
 const pageForm = ref(null);
+
+// ── Status page incidents ────────────────────────────────────────────────
+const incidentsFor = ref(null);
+const incidents = ref([]);
+const savingIncident = ref(false);
+const replyTo = ref(null);
+const emptyIncident = () => ({ title: '', body: '', status: 'investigating' });
+const incidentForm = ref(emptyIncident());
+const updateForm = ref({ status: 'identified', body: '' });
+
+async function openIncidents(page) {
+  incidentsFor.value = page;
+  replyTo.value = null;
+  incidentForm.value = emptyIncident();
+  await loadIncidents();
+}
+
+async function loadIncidents() {
+  try {
+    incidents.value = (await axios.get(`/api/status-pages/${incidentsFor.value.id}/incidents`)).data;
+  } catch {
+    incidents.value = [];
+  }
+}
+
+async function createIncident() {
+  savingIncident.value = true;
+  try {
+    await axios.post(`/api/status-pages/${incidentsFor.value.id}/incidents`, incidentForm.value);
+    incidentForm.value = emptyIncident();
+    toast.success('Incident published — it is live on the status page now.');
+    await Promise.all([loadIncidents(), fetchPages()]);
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Could not publish that incident.');
+  } finally {
+    savingIncident.value = false;
+  }
+}
+
+async function postUpdate() {
+  savingIncident.value = true;
+  try {
+    await axios.post(
+      `/api/status-pages/${incidentsFor.value.id}/incidents/${replyTo.value}/updates`,
+      updateForm.value
+    );
+    updateForm.value = { status: 'identified', body: '' };
+    replyTo.value = null;
+    toast.success('Update posted.');
+    await Promise.all([loadIncidents(), fetchPages()]);
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Could not post that update.');
+  } finally {
+    savingIncident.value = false;
+  }
+}
+
+async function removeIncident(inc) {
+  if (!(await confirmDialog(`Delete "${inc.title}"? It disappears from the public page, timeline and all.`))) return;
+  savingIncident.value = true;
+  try {
+    await axios.delete(`/api/status-pages/${incidentsFor.value.id}/incidents/${inc.id}`);
+    toast.success('Incident removed.');
+    await Promise.all([loadIncidents(), fetchPages()]);
+  } catch (e) {
+    toast.error(e.response?.data?.message || 'Could not remove that incident.');
+  } finally {
+    savingIncident.value = false;
+  }
+}
 const pageError = ref('');
 const savingPage = ref(false);
 const showChannels = ref(false);
@@ -807,6 +949,8 @@ const openHistory = async (m) => {
 .mon-pill.passing { color: #3fb950; background: rgba(63,185,80,.16); }
 .mon-pill.failing { color: #f85149; background: rgba(248,81,73,.14); }
 .mon-pill.unknown { color: var(--text-secondary); background: rgba(255,255,255,.07); }
+.mon-inc-body { min-height: 76px; resize: vertical; margin-top: 8px; }
+.mon-sub { font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin: 0 0 6px; }
 .mon-pill.snoozed { background: rgba(210,153,34,.18); color: #d29922; }
 .mon-pill.paused { color: #d29922; background: rgba(210,153,34,.14); }
 .mon-meta { font-size: 12px; color: var(--text-secondary); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
