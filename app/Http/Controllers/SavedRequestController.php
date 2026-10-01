@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\SavedRequest;
+use App\Models\WorkspaceActivity;
 use App\Rules\TemplatedUrl;
 use App\Services\Assertions\Assertion;
 use App\Services\Auth\RequestAuthenticator;
@@ -25,9 +26,34 @@ class SavedRequestController extends Controller
 
     public function index(Request $request)
     {
-        return response()->json(
-            SavedRequest::inWorkspaceOf($request->user())->with('owner:id,name')->latest()->get()
-        );
+        $requests = SavedRequest::inWorkspaceOf($request->user())
+            ->with(['owner:id,name', 'steps.collection:id,name'])
+            ->latest()
+            ->get();
+
+        return response()->json($requests->map(fn ($saved) => $this->present($saved))->values());
+    }
+
+    /**
+     * The shape every saved-request response uses.
+     *
+     * Kept in one place because the list renders the usage and flag fields: an
+     * endpoint that returned the bare model would hand the client a row with
+     * those missing, and the row would render as unused.
+     */
+    private function present(SavedRequest $saved): array
+    {
+        $saved->loadMissing(['owner:id,name', 'steps.collection:id,name']);
+
+        return $saved->toArray() + [
+            // Deleting a request removes it from these, so a caller can say so
+            // before doing it rather than after.
+            'used_by' => $saved->steps->map(fn ($step) => $step->collection?->name)
+                ->filter()->unique()->values()->all(),
+            'has_assertions' => ! empty($saved->assertions),
+            'has_contract' => ! empty($saved->contract),
+            'has_auth' => is_array($saved->auth) && ($saved->auth['scheme'] ?? 'inherit') !== 'inherit',
+        ];
     }
 
     public function store(Request $request)
@@ -46,7 +72,7 @@ class SavedRequestController extends Controller
 
         $savedRequest = $user->savedRequests()->create($validated);
 
-        return response()->json($savedRequest, 201);
+        return response()->json($this->present($savedRequest), 201);
     }
 
     /** The shape of a saved request, shared by create and edit. */
@@ -97,15 +123,46 @@ class SavedRequestController extends Controller
         // clearing them.
         $savedRequest->update($this->validated($request));
 
-        return response()->json($savedRequest->fresh()->load('owner:id,name'));
+        return response()->json($this->present($savedRequest->fresh()));
     }
 
+    /**
+     * Delete a saved request.
+     *
+     * The step foreign key cascades, so any collection using this request
+     * loses that step. That is intended, but it used to happen silently: the
+     * affected collections are now named back to the caller, and each one gets
+     * an activity entry so a colleague can see why their suite got shorter.
+     */
     public function destroy(Request $request, $id)
     {
-        $savedRequest = SavedRequest::inWorkspaceOf($request->user())->findOrFail($id);
+        $savedRequest = SavedRequest::inWorkspaceOf($request->user())
+            ->with('steps.collection:id,name')
+            ->findOrFail($id);
+
+        $affected = $savedRequest->steps->map(fn ($step) => $step->collection)
+            ->filter()->unique('id')->values();
+        $removedSteps = $savedRequest->steps->count();
+        $name = $savedRequest->name;
+
         $savedRequest->delete();
 
-        return response()->json(['message' => 'Deleted']);
+        foreach ($affected as $collection) {
+            WorkspaceActivity::record(
+                $request->user()->id,
+                'collection',
+                $collection->id,
+                $collection->name,
+                WorkspaceActivity::ACTION_UPDATED,
+                'lost a step — the request "'.$name.'" was deleted'
+            );
+        }
+
+        return response()->json([
+            'message' => 'Deleted',
+            'removed_steps' => $removedSteps,
+            'used_by' => $affected->pluck('name')->all(),
+        ]);
     }
 
     /**
@@ -137,7 +194,7 @@ class SavedRequestController extends Controller
             'contract' => $source->contract,
         ]);
 
-        return response()->json($copy->fresh()->load('owner:id,name'), 201);
+        return response()->json($this->present($copy->fresh()), 201);
     }
 
     private function uniqueCopyName($user, string $base): string

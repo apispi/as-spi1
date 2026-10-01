@@ -30,7 +30,7 @@
     <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Testing &amp; assertions</span></div>
     <h1>Sending requests</h1>
     <p class="lead">The Tester in depth: protocols, headers, body, params, and reading responses.</p>
-    <nav class="toc"><span class="toc-label">On this page</span><a href="#choosing-a-protocol">Choosing a protocol</a><a href="#worked-examples-by-protocol">Worked examples by protocol</a><a href="#headers">Headers</a><a href="#query-params">Query params</a><a href="#request-body">Request body</a><a href="#reading-the-response">Reading the response</a><a href="#editing-a-saved-request">Editing a saved request</a></nav>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#choosing-a-protocol">Choosing a protocol</a><a href="#worked-examples-by-protocol">Worked examples by protocol</a><a href="#headers">Headers</a><a href="#query-params">Query params</a><a href="#request-body">Request body</a><a href="#reading-the-response">Reading the response</a><a href="#browsing-what-you-have-saved">Browsing what you have saved</a><a href="#editing-a-saved-request">Editing a saved request</a></nav>
     <article><p>The <a href="/tester">Tester</a> is where you compose and send a single request over any supported protocol and inspect exactly what came back. This article covers each part of the request panel.</p>
 <h2 id="choosing-a-protocol">Choosing a protocol</h2>
 <p>The protocol selector changes what the rest of the panel offers. Spi supports these protocols directly:</p>
@@ -131,6 +131,10 @@ URL:    https://api.example.com/v1/orders?status=active&amp;page=2</code></pre><
 <p>Every response shows:</p>
 <ul><li><strong>Status</strong> — the HTTP status code (or protocol-specific outcome).</li><li><strong>Time</strong> — how long the request took, in milliseconds.</li><li><strong>Headers</strong> — the response headers.</li><li><strong>Body</strong> — the response payload, pretty-printed when it is JSON.</li></ul>
 <p>Requests you send are kept in your history so you can revisit them. When you are happy with a request, save it — saved requests can carry <a href="/docs/assertions/">assertions</a> and a <a href="/docs/response-contracts/">response contract</a>, and can be added to <a href="/docs/collections/">collections</a>.</p>
+<h2 id="browsing-what-you-have-saved">Browsing what you have saved</h2>
+<p><a href="/requests">Requests</a> lists everything saved in the workspace — yours and your colleagues' — with search, a protocol filter, and a count against your plan limit. Each row shows its method and URL, badges for whatever is attached (its own auth, assertions, a response contract), and <strong>which collections use it</strong>.</p>
+<p>From there you can open a request in the Tester, rename it in place (double-click the name), duplicate it, or delete it.</p>
+<div class="note">Deleting a saved request removes it from every collection that uses it — that is the intended behaviour, but it used to happen with no warning. The list names the affected collections before you confirm, the response says how many steps went, and each collection gets an <a href="/docs/workspaces-and-teams/">activity entry</a> explaining why it got shorter. If you only want to stop using it somewhere, edit that collection instead.</div>
 <h2 id="editing-a-saved-request">Editing a saved request</h2>
 <p>Open a saved request (<code>Cmd/Ctrl + K</code> finds it), change whatever you like, and the Tester offers two buttons:</p>
 <ul><li><strong>Update</strong> — saves over the request you opened. It keeps the same request, so every <a href="/docs/collections/">collection</a> step and <a href="/docs/monitors-and-alerts/">monitor</a> built on it keeps working.</li><li><strong>Save as new</strong> — creates a separate request under a new name, leaving the original alone.</li></ul>

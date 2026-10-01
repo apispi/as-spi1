@@ -47,10 +47,18 @@ export const useRequestsStore = defineStore('requests', {
             }
             return response.data;
         },
+        async duplicateRequest(id) {
+            const response = await axios.post(`/api/saved-requests/${id}/duplicate`);
+            this.savedRequests.unshift(response.data);
+            return response.data;
+        },
         async deleteRequest(id) {
             try {
-                await axios.delete(`/api/saved-requests/${id}`);
+                const response = await axios.delete(`/api/saved-requests/${id}`);
                 this.savedRequests = this.savedRequests.filter(req => req.id !== id);
+                // Carries what the delete took with it, so the caller can say
+                // which collections just got shorter.
+                return response.data;
             } catch (error) {
                 console.error("Failed to delete request", error);
                 throw error;

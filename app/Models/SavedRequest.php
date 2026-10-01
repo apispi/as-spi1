@@ -50,4 +50,15 @@ class SavedRequest extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * The collection steps built on this request.
+     *
+     * The foreign key cascades, so deleting a request removes these — which is
+     * exactly why callers need to be able to count them first.
+     */
+    public function steps()
+    {
+        return $this->hasMany(CollectionStep::class);
+    }
 }

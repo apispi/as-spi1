@@ -78,7 +78,12 @@ class CollectionControllerTest extends TestCase
         $collection = $user->collections()->create(['name' => 'Suite']);
         $collection->steps()->create(['saved_request_id' => $saved->id, 'position' => 0]);
 
-        $this->actingAs($user)->deleteJson("/api/saved-requests/{$saved->id}")->assertOk();
+        $this->actingAs($user)->deleteJson("/api/saved-requests/{$saved->id}")
+            ->assertOk()
+            // The cascade is intended, but it must not be silent: the response
+            // names what it took with it.
+            ->assertJsonPath('removed_steps', 1)
+            ->assertJsonPath('used_by.0', 'Suite');
 
         $this->assertSame(0, $collection->steps()->count());
     }

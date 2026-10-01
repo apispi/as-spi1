@@ -24,6 +24,7 @@ import Recorder from './views/Recorder.vue';
 import Mocks from './views/Mocks.vue';
 import Collections from './views/Collections.vue';
 import ApiDiff from './views/ApiDiff.vue';
+import Requests from './views/Requests.vue';
 import AcceptInvitation from './views/AcceptInvitation.vue';
 import AdminOrganisations from './views/AdminOrganisations.vue';
 import AdminMonitoring from './views/AdminMonitoring.vue';
@@ -52,6 +53,12 @@ const routes = [
         path: '/tester',
         name: 'tester',
         component: Tester,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/requests',
+        name: 'requests',
+        component: Requests,
         meta: { requiresAuth: true }
     },
     {

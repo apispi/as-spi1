@@ -152,6 +152,7 @@ const paletteOpen = ref(false);
 const workspaceNav = [
   { to: '/dashboard', label: 'Home', icon: 'home' },
   { to: '/tester', label: 'Tester', icon: 'send' },
+  { to: '/requests', label: 'Requests', icon: 'braces' },
   { to: '/collections', label: 'Collections', icon: 'layers' },
   { to: '/api-diff', label: 'API Diff', icon: 'gitCompare' },
   { to: '/ai-lab', label: 'AI Lab', icon: 'sparkles' },
