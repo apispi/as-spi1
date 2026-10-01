@@ -210,6 +210,62 @@
       </div>
     </template>
 
+    <!-- Contract fuzzing -->
+    <template v-else-if="type === 'fuzz'">
+      <div class="rv-hero">
+        <span class="rv-grade" :class="data.passed ? 'g-a' : 'g-f'">{{ data.passed ? '✓' : '✗' }}</span>
+        <div>
+          <div class="rv-score">
+            {{ data.passed ? 'No findings' : data.findings + ' finding' + (data.findings === 1 ? '' : 's') }}
+          </div>
+          <div class="rv-muted">
+            {{ data.total }} variant(s)
+            <template v-if="data.server_errors"> · {{ data.server_errors }} server error(s)</template>
+            <template v-if="data.accepted_invalid"> · {{ data.accepted_invalid }} accepted invalid input</template>
+          </div>
+        </div>
+      </div>
+      <div v-for="(r, i) in data.results" :key="i" class="rv-row" :class="fuzzClass(r.verdict)">
+        <span class="rv-badge">{{ (r.verdict || '').replace('_', ' ') }}</span>
+        <div class="rv-grow">
+          <strong>{{ r.label }}</strong>
+          <span v-if="r.status != null" class="rv-muted"> · HTTP {{ r.status }}</span>
+          <div class="rv-muted">
+            {{ r.expects_reject ? 'Should have been rejected' : 'Should have been accepted' }}
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Golden snapshot diff -->
+    <template v-else-if="type === 'snapshot'">
+      <div class="rv-hero">
+        <span class="rv-grade" :class="data.matches ? 'g-a' : 'g-f'">{{ data.matches ? '✓' : '✗' }}</span>
+        <div>
+          <div class="rv-score">{{ data.matches ? 'Matches the snapshot' : 'Drifted from the snapshot' }}</div>
+          <div class="rv-muted">
+            <template v-if="data.status_changed">status {{ data.status_from }} → {{ data.status_to }} · </template>
+            {{ data.changed_count }} changed · {{ data.added_count }} added · {{ data.removed_count }} removed
+          </div>
+        </div>
+      </div>
+      <div v-for="(c, i) in (data.changed || [])" :key="'c' + i" class="rv-row st-fail">
+        <span class="rv-badge">changed</span>
+        <div class="rv-grow">
+          <strong class="rv-mono">{{ c.path }}</strong>
+          <div class="rv-muted rv-mono">{{ printable(c.from) }} → {{ printable(c.to) }}</div>
+        </div>
+      </div>
+      <div v-for="(r, i) in (data.removed || [])" :key="'r' + i" class="rv-row st-fail">
+        <span class="rv-badge">removed</span>
+        <div class="rv-grow"><strong class="rv-mono">{{ r.path || r }}</strong></div>
+      </div>
+      <div v-for="(a, i) in (data.added || [])" :key="'a' + i" class="rv-row st-warn">
+        <span class="rv-badge">added</span>
+        <div class="rv-grow"><strong class="rv-mono">{{ a.path || a }}</strong></div>
+      </div>
+    </template>
+
     <!--
       Anything else. Nine report types used to render an empty modal because
       they had no branch here, so a generic view means a new type is legible on
@@ -237,6 +293,15 @@ defineProps({
 });
 
 const stepClass = (s) => (s.skipped ? 'st-skip' : (s.passed ? 'st-pass' : 'st-fail'));
+
+// Mirrors FuzzRunner: only server_error and accepted_invalid are findings.
+// "rejected" is a pass — the API correctly refused bad input — and a transport
+// "error" is neither a finding nor a clean result.
+const FUZZ_FINDINGS = ['server_error', 'accepted_invalid'];
+const fuzzClass = (verdict) => {
+  if (FUZZ_FINDINGS.includes(verdict)) return 'st-fail';
+  return verdict === 'error' ? 'st-warn' : 'st-pass';
+};
 
 const failedAssertions = (s) =>
   ((s.assertions && s.assertions.results) || []).filter((a) => !a.passed);
