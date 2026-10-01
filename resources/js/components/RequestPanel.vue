@@ -3,7 +3,15 @@
     <div class="panel-header flex items-center justify-between">
       <div class="flex items-center gap-4">
         <h2>Request</h2>
-        <button class="secondary text-sm" @click="openSave" :disabled="isLoading || !url">Save Request</button>
+        <button
+          v-if="loadedRequest"
+          class="primary text-sm" @click="updateLoaded"
+          :disabled="isLoading || !url"
+          :title="'Save changes to \'' + loadedRequest.name + '\''"
+        >Update</button>
+        <button class="secondary text-sm" @click="openSave" :disabled="isLoading || !url">
+          {{ loadedRequest ? 'Save as new' : 'Save Request' }}
+        </button>
         <ExportMenu
           v-if="protocol === 'rest'"
           :method="method"
@@ -375,7 +383,7 @@ const props = defineProps({
   activeResources: Array
 });
 
-const emit = defineEmits(['send-request', 'save-request']);
+const emit = defineEmits(['send-request', 'save-request', 'update-request']);
 
 let defaultsApplied = false;
 
@@ -496,6 +504,24 @@ const parseHostPort = () => {
 
 // Inline save (replaces window.prompt).
 const showSave = ref(false);
+
+/**
+ * Save over the request that is currently loaded.
+ *
+ * Before this existed the only option was "save as new", so changing a URL
+ * meant a second request and a collection step still pointing at the old one.
+ * The parent reports the outcome; this only has to hand it a valid payload.
+ */
+const updateLoaded = () => {
+  if (!props.loadedRequest || !url.value) return;
+
+  const payload = buildSavePayload(props.loadedRequest.name);
+
+  // Null means the body would not parse; the panel has already said so.
+  if (payload) {
+    emit('update-request', { id: props.loadedRequest.id, payload });
+  }
+};
 const showGraphql = ref(false);
 
 // Drop a GraphQL query skeleton into the body, switching method to POST.
@@ -901,10 +927,12 @@ const openSave = () => {
   nextTick(() => saveInput.value?.focus());
 };
 
-const confirmSave = () => {
-  const name = saveName.value.trim();
-  if (!name) return;
-
+/**
+ * The payload for a given name, or null when the body will not parse (the
+ * panel surfaces the error itself). Shared by "save as new" and "update", so
+ * the two cannot drift apart per protocol.
+ */
+const buildSavePayload = (name) => {
   if (isBrokerProtocol.value) {
     let payload;
     try {
@@ -912,19 +940,16 @@ const confirmSave = () => {
     } catch (e) {
       bodyError.value = 'Message/request is not valid.';
       activeTab.value = 'body';
-      showSave.value = false;
-      return;
+      return null;
     }
-    emit('save-request', {
+    return {
       name,
       protocol: protocol.value,
       method: protocol.value === 'grpc' ? grpcMethod.value : payload.action,
       url: url.value,
       headers: protocol.value === 'grpc' ? collectHeaders() : {},
       params: payload,
-    });
-    showSave.value = false;
-    return;
+    };
   }
 
   if (protocol.value === 'mcp' || protocol.value === 'a2a') {
@@ -935,34 +960,42 @@ const confirmSave = () => {
       } catch (e) {
         bodyError.value = 'Params must be valid JSON.';
         activeTab.value = 'body';
-        showSave.value = false;
-        return;
+        return null;
       }
     }
 
-    emit('save-request', {
+    return {
       name,
       protocol: protocol.value,
       method: protocol.value === 'mcp' ? mcpMethod.value : a2aMethod.value,
       url: url.value,
       headers: collectHeaders(),
       auth: collectAuth(),
-      params
-    });
-    showSave.value = false;
-    return;
+      params,
+    };
   }
 
-  emit('save-request', {
+  return {
     name,
     protocol: 'rest',
     method: method.value,
     url: url.value,
     headers: collectHeaders(),
     auth: collectAuth(),
-    body: ['GET', 'HEAD'].includes(method.value) ? null : body.value
-  });
+    body: ['GET', 'HEAD'].includes(method.value) ? null : body.value,
+  };
+};
+
+const confirmSave = () => {
+  const name = saveName.value.trim();
+  if (!name) return;
+
+  const payload = buildSavePayload(name);
   showSave.value = false;
+
+  if (payload) {
+    emit('save-request', payload);
+  }
 };
 </script>
 

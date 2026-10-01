@@ -28,6 +28,7 @@
           <RequestPanel
             @send-request="handleRequest"
             @save-request="handleSaveRequest"
+            @update-request="handleUpdateRequest"
             :isLoading="isLoading"
             :loadedRequest="currentLoadedRequest"
             :defaults="preferences"
@@ -139,6 +140,18 @@ const onEnvChange = (e) => {
   const value = e.target.value;
   envStore.select(value ? Number(value) : null);
   unresolved.value = [];
+};
+
+const handleUpdateRequest = async ({ id, payload }) => {
+  try {
+    const updated = await requestsStore.updateRequest(id, payload);
+    // Keep the panel pointed at what is now stored, so a second Update does
+    // not act on a stale copy.
+    currentLoadedRequest.value = { ...currentLoadedRequest.value, ...updated };
+    toast.success(`Saved changes to "${updated.name}".`);
+  } catch (error) {
+    toast.error(error.response?.data?.message || 'Could not save those changes.');
+  }
 };
 
 const handleSaveRequest = async (requestData) => {

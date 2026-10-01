@@ -39,6 +39,14 @@ export const useRequestsStore = defineStore('requests', {
                 throw error;
             }
         },
+        async updateRequest(id, requestData) {
+            const response = await axios.put(`/api/saved-requests/${id}`, requestData);
+            const index = this.savedRequests.findIndex((r) => r.id === id);
+            if (index !== -1) {
+                this.savedRequests[index] = response.data;
+            }
+            return response.data;
+        },
         async deleteRequest(id) {
             try {
                 await axios.delete(`/api/saved-requests/${id}`);

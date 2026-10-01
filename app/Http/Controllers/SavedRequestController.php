@@ -40,7 +40,19 @@ class SavedRequestController extends Controller
             ], 422);
         }
 
-        $validated = $request->validate([
+        $validated = $this->validated($request);
+
+        $validated['protocol'] = $validated['protocol'] ?? 'rest';
+
+        $savedRequest = $user->savedRequests()->create($validated);
+
+        return response()->json($savedRequest, 201);
+    }
+
+    /** The shape of a saved request, shared by create and edit. */
+    private function validated(Request $request): array
+    {
+        return $request->validate([
             'name' => 'required|string|max:255',
             'protocol' => 'nullable|string|in:rest,mcp,a2a,grpc,mqtt,amqp',
             'method' => 'required|string',
@@ -62,12 +74,30 @@ class SavedRequestController extends Controller
             // normally {{variables}}, so the credential stays in a secret
             // environment variable rather than in this row.
         ] + RequestAuthenticator::rules());
+    }
 
-        $validated['protocol'] = $validated['protocol'] ?? 'rest';
+    /**
+     * Edit a saved request in place.
+     *
+     * Without this the only way to change a URL was to delete and re-save,
+     * which takes the request's id with it — and every collection step
+     * pointing at it. Updating keeps the id, so the collections built on it
+     * keep working.
+     *
+     * The edit flows through RecordsActivity like any other change, so it
+     * appears in the workspace activity feed and can be undone there.
+     */
+    public function update(Request $request, int $id)
+    {
+        $savedRequest = SavedRequest::inWorkspaceOf($request->user())->findOrFail($id);
 
-        $savedRequest = $user->savedRequests()->create($validated);
+        // validate() returns only the fields that were actually sent, so a
+        // payload that omits assertions (they have their own endpoint, as do
+        // the contract and the snapshot) leaves them alone rather than
+        // clearing them.
+        $savedRequest->update($this->validated($request));
 
-        return response()->json($savedRequest, 201);
+        return response()->json($savedRequest->fresh()->load('owner:id,name'));
     }
 
     public function destroy(Request $request, $id)

@@ -107,6 +107,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markRead']);
     Route::get('/api/saved-requests', [SavedRequestController::class, 'index']);
     Route::post('/api/saved-requests', [SavedRequestController::class, 'store']);
+    Route::put('/api/saved-requests/{id}', [SavedRequestController::class, 'update']);
     Route::delete('/api/saved-requests/{id}', [SavedRequestController::class, 'destroy']);
     Route::post('/api/saved-requests/{id}/duplicate', [SavedRequestController::class, 'duplicate']);
     Route::get('/api/tools/active', [ToolController::class, 'active']);

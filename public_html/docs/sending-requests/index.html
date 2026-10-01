@@ -30,7 +30,7 @@
     <div class="crumb"><a href="/docs/">Docs</a><span>/</span><span>Testing &amp; assertions</span></div>
     <h1>Sending requests</h1>
     <p class="lead">The Tester in depth: protocols, headers, body, params, and reading responses.</p>
-    <nav class="toc"><span class="toc-label">On this page</span><a href="#choosing-a-protocol">Choosing a protocol</a><a href="#worked-examples-by-protocol">Worked examples by protocol</a><a href="#headers">Headers</a><a href="#query-params">Query params</a><a href="#request-body">Request body</a><a href="#reading-the-response">Reading the response</a></nav>
+    <nav class="toc"><span class="toc-label">On this page</span><a href="#choosing-a-protocol">Choosing a protocol</a><a href="#worked-examples-by-protocol">Worked examples by protocol</a><a href="#headers">Headers</a><a href="#query-params">Query params</a><a href="#request-body">Request body</a><a href="#reading-the-response">Reading the response</a><a href="#editing-a-saved-request">Editing a saved request</a></nav>
     <article><p>The <a href="/tester">Tester</a> is where you compose and send a single request over any supported protocol and inspect exactly what came back. This article covers each part of the request panel.</p>
 <h2 id="choosing-a-protocol">Choosing a protocol</h2>
 <p>The protocol selector changes what the rest of the panel offers. Spi supports these protocols directly:</p>
@@ -131,6 +131,11 @@ URL:    https://api.example.com/v1/orders?status=active&amp;page=2</code></pre><
 <p>Every response shows:</p>
 <ul><li><strong>Status</strong> — the HTTP status code (or protocol-specific outcome).</li><li><strong>Time</strong> — how long the request took, in milliseconds.</li><li><strong>Headers</strong> — the response headers.</li><li><strong>Body</strong> — the response payload, pretty-printed when it is JSON.</li></ul>
 <p>Requests you send are kept in your history so you can revisit them. When you are happy with a request, save it — saved requests can carry <a href="/docs/assertions/">assertions</a> and a <a href="/docs/response-contracts/">response contract</a>, and can be added to <a href="/docs/collections/">collections</a>.</p>
+<h2 id="editing-a-saved-request">Editing a saved request</h2>
+<p>Open a saved request (<code>Cmd/Ctrl + K</code> finds it), change whatever you like, and the Tester offers two buttons:</p>
+<ul><li><strong>Update</strong> — saves over the request you opened. It keeps the same request, so every <a href="/docs/collections/">collection</a> step and <a href="/docs/monitors-and-alerts/">monitor</a> built on it keeps working.</li><li><strong>Save as new</strong> — creates a separate request under a new name, leaving the original alone.</li></ul>
+<p>An edit leaves the things attached to the request — its assertions, <a href="/docs/response-contracts/">response contract</a> and captured <a href="/docs/response-contracts/">snapshot</a> — untouched, because those are managed on their own panels.</p>
+<div class="note">Every edit is recorded in the <a href="/docs/workspaces-and-teams/">workspace activity feed</a> with the values it replaced, so a colleague can see what changed and undo it. That matters more than usual here, because a saved request is shared across the workspace and the collections depending on it will pick the change up on their next run.</div>
 <div class="note">Spi guards outbound requests against SSRF, so requests to internal or loopback addresses may be refused. This protects the shared infrastructure the Tester runs on.</div></article>
     <nav class="pager">
       <a class="pager-link prev" href="/docs/quickstart/"><span>← Previous</span><strong>Quickstart</strong></a>
