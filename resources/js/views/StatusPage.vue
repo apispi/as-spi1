@@ -47,7 +47,7 @@
           <div class="sp-mon-head">
             <span class="sp-dot" :class="m.status"></span>
             <h2 class="sp-mon-name">{{ m.name }}</h2>
-            <span v-if="m.kind === 'mcp_contract'" class="sp-kind">MCP contract</span>
+            <span v-if="kindLabel(m.kind)" class="sp-kind">{{ kindLabel(m.kind) }}</span>
             <span class="sp-mon-meta">
               <template v-if="m.uptime !== null">{{ m.uptime }}% </template>
               <template v-if="m.last_run_at">· checked {{ ago(m.last_run_at) }}</template>
@@ -120,6 +120,14 @@ onMounted(() => {
   timer = setInterval(fetchPage, 60000);
 });
 onUnmounted(() => clearInterval(timer));
+
+// What a monitor watches, when it is not just "does it respond".
+const KIND_LABELS = {
+  mcp_contract: 'MCP contract',
+  graphql_schema: 'GraphQL schema',
+  openapi_schema: 'OpenAPI schema',
+};
+const kindLabel = (v) => KIND_LABELS[v] || '';
 
 const STATUS_LABELS = {
   investigating: 'Investigating',

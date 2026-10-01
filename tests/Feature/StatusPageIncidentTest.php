@@ -315,6 +315,37 @@ class StatusPageIncidentTest extends TestCase
         $this->actingAs($user)->getJson('/api/status-pages')->assertJsonPath('0.open_incidents', 0);
     }
 
+    public function test_the_public_page_says_what_each_monitor_watches(): void
+    {
+        // Everything that was not MCP drift used to be labelled "checks", so a
+        // schema monitor said nothing about what it actually watches.
+        $user = User::factory()->create();
+        $page = $this->page($user);
+
+        $kinds = [
+            \App\Models\Monitor::TYPE_GRAPHQL_DRIFT => 'graphql_schema',
+            \App\Models\Monitor::TYPE_OPENAPI_DRIFT => 'openapi_schema',
+            \App\Models\Monitor::TYPE_MCP_DRIFT => 'mcp_contract',
+        ];
+
+        foreach (array_keys($kinds) as $i => $type) {
+            $monitor = $user->monitors()->create([
+                'name' => 'Watcher '.$i,
+                'type' => $type,
+                'target_url' => 'https://api.example.com/'.$i,
+                'interval_minutes' => 60,
+            ]);
+            $page->monitors()->attach($monitor->id, ['position' => $i]);
+        }
+
+        $published = collect($this->getJson("/api/status/{$page->token}")->assertOk()->json('monitors'));
+
+        $this->assertEqualsCanonicalizing(
+            array_values($kinds),
+            $published->pluck('kind')->all()
+        );
+    }
+
     public function test_the_incident_routes_require_authentication(): void
     {
         $user = User::factory()->create();

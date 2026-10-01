@@ -59,7 +59,7 @@
     <div v-if="open" class="rp-modal-overlay" @click.self="open = null">
       <div class="rp-modal">
         <div class="rp-modal-head">
-          <h2>{{ typeName(open.type) }} — {{ open.connector_name || open.connector_slug }}</h2>
+          <h2>{{ typeName(open.type) }}<template v-if="subjectOf(open)"> — {{ subjectOf(open) }}</template></h2>
           <div class="rp-modal-actions">
             <button class="rp-btn" :disabled="busy" @click="toggleShare(open)">
               {{ open.share_url ? 'Copy link' : (open.is_shared ? 'Copy link' : 'Share') }}
@@ -205,6 +205,10 @@ async function load() {
 }
 
 function setFilter(v) { typeFilter.value = v; cancelCompare(); load(); }
+// Only connector-scoped reports carry a connector; a collection run, a diff or
+// a perf profile does not, and the heading used to end in a dangling dash.
+const subjectOf = (r) => r.connector_name || r.connector_slug || '';
+
 const typeName = (t) => ({ conformance: 'Conformance', security: 'Security', agent_loop: 'Agent run', collection_run: 'Collection run', mcp_drift: 'MCP drift', parity: 'Env parity', exploration: 'Exploration', fuzz: 'Fuzz', replay: 'Replay', dataset_run: 'Dataset run', perf: 'Performance', snapshot: 'Snapshot', api_diff: 'API diff', graphql_diff: 'GraphQL diff', schema_drift: 'Schema drift' }[t] || t);
 
 function rowClick(r) {

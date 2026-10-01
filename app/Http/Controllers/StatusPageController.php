@@ -98,7 +98,12 @@ class StatusPageController extends Controller
 
             return [
                 'name' => $monitor->name,
-                'kind' => $monitor->type === Monitor::TYPE_MCP_DRIFT ? 'mcp_contract' : 'checks',
+                'kind' => match ($monitor->type) {
+                    Monitor::TYPE_MCP_DRIFT => 'mcp_contract',
+                    Monitor::TYPE_GRAPHQL_DRIFT => 'graphql_schema',
+                    Monitor::TYPE_OPENAPI_DRIFT => 'openapi_schema',
+                    default => 'checks',
+                },
                 'status' => $monitor->last_status,
                 'last_run_at' => $monitor->last_run_at,
                 'uptime' => $monitor->uptime(),
