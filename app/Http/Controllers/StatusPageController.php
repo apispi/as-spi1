@@ -91,7 +91,14 @@ class StatusPageController extends Controller
             return response()->json(['message' => 'Not found.'], 404);
         }
 
-        $monitors = $page->monitors()->get()->map(function (Monitor $monitor) {
+        $pageMonitors = $page->monitors()->get();
+        // One grouped query for the whole page instead of two counts each.
+        // The history strip below is still one query per monitor: trimming
+        // that needs a per-monitor window, which is not worth the raw SQL for
+        // a page capped at a handful of monitors.
+        $uptimes = Monitor::uptimesFor($pageMonitors);
+
+        $monitors = $pageMonitors->map(function (Monitor $monitor) use ($uptimes) {
             $history = $monitor->results()->take(self::HISTORY)
                 ->get(['passed', 'time_ms', 'created_at'])
                 ->reverse()->values();
@@ -106,7 +113,7 @@ class StatusPageController extends Controller
                 },
                 'status' => $monitor->last_status,
                 'last_run_at' => $monitor->last_run_at,
-                'uptime' => $monitor->uptime(),
+                'uptime' => $uptimes[$monitor->id] ?? null,
                 'history' => $history->map(fn ($r) => [
                     'ok' => (bool) $r->passed,
                     'time_ms' => $r->time_ms,

@@ -160,15 +160,68 @@ class Monitor extends Model
 
     /**
      * Uptime across retained history, as a percentage.
+     *
+     * One aggregate rather than two counts. Prefer uptimesFor() when
+     * presenting a list — this is still one query per monitor.
      */
     public function uptime(): ?float
     {
-        $total = $this->results()->count();
+        $row = $this->results()
+            // Aliases deliberately avoid `passed`: that is a boolean-cast
+            // attribute on MonitorResult, and a sum landing on it would be
+            // cast to true and then back to 1, under-reporting every monitor.
+            ->selectRaw('count(*) as result_count, sum(case when passed then 1 else 0 end) as passed_count_agg')
+            ->toBase()
+            ->first();
 
-        if ($total === 0) {
-            return null;
+        return self::percentage((int) ($row->result_count ?? 0), (int) ($row->passed_count_agg ?? 0));
+    }
+
+    /**
+     * Uptime for many monitors in a single query, keyed by monitor id.
+     *
+     * The list endpoints present every monitor, so computing this per row made
+     * the cost grow with the number of monitors — including on the public
+     * status page, which is the one place where that cost is somebody else's
+     * to trigger.
+     *
+     * @param  iterable<Monitor>|array<int>  $monitors
+     * @return array<int, float|null>
+     */
+    public static function uptimesFor(iterable $monitors): array
+    {
+        $ids = [];
+        foreach ($monitors as $monitor) {
+            $ids[] = $monitor instanceof self ? $monitor->id : (int) $monitor;
         }
 
-        return round($this->results()->where('passed', true)->count() / $total * 100, 1);
+        if ($ids === []) {
+            return [];
+        }
+
+        $rows = MonitorResult::whereIn('monitor_id', $ids)
+            ->selectRaw('monitor_id, count(*) as result_count, sum(case when passed then 1 else 0 end) as passed_count_agg')
+            ->groupBy('monitor_id')
+            // Raw rows, so no attribute cast can touch the aggregates.
+            ->toBase()
+            ->get();
+
+        // Absent from the result set means no history at all, which is a null
+        // uptime rather than zero — "never checked" is not "always down".
+        $uptimes = array_fill_keys($ids, null);
+
+        foreach ($rows as $row) {
+            $uptimes[(int) $row->monitor_id] = self::percentage(
+                (int) $row->result_count,
+                (int) $row->passed_count_agg
+            );
+        }
+
+        return $uptimes;
+    }
+
+    private static function percentage(int $total, int $passed): ?float
+    {
+        return $total === 0 ? null : round($passed / $total * 100, 1);
     }
 }

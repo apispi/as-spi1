@@ -13,11 +13,13 @@ class MonitorController extends Controller
     public function index(Request $request)
     {
         $monitors = Monitor::inWorkspaceOf($request->user())
-            ->with(['owner:id,name', 'collection:id,name', 'environment:id,name'])
+            ->with(['owner:id,name', 'collection:id,name', 'environment:id,name', 'alertChannels:id'])
             ->orderBy('name')
             ->get();
 
-        return response()->json($monitors->map(fn (Monitor $m) => $this->present($m)));
+        $uptimes = Monitor::uptimesFor($monitors);
+
+        return response()->json($monitors->map(fn (Monitor $m) => $this->present($m, $uptimes)));
     }
 
     /**
@@ -135,7 +137,10 @@ class MonitorController extends Controller
         return response()->json($this->present($monitor->fresh()->load(['collection', 'environment', 'owner'])));
     }
 
-    private function present(Monitor $monitor): array
+    /**
+     * @param  array<int, float|null>|null  $uptimes  precomputed for a list, to keep the cost flat
+     */
+    private function present(Monitor $monitor, ?array $uptimes = null): array
     {
         return [
             'id' => $monitor->id,
@@ -152,8 +157,12 @@ class MonitorController extends Controller
             'last_status' => $monitor->last_status,
             'last_run_at' => $monitor->last_run_at,
             'consecutive_failures' => $monitor->consecutive_failures,
-            'uptime' => $monitor->uptime(),
-            'alert_channel_ids' => $monitor->alertChannels()->pluck('alert_channels.id'),
+            'uptime' => $uptimes !== null && array_key_exists($monitor->id, $uptimes)
+                ? $uptimes[$monitor->id]
+                : $monitor->uptime(),
+            'alert_channel_ids' => $monitor->relationLoaded('alertChannels')
+                ? $monitor->alertChannels->pluck('id')->values()
+                : $monitor->alertChannels()->pluck('alert_channels.id'),
             'owner' => $monitor->relationLoaded('owner') && $monitor->owner
                 ? ['id' => $monitor->owner->id, 'name' => $monitor->owner->name] : null,
         ];
