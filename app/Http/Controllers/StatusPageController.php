@@ -20,6 +20,8 @@ class StatusPageController extends Controller
         return response()->json(
             StatusPage::inWorkspaceOf($request->user())
                 ->with('monitors:monitors.id,name')
+                // Counted in the listing query rather than once per page.
+                ->withCount(['incidents as open_incidents' => fn ($q) => $q->whereNull('resolved_at')])
                 ->orderBy('name')->get()
                 ->map(fn ($page) => $this->presentForOwner($page))
                 ->values()
@@ -249,8 +251,10 @@ class StatusPageController extends Controller
             'monitor_ids' => $page->monitors->pluck('id')->values(),
             'monitors' => $page->monitors->pluck('name')->values(),
             // Surfaced on the owner's list so an incident left open on a public
-            // page is visible without opening the page itself.
-            'open_incidents' => $page->incidents()->open()->count(),
+            // page is visible without opening the page itself. Comes from
+            // withCount on the listing query; falls back for a single page
+            // presented after a write, where there is no N+1 to avoid.
+            'open_incidents' => $page->open_incidents ?? $page->incidents()->open()->count(),
         ];
     }
 
