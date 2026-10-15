@@ -3,10 +3,36 @@ import axios from 'axios';
 
 const SELECTED_KEY = 'spi.selectedEnvironmentId';
 
+// Storage access can throw outright, not just come back empty — a browser with
+// site data blocked, or a privacy mode that disallows it. theme.js and
+// onboarding.js both guard for that; this store did not, and it read storage
+// while building its initial state, so the throw would take the store (and
+// with it the tester) down at startup. Remembering the selected environment is
+// a convenience and must never be load-bearing.
+const remembered = () => {
+    try {
+        return Number(localStorage.getItem(SELECTED_KEY)) || null;
+    } catch {
+        return null;
+    }
+};
+
+const remember = (id) => {
+    try {
+        if (id) {
+            localStorage.setItem(SELECTED_KEY, String(id));
+        } else {
+            localStorage.removeItem(SELECTED_KEY);
+        }
+    } catch {
+        // Nothing to do: the selection still applies for this session.
+    }
+};
+
 export const useEnvironmentsStore = defineStore('environments', {
     state: () => ({
         environments: [],
-        selectedId: Number(localStorage.getItem(SELECTED_KEY)) || null,
+        selectedId: remembered(),
         isLoading: false,
         // Set when the list fetch fails, so a view can say so instead of
         // rendering its empty state — \"you have none\" and \"it did not
@@ -47,11 +73,7 @@ export const useEnvironmentsStore = defineStore('environments', {
         },
         select(id) {
             this.selectedId = id;
-            if (id) {
-                localStorage.setItem(SELECTED_KEY, String(id));
-            } else {
-                localStorage.removeItem(SELECTED_KEY);
-            }
+            remember(id);
         },
         async create(payload) {
             const res = await axios.post('/api/environments', payload);

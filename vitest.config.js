@@ -11,6 +11,9 @@ export default defineConfig({
     plugins: [vue()],
     test: {
         environment: 'jsdom',
+        // Without an origin, jsdom refuses localStorage outright, which is a
+        // confusing way to find out your component touches it.
+        environmentOptions: { jsdom: { url: 'http://localhost' } },
         include: ['resources/js/**/*.test.js'],
         // Vue's SFC compiler needs this when components are mounted.
         globals: true,
