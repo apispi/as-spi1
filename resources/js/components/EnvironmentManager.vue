@@ -19,7 +19,11 @@
             <span v-if="ownerName(env)" class="env-owner">{{ ownerName(env) }}</span>
             <span v-if="env.is_default" class="env-badge">default</span>
           </button>
-          <p v-if="!store.environments.length" class="env-none">No environments yet.</p>
+          <p v-if="store.loadError" class="env-failed">
+            {{ store.loadError }}
+            <button class="env-new" @click="store.fetch()">Try again</button>
+          </p>
+          <p v-else-if="!store.environments.length" class="env-none">No environments yet.</p>
           <button class="env-new" @click="startNew">+ New environment</button>
           <button class="env-new" @click="triggerImport">↥ Import from file</button>
           <input ref="importInput" type="file" accept="application/json,.json" class="env-file" @change="onImportFile" />
@@ -404,6 +408,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey));
 .env-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .env-owner { font-size: 10.5px; color: var(--text-secondary); }
 .env-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: rgba(63,185,80,.16); color: #3fb950; }
+.env-failed { font-size: 12.5px; line-height: 1.6; color: #f85149; margin: 6px 0; }
 .env-none { color: var(--text-secondary); font-size: 13px; padding: 8px 11px; margin: 0; }
 .env-new { margin-top: 4px; padding: 9px; border: 1px dashed var(--border-color); border-radius: 8px; background: none; color: var(--text-secondary); font-size: 13px; cursor: pointer; }
 .env-file { display: none; }

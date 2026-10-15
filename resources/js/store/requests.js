@@ -5,6 +5,10 @@ export const useRequestsStore = defineStore('requests', {
     state: () => ({
         savedRequests: [],
         isLoading: false,
+        // Set when the list fetch fails, so a view can say so instead of
+        // rendering its empty state — \"you have none\" and \"it did not
+        // load\" look identical otherwise.
+        loadError: null,
         // Handed to the tester when a request is opened from another view.
         // Consumed once, so returning to the tester later starts clean.
         pendingLoad: null,
@@ -12,11 +16,13 @@ export const useRequestsStore = defineStore('requests', {
     actions: {
         async fetchSavedRequests() {
             this.isLoading = true;
+            this.loadError = null;
             try {
                 const response = await axios.get('/api/saved-requests');
                 this.savedRequests = response.data;
             } catch (error) {
                 console.error("Failed to fetch saved requests", error);
+                this.loadError = 'Could not load your saved requests.';
             } finally {
                 this.isLoading = false;
             }

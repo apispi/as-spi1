@@ -8,6 +8,10 @@ export const useEnvironmentsStore = defineStore('environments', {
         environments: [],
         selectedId: Number(localStorage.getItem(SELECTED_KEY)) || null,
         isLoading: false,
+        // Set when the list fetch fails, so a view can say so instead of
+        // rendering its empty state — \"you have none\" and \"it did not
+        // load\" look identical otherwise.
+        loadError: null,
         loaded: false,
     }),
     getters: {
@@ -22,6 +26,7 @@ export const useEnvironmentsStore = defineStore('environments', {
     actions: {
         async fetch() {
             this.isLoading = true;
+            this.loadError = null;
             try {
                 const res = await axios.get('/api/environments');
                 this.environments = res.data;
@@ -35,6 +40,7 @@ export const useEnvironmentsStore = defineStore('environments', {
                 this.loaded = true;
             } catch (error) {
                 console.error('Failed to fetch environments', error);
+                this.loadError = 'Could not load your environments.';
             } finally {
                 this.isLoading = false;
             }

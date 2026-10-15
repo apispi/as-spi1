@@ -5,18 +5,24 @@ export const useCollectionsStore = defineStore('collections', {
     state: () => ({
         collections: [],
         isLoading: false,
+        // Set when the list fetch fails, so a view can say so instead of
+        // rendering its empty state — \"you have none\" and \"it did not
+        // load\" look identical otherwise.
+        loadError: null,
         loaded: false,
         lastRun: null,
     }),
     actions: {
         async fetch() {
             this.isLoading = true;
+            this.loadError = null;
             try {
                 const res = await axios.get('/api/collections');
                 this.collections = res.data;
                 this.loaded = true;
             } catch (error) {
                 console.error('Failed to fetch collections', error);
+                this.loadError = 'Could not load your collections.';
             } finally {
                 this.isLoading = false;
             }

@@ -16,6 +16,12 @@
 
     <Skeleton v-if="store.isLoading" :rows="5" />
 
+    <div v-else-if="store.loadError" class="mon-empty">
+      <Icon name="activity" :size="26" />
+      <p>{{ store.loadError }}</p>
+      <button class="mon-btn" @click="store.fetch()">Try again</button>
+    </div>
+
     <div v-else-if="!store.monitors.length" class="mon-empty">
       <Icon name="activity" :size="26" />
       <p>No monitors yet. Create one to watch a collection on a schedule.</p>

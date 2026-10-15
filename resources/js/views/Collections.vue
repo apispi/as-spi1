@@ -24,6 +24,10 @@
     <!-- Saved requests -->
     <section v-if="tab === 'saved'">
       <Skeleton v-if="requestsStore.isLoading" :rows="5" />
+      <div v-else-if="requestsStore.loadError" class="col-empty">
+        <p>{{ requestsStore.loadError }}</p>
+        <button class="col-empty-btn" @click="requestsStore.fetchSavedRequests()">Try again</button>
+      </div>
       <div v-else-if="!requestsStore.savedRequests.length" class="col-empty">
         <Icon name="send" :size="26" />
         <p>No saved requests yet. Build one in the tester and save it — saved requests are the steps a collection runs.</p>
@@ -95,6 +99,10 @@
     <!-- Collections -->
     <section v-else-if="tab === 'collections'">
       <Skeleton v-if="collectionsStore.isLoading" :rows="5" />
+      <div v-else-if="collectionsStore.loadError" class="col-empty">
+        <p>{{ collectionsStore.loadError }}</p>
+        <button class="col-empty-btn" @click="collectionsStore.fetch()">Try again</button>
+      </div>
       <div v-else-if="!collectionsStore.collections.length" class="col-empty">
         <Icon name="layers" :size="26" />
         <p>No collections yet. A collection runs saved requests in order against one environment, checking each step's assertions.</p>

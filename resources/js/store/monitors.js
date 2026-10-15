@@ -5,17 +5,23 @@ export const useMonitorsStore = defineStore('monitors', {
     state: () => ({
         monitors: [],
         isLoading: false,
+        // Set when the list fetch fails, so a view can say so instead of
+        // rendering its empty state — \"you have none\" and \"it did not
+        // load\" look identical otherwise.
+        loadError: null,
         loaded: false,
     }),
     actions: {
         async fetch() {
             this.isLoading = true;
+            this.loadError = null;
             try {
                 const res = await axios.get('/api/monitors');
                 this.monitors = res.data;
                 this.loaded = true;
             } catch (error) {
                 console.error('Failed to fetch monitors', error);
+                this.loadError = 'Could not load your monitors.';
             } finally {
                 this.isLoading = false;
             }

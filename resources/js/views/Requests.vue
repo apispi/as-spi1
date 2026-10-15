@@ -22,6 +22,11 @@
 
     <Skeleton v-if="loading" :rows="6" />
 
+    <p v-else-if="store.loadError" class="rq-failed">
+      {{ store.loadError }}
+      <button type="button" class="rq-btn" @click="reload">Try again</button>
+    </p>
+
     <p v-else-if="!rows.length" class="rq-muted">
       Nothing saved yet. Send something in the <router-link to="/tester">Tester</router-link> and save it.
     </p>
@@ -124,13 +129,16 @@ const filtered = computed(() => {
   });
 });
 
-onMounted(async () => {
+async function reload() {
+  loading.value = true;
   try {
     await store.fetchSavedRequests();
   } finally {
     loading.value = false;
   }
-});
+}
+
+onMounted(reload);
 
 function open(r) {
   // The Tester picks this up on mount, the same way the command palette does.
@@ -212,6 +220,11 @@ async function remove(r) {
 .rq-sub { color: var(--text-secondary); max-width: 72ch; margin: 0 0 20px; line-height: 1.5; }
 .rq-count { display: inline-block; margin-left: 8px; font-size: 0.8rem; opacity: .8; }
 .rq-muted { color: var(--text-secondary); }
+.rq-failed {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  color: #f85149; border: 1px solid rgba(248,81,73,.4);
+  border-radius: 10px; padding: 12px 14px;
+}
 
 .rq-toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
 .rq-search {
