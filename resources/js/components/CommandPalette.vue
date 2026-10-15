@@ -57,20 +57,43 @@ const loading = ref(false);
 const input = ref(null);
 let debounce = null;
 
+// Which search is current. A slower earlier request could otherwise resolve
+// after a newer one and overwrite fresh results with results for a query the
+// user has already moved on from.
+let searchId = 0;
+
 onMounted(() => nextTick(() => input.value?.focus()));
 
 watch(q, (value) => {
   clearTimeout(debounce);
   active.value = 0;
-  if (!value.trim()) { results.value = []; return; }
+  searchId++;
+
+  if (!value.trim()) {
+    results.value = [];
+    // Also stop searching: clearing the box within the debounce window used
+    // to cancel the request while leaving this true, so the palette sat on
+    // "Searching…" until something else was typed.
+    loading.value = false;
+
+    return;
+  }
+
   loading.value = true;
+  const id = searchId;
+
   debounce = setTimeout(async () => {
     try {
-      results.value = (await axios.get('/api/search', { params: { q: value } })).data.results;
+      const { data } = await axios.get('/api/search', { params: { q: value } });
+      if (id !== searchId) return;
+      results.value = data.results;
     } catch {
+      if (id !== searchId) return;
       results.value = [];
     } finally {
-      loading.value = false;
+      // Only the newest search owns the spinner, or an outdated response
+      // clears it while the current one is still running.
+      if (id === searchId) loading.value = false;
     }
   }, 200);
 });
