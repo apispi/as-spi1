@@ -464,7 +464,7 @@ const openHistory = async () => {
   try {
     history.value = (await axios.get('/api/history')).data;
   } catch {
-    history.value = [];
+    history.value = []; toast.error('Could not load the run history.');
   } finally {
     historyLoading.value = false;
   }

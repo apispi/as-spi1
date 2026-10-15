@@ -277,7 +277,7 @@ const startCreate = async () => {
   try {
     organisations.value = (await axios.get('/api/admin/organisations')).data.organisations;
   } catch {
-    organisations.value = [];
+    organisations.value = []; show('Could not load the organisation list.', 'error');
   }
 };
 

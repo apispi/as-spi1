@@ -104,6 +104,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import axios from 'axios';
 import Icon from '../components/Icon.vue';
+import { toast } from '../toast';
 
 const ACTIONS = [
   { value: 'auth.login', label: 'Signed in' },
@@ -128,7 +129,7 @@ const loadActions = async () => {
   try {
     const res = await axios.get('/api/admin/actions');
     actions.value = (res.data.data || []).slice(0, 10);
-  } catch { actions.value = []; }
+  } catch { actions.value = []; toast.error('Could not load the recent admin actions.'); }
 };
 
 const refresh = () => { fetchPage(1); loadActions(); };
@@ -151,7 +152,7 @@ const fetchPage = async (page) => {
     pagination.last_page = res.data.events.last_page;
     summary.value = res.data.summary || {};
   } catch {
-    events.value = [];
+    events.value = []; toast.error('Could not load the security events.');
   } finally {
     loading.value = false;
   }

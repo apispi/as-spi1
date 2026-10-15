@@ -527,7 +527,7 @@ async function loadIncidents() {
   try {
     incidents.value = (await axios.get(`/api/status-pages/${incidentsFor.value.id}/incidents`)).data;
   } catch {
-    incidents.value = [];
+    incidents.value = []; toast.error('Could not load the incidents for this page.');
   }
 }
 
@@ -649,7 +649,7 @@ const fetchChannels = async () => {
   try {
     channels.value = (await axios.get('/api/alert-channels')).data;
   } catch {
-    channels.value = [];
+    channels.value = []; toast.error('Could not load your alert channels.');
   }
 };
 
@@ -657,7 +657,7 @@ const fetchPages = async () => {
   try {
     pages.value = (await axios.get('/api/status-pages')).data;
   } catch {
-    pages.value = [];
+    pages.value = []; toast.error('Could not load your status pages.');
   }
 };
 

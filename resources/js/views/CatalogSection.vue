@@ -211,6 +211,7 @@ import axios from 'axios';
 import { confirmDialog } from '../confirm';
 import ReportView from '../components/ReportView.vue';
 import { useEscape } from '../useEscape';
+import { toast } from '../toast';
 
 const route = useRoute();
 
@@ -287,7 +288,7 @@ const fetchAll = async () => {
     items.value = itemsRes.data;
     counts.value = countsRes.data;
   } catch (error) {
-    items.value = [];
+    items.value = []; toast.error('Could not load the catalog.');
   } finally {
     loading.value = false;
   }

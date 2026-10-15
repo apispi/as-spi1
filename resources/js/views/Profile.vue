@@ -850,7 +850,7 @@ const loadApiKeys = async () => {
     const res = await axios.get('/api/user/api-keys');
     apiKeys.value = res.data || [];
   } catch (error) {
-    apiKeys.value = [];
+    apiKeys.value = []; toast.error('Could not load your API keys.');
   }
 };
 
@@ -868,7 +868,7 @@ const loadSecurityLog = async () => {
     const res = await axios.get('/api/user/security-log');
     securityLog.value = res.data || [];
   } catch {
-    securityLog.value = [];
+    securityLog.value = []; toast.error('Could not load your security log.');
   }
 };
 
@@ -877,7 +877,7 @@ const loadMonitors = async () => {
     const res = await axios.get('/api/monitors');
     monitors.value = res.data || [];
   } catch {
-    monitors.value = [];
+    monitors.value = []; toast.error('Could not load your monitors.');
   }
 };
 
@@ -886,7 +886,7 @@ const loadRecentActivity = async () => {
     const res = await axios.get('/api/user/activity');
     recentActivity.value = res.data || [];
   } catch (error) {
-    recentActivity.value = [];
+    recentActivity.value = []; toast.error('Could not load your recent activity.');
   }
 };
 
@@ -1090,7 +1090,7 @@ async function loadActivity() {
     });
     activity.value = res.data.activity || [];
   } catch {
-    activity.value = [];
+    activity.value = []; toast.error('Could not load the workspace activity.');
   } finally {
     activityLoading.value = false;
   }

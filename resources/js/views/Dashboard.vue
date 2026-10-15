@@ -82,6 +82,7 @@ import { useAuthStore } from '../store/auth';
 import Icon from '../components/Icon.vue';
 import Skeleton from '../components/Skeleton.vue';
 import Sparkline from '../components/Sparkline.vue';
+import { toast } from '../toast';
 
 const authStore = useAuthStore();
 const firstName = computed(() => (authStore.user?.name || 'there').split(' ')[0]);
@@ -119,7 +120,7 @@ onMounted(async () => {
     const res = await axios.get('/api/reports');
     reports.value = (res.data.reports || []).slice(0, 5);
   } catch {
-    reports.value = [];
+    reports.value = []; toast.error('Could not load your recent reports.');
   } finally {
     loadingReports.value = false;
   }
