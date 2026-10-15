@@ -51,7 +51,19 @@
             {{ busy === m.id ? 'Running…' : 'Run now' }}
           </button>
           <button v-if="m.is_snoozed" class="mon-btn" @click="wake(m)" :disabled="busy === m.id">Unmute</button>
-          <button v-else class="mon-btn" @click="snooze(m)" :disabled="busy === m.id">Mute alerts</button>
+
+          <!-- Three fixed durations, rather than asking for a number. -->
+          <template v-else-if="muting === m.id">
+            <span class="mon-mute-label">Mute for</span>
+            <button
+              v-for="c in SNOOZE_CHOICES" :key="c.minutes"
+              class="mon-btn" :disabled="busy === m.id"
+              @click="mute(m, c.minutes)"
+            >{{ c.label }}</button>
+            <button class="mon-btn" @click="muting = null">Cancel</button>
+          </template>
+
+          <button v-else class="mon-btn" @click="muting = m.id" :disabled="busy === m.id">Mute alerts</button>
           <button class="mon-btn" @click="openHistory(m)">History</button>
           <button class="mon-btn" @click="edit(m)">Edit</button>
         </div>
@@ -60,7 +72,7 @@
 
     <!-- Editor -->
     <div v-if="editing" class="mon-scrim" @click.self="editing = null">
-      <div class="mon-modal">
+      <div class="mon-modal" role="dialog" aria-modal="true" aria-label="Monitor details">
         <header class="mon-modal-head">
           <h2>{{ editing.id ? 'Edit monitor' : 'New monitor' }}</h2>
           <button class="mon-x" @click="editing = null" aria-label="Close"><Icon name="close" :size="18" /></button>
@@ -156,7 +168,7 @@
 
     <!-- Alert channels -->
     <div v-if="showChannels" class="mon-scrim" @click.self="showChannels = false">
-      <div class="mon-modal">
+      <div class="mon-modal" role="dialog" aria-modal="true" aria-label="Alert channels">
         <header class="mon-modal-head">
           <h2>Alert channels</h2>
           <button class="mon-x" @click="showChannels = false" aria-label="Close"><Icon name="close" :size="18" /></button>
@@ -231,7 +243,7 @@
 
     <!-- Status pages -->
     <div v-if="showPages" class="mon-scrim" @click.self="showPages = false">
-      <div class="mon-modal">
+      <div class="mon-modal" role="dialog" aria-modal="true" aria-label="Status pages">
         <header class="mon-modal-head">
           <h2>Status pages</h2>
           <button class="mon-x" @click="showPages = false" aria-label="Close"><Icon name="close" :size="18" /></button>
@@ -369,7 +381,7 @@
 
     <!-- History -->
     <div v-if="history" class="mon-scrim" @click.self="history = null">
-      <div class="mon-modal">
+      <div class="mon-modal" role="dialog" aria-modal="true" aria-label="Monitor run history">
         <header class="mon-modal-head">
           <h2>{{ history.name }}</h2>
           <span class="mon-pill" :class="history.last_status">{{ statusLabel(history) }}</span>
@@ -432,7 +444,7 @@
 
     <!-- Run comparison (this run vs the previous) -->
     <div v-if="cmp" class="mon-scrim" @click.self="cmp = null">
-      <div class="mon-modal">
+      <div class="mon-modal" role="dialog" aria-modal="true" aria-label="Run comparison">
         <header class="mon-modal-head">
           <h2>Run comparison</h2>
           <button class="mon-x" @click="cmp = null" aria-label="Close"><Icon name="close" :size="18" /></button>
@@ -473,6 +485,7 @@ import Icon from '../components/Icon.vue';
 import Skeleton from '../components/Skeleton.vue';
 import ReportDiff from '../components/ReportDiff.vue';
 import Sparkline from '../components/Sparkline.vue';
+import { useEscape } from '../useEscape';
 
 const store = useMonitorsStore();
 const collectionsStore = useCollectionsStore();
@@ -574,23 +587,25 @@ const SNOOZE_CHOICES = [
   { minutes: 1440, label: '1 day' },
 ];
 
-// Muting is not the same as pausing: the monitor keeps checking, so the
-// history and uptime stay honest through a deploy. Said out loud here because
-// the two buttons sit next to each other.
-async function snooze(m) {
-  const choice = window.prompt(
-    `Mute alerts for "${m.name}" for how long?\n\n${SNOOZE_CHOICES.map(c => c.minutes + ' = ' + c.label).join('\n')}\n\nMinutes:`,
-    '60'
-  );
-  if (choice === null) return;
+// Which monitor's duration picker is open, if any.
+const muting = ref(null);
 
-  const minutes = parseInt(choice, 10);
-  if (!Number.isInteger(minutes) || minutes < 1) {
-    toast.error('Enter a number of minutes.');
-    return;
-  }
-
+/**
+ * Mute alerts for a set time.
+ *
+ * Was a window.prompt asking for a number of minutes, which is both out of
+ * keeping with every other control here and a poor way to offer three fixed
+ * choices. The durations were already defined above and only used to build
+ * that prompt's text.
+ *
+ * Muting is not pausing: the monitor keeps checking, so the history and uptime
+ * stay honest through a deploy. Worth saying plainly, because the two controls
+ * sit next to each other.
+ */
+async function mute(m, minutes) {
+  muting.value = null;
   busy.value = m.id;
+
   try {
     await axios.post(`/api/monitors/${m.id}/snooze`, { minutes });
     await store.fetch();
@@ -915,6 +930,15 @@ const runNow = async (m) => {
 const openHistory = async (m) => {
   history.value = await store.show(m.id);
 };
+
+// Escape closes the topmost open modal, innermost first.
+useEscape(() => [
+    [cmp.value, () => { cmp.value = null; }],
+    [history.value, () => { history.value = null; }],
+    [editing.value, () => { editing.value = null; }],
+    [showChannels.value, () => { showChannels.value = false; }],
+    [showPages.value, () => { showPages.value = false; }],
+]);
 </script>
 
 <style scoped>
@@ -951,6 +975,7 @@ const openHistory = async (m) => {
 .mon-pill.unknown { color: var(--text-secondary); background: rgba(255,255,255,.07); }
 .mon-inc-body { min-height: 76px; resize: vertical; margin-top: 8px; }
 .mon-sub { font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin: 0 0 6px; }
+.mon-mute-label { font-size: 12px; color: var(--text-secondary); align-self: center; }
 .mon-pill.snoozed { background: rgba(210,153,34,.18); color: #d29922; }
 .mon-pill.paused { color: #d29922; background: rgba(210,153,34,.14); }
 .mon-meta { font-size: 12px; color: var(--text-secondary); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -82,7 +82,7 @@
 
     <!-- Create -->
     <div v-if="creating" class="ad-scrim" @click.self="creating = null">
-      <div class="ad-modal">
+      <div class="ad-modal" role="dialog" aria-modal="true" aria-label="New user">
         <header class="ad-modal-head">
           <h2>New user</h2>
           <button class="ad-x" @click="creating = null" aria-label="Close"><Icon name="close" :size="18" /></button>
@@ -131,6 +131,7 @@ import { confirmDialog } from '../confirm';
 import Icon from '../components/Icon.vue';
 import Skeleton from '../components/Skeleton.vue';
 import { useAuthStore } from '../store/auth';
+import { useEscape } from '../useEscape';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -301,6 +302,11 @@ const createUser = async () => {
     savingUser.value = false;
   }
 };
+
+// Escape closes the topmost open modal, innermost first.
+useEscape(() => [
+    [creating.value, () => { creating.value = null; }],
+]);
 </script>
 
 <style scoped>

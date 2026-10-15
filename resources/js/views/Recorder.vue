@@ -52,7 +52,7 @@
 
     <!-- Timeline -->
     <div v-if="viewing" class="rec-scrim" @click.self="viewing = null">
-      <div class="rec-modal wide">
+      <div class="rec-modal wide" role="dialog" aria-modal="true" aria-label="Recorded exchanges">
         <header class="rec-modal-head">
           <h2>{{ viewing.proxy.name }}</h2>
           <label class="rec-flagtoggle">
@@ -144,7 +144,7 @@
 
     <!-- Editor -->
     <div v-if="editing" class="rec-scrim" @click.self="editing = null">
-      <div class="rec-modal">
+      <div class="rec-modal" role="dialog" aria-modal="true" aria-label="Recorder details">
         <header class="rec-modal-head">
           <h2>{{ editing.id ? 'Edit recorder' : 'New recorder' }}</h2>
           <button class="rec-x" @click="editing = null" aria-label="Close"><Icon name="close" :size="18" /></button>
@@ -212,6 +212,7 @@ import axios from 'axios';
 import { confirmDialog } from '../confirm';
 import { toast } from '../toast';
 import Icon from '../components/Icon.vue';
+import { useEscape } from '../useEscape';
 
 const proxies = ref([]);
 const loading = ref(true);
@@ -372,6 +373,12 @@ const ago = (iso) => {
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   return `${Math.floor(s / 86400)}d ago`;
 };
+
+// Escape closes the topmost open modal, innermost first.
+useEscape(() => [
+    [viewing.value, () => { viewing.value = null; }],
+    [editing.value, () => { editing.value = null; }],
+]);
 </script>
 
 <style scoped>

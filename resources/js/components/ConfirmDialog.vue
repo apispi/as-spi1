@@ -1,9 +1,16 @@
 <template>
   <transition name="cd-fade">
-    <div v-if="confirmState.open" class="cd-overlay" @click.self="cancel" @keydown.esc="cancel">
-      <div class="cd-box" role="alertdialog" aria-modal="true" :aria-label="confirmState.title">
-        <h2 class="cd-title">{{ confirmState.title }}</h2>
-        <p class="cd-message">{{ confirmState.message }}</p>
+    <div v-if="confirmState.open" class="cd-overlay" @click.self="cancel">
+      <div
+        ref="box"
+        class="cd-box"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="cd-title"
+        aria-describedby="cd-message"
+      >
+        <h2 id="cd-title" class="cd-title">{{ confirmState.title }}</h2>
+        <p id="cd-message" class="cd-message">{{ confirmState.message }}</p>
         <div class="cd-actions">
           <button ref="cancelBtn" class="cd-btn cancel" @click="cancel">{{ confirmState.cancelText }}</button>
           <button class="cd-btn confirm" :class="{ danger: confirmState.danger }" @click="ok">{{ confirmState.confirmText }}</button>
@@ -18,19 +25,70 @@ import { watch, nextTick, ref, onMounted, onUnmounted } from 'vue';
 import { confirmState, resolveConfirm } from '../confirm';
 
 const cancelBtn = ref(null);
+const box = ref(null);
+
+// Where focus was before the dialog took it, so it can be handed back.
+let previouslyFocused = null;
 
 const ok = () => resolveConfirm(true);
 const cancel = () => resolveConfirm(false);
 
-// Focus the safe (cancel) button when the dialog opens; Enter confirms.
+// Focus the safe (cancel) button on open, and return focus to whatever opened
+// the dialog on close — otherwise a keyboard user is dropped at the top of the
+// document after every confirmation.
 watch(() => confirmState.open, (open) => {
-  if (open) nextTick(() => cancelBtn.value?.focus());
+  if (open) {
+    previouslyFocused = document.activeElement;
+    nextTick(() => cancelBtn.value?.focus());
+
+    return;
+  }
+
+  const target = previouslyFocused;
+  previouslyFocused = null;
+  if (target && typeof target.focus === 'function' && document.contains(target)) {
+    target.focus();
+  }
 });
+
+/** The dialog's own focusable controls, in tab order. */
+const focusables = () =>
+  Array.from(box.value?.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])') ?? []);
 
 const onKey = (e) => {
   if (!confirmState.open) return;
-  if (e.key === 'Enter') { e.preventDefault(); ok(); }
-  else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    cancel();
+
+    return;
+  }
+
+  // Deliberately no Enter handler. Enter used to confirm regardless of what
+  // was focused, with preventDefault stopping the focused button activating —
+  // so on a delete prompt the dialog showed Cancel focused while Enter
+  // deleted. A button activates on Enter natively, so letting that through
+  // means Enter does what the focused control says it does.
+
+  if (e.key !== 'Tab') return;
+
+  // Keep Tab inside the dialog. Without this, focus walks out into the page
+  // behind an aria-modal dialog, which is both confusing and a way to click
+  // things that are supposed to be blocked.
+  const items = focusables();
+  if (items.length === 0) return;
+
+  const first = items[0];
+  const last = items[items.length - 1];
+
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (! e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
 };
 
 onMounted(() => window.addEventListener('keydown', onKey));

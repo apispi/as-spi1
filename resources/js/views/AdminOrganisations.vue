@@ -36,7 +36,7 @@
 
     <!-- Members management -->
     <div v-if="members" class="ad-scrim" @click.self="members = null">
-      <div class="ad-modal">
+      <div class="ad-modal" role="dialog" aria-modal="true" aria-label="Organisation members">
         <header class="ad-modal-head">
           <h2>{{ members.org.name }} · members</h2>
           <button class="ad-x" @click="members = null" aria-label="Close"><Icon name="close" :size="18" /></button>
@@ -69,7 +69,7 @@
     </div>
 
     <div v-if="editing" class="ad-scrim" @click.self="editing = null">
-      <div class="ad-modal">
+      <div class="ad-modal" role="dialog" aria-modal="true" aria-label="Organisation details">
         <header class="ad-modal-head">
           <h2>{{ editing.id ? 'Edit organisation' : 'New organisation' }}</h2>
           <button class="ad-x" @click="editing = null" aria-label="Close"><Icon name="close" :size="18" /></button>
@@ -110,6 +110,7 @@ import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import { confirmDialog } from '../confirm';
 import Icon from '../components/Icon.vue';
+import { useEscape } from '../useEscape';
 
 const organisations = ref([]);
 const unassigned = ref(0);
@@ -247,6 +248,12 @@ const remove = async () => {
     saving.value = false;
   }
 };
+
+// Escape closes the topmost open modal, innermost first.
+useEscape(() => [
+    [members.value, () => { members.value = null; }],
+    [editing.value, () => { editing.value = null; }],
+]);
 </script>
 
 <style scoped>

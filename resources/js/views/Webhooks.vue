@@ -49,7 +49,7 @@
 
     <!-- Captures -->
     <div v-if="viewing" class="wh-scrim" @click.self="viewing = null">
-      <div class="wh-modal wide">
+      <div class="wh-modal wide" role="dialog" aria-modal="true" aria-label="Received webhook payloads">
         <header class="wh-modal-head">
           <h2>{{ viewing.endpoint.name }}</h2>
           <button class="wh-btn" @click="refreshCaptures" :disabled="refreshing">{{ refreshing ? '…' : 'Refresh' }}</button>
@@ -85,7 +85,7 @@
 
     <!-- Editor -->
     <div v-if="editing" class="wh-scrim" @click.self="editing = null">
-      <div class="wh-modal">
+      <div class="wh-modal" role="dialog" aria-modal="true" aria-label="Webhook endpoint details">
         <header class="wh-modal-head">
           <h2>{{ editing.id ? 'Edit endpoint' : 'New endpoint' }}</h2>
           <button class="wh-x" @click="editing = null" aria-label="Close"><Icon name="close" :size="18" /></button>
@@ -145,6 +145,7 @@ import { confirmDialog } from '../confirm';
 import { useRouter } from 'vue-router';
 import Icon from '../components/Icon.vue';
 import { useRequestsStore } from '../store/requests';
+import { useEscape } from '../useEscape';
 
 const router = useRouter();
 const requestsStore = useRequestsStore();
@@ -302,6 +303,12 @@ const ago = (iso) => {
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   return `${Math.floor(s / 86400)}d ago`;
 };
+
+// Escape closes the topmost open modal, innermost first.
+useEscape(() => [
+    [viewing.value, () => { viewing.value = null; }],
+    [editing.value, () => { editing.value = null; }],
+]);
 </script>
 
 <style scoped>

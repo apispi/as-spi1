@@ -186,7 +186,7 @@
 
     <!-- Deep-inspection results (conformance / security / agent trace) -->
     <div v-if="inspect" class="cat-modal-overlay" @click.self="inspect = null">
-      <div class="cat-modal">
+      <div class="cat-modal" role="dialog" aria-modal="true" aria-label="Catalog item details">
         <div class="cat-modal-head">
           <h2>{{ inspect.title }}</h2>
           <div class="cat-modal-actions">
@@ -210,6 +210,7 @@ import { useRoute } from 'vue-router';
 import axios from 'axios';
 import { confirmDialog } from '../confirm';
 import ReportView from '../components/ReportView.vue';
+import { useEscape } from '../useEscape';
 
 const route = useRoute();
 
@@ -503,6 +504,11 @@ const destroy = async (item) => {
 };
 
 onMounted(fetchAll);
+
+// Escape closes the topmost open modal, innermost first.
+useEscape(() => [
+    [inspect.value, () => { inspect.value = null; }],
+]);
 </script>
 
 <style scoped>

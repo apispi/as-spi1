@@ -47,7 +47,7 @@
     </ul>
 
     <div v-if="editing" class="mk-scrim" @click.self="editing = null">
-      <div class="mk-modal">
+      <div class="mk-modal" role="dialog" aria-modal="true" aria-label="Mock server details">
         <header class="mk-modal-head">
           <h2>{{ editing.id ? 'Edit mock' : 'New mock' }}</h2>
           <button class="mk-x" @click="editing = null" aria-label="Close"><Icon name="close" :size="18" /></button>
@@ -100,6 +100,7 @@ import axios from 'axios';
 import { confirmDialog } from '../confirm';
 import Icon from '../components/Icon.vue';
 import { useAuthStore } from '../store/auth';
+import { useEscape } from '../useEscape';
 
 const authStore = useAuthStore();
 const mocks = ref([]);
@@ -192,6 +193,11 @@ const seed = async () => {
     seeding.value = false;
   }
 };
+
+// Escape closes the topmost open modal, innermost first.
+useEscape(() => [
+    [editing.value, () => { editing.value = null; }],
+]);
 </script>
 
 <style scoped>

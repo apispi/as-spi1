@@ -190,7 +190,7 @@
 
     <!-- Data-driven run -->
     <div v-if="dataset" class="col-scrim" @click.self="dataset = null">
-      <div class="col-modal">
+      <div class="col-modal" role="dialog" aria-modal="true" aria-label="Run collection with a dataset">
         <header class="col-modal-head">
           <h2>Run “{{ dataset.name }}” with data</h2>
           <button class="col-x" @click="dataset = null" aria-label="Close"><Icon name="close" :size="18" /></button>
@@ -247,6 +247,7 @@ import { useRequestsStore } from '../store/requests';
 import { useCollectionsStore } from '../store/collections';
 import { useEnvironmentsStore } from '../store/environments';
 import { useAuthStore } from '../store/auth';
+import { useEscape } from '../useEscape';
 
 const router = useRouter();
 const requestsStore = useRequestsStore();
@@ -484,6 +485,11 @@ const ago = (iso) => {
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   return `${Math.floor(s / 86400)}d ago`;
 };
+
+// Escape closes the topmost open modal, innermost first.
+useEscape(() => [
+    [dataset.value, () => { dataset.value = null; }],
+]);
 </script>
 
 <style scoped>

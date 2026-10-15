@@ -57,7 +57,7 @@
 
     <!-- Single report modal -->
     <div v-if="open" class="rp-modal-overlay" @click.self="open = null">
-      <div class="rp-modal">
+      <div class="rp-modal" role="dialog" aria-modal="true" aria-label="Report details">
         <div class="rp-modal-head">
           <h2>{{ typeName(open.type) }}<template v-if="subjectOf(open)"> — {{ subjectOf(open) }}</template></h2>
           <div class="rp-modal-actions">
@@ -80,7 +80,7 @@
 
     <!-- Compare modal -->
     <div v-if="cmp" class="rp-modal-overlay" @click.self="cmp = null">
-      <div class="rp-modal rp-modal-wide">
+      <div class="rp-modal rp-modal-wide" role="dialog" aria-modal="true" aria-label="Report comparison">
         <div class="rp-modal-head">
           <h2>Compare · {{ typeName(cmp.type) }}</h2>
           <button class="rp-btn" @click="cmp = null">Close</button>
@@ -128,6 +128,7 @@ import { confirmDialog } from '../confirm';
 import { toast } from '../toast';
 import ReportView from '../components/ReportView.vue';
 import ReportDiff from '../components/ReportDiff.vue';
+import { useEscape } from '../useEscape';
 
 const filters = [
   { value: '', label: 'All' },
@@ -309,6 +310,12 @@ const ago = (iso) => {
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   return `${Math.floor(s / 86400)}d ago`;
 };
+
+// Escape closes the topmost open modal, innermost first.
+useEscape(() => [
+    [cmp.value, () => { cmp.value = null; }],
+    [open.value, () => { open.value = null; }],
+]);
 </script>
 
 <style scoped>
