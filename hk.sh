@@ -45,7 +45,7 @@ echo What do you want to do?
 rule
 echo CHECK
 echo "00 : STATUS: branch, pending migrations, outdated packages"
-echo "01 : TEST: run the full test suite"
+echo "01 : TEST: run the full test suite (PHP + front-end)"
 echo "02 : BUILD: compile front-end assets"
 echo "03 : AUDIT: composer security advisories"
 echo "04 : LINT: format PHP with Pint"
@@ -106,7 +106,11 @@ case "$SELECTION" in
   "01" )
   banner "TEST: full suite"
   php artisan test
-  note "Ran the test suite"
+  rule
+  # The front-end suite is separate but not optional: it covers the browser
+  # logic the PHP tests cannot reach.
+  npm run test:js
+  note "Ran the test suites"
   ;;
 
   "02" )
@@ -131,7 +135,7 @@ case "$SELECTION" in
   banner "PREFLIGHT: build + test + audit"
   # The same gate CLAUDE.md asks for before pushing: assets built and tests
   # green, so a broken build never reaches the server.
-  npm run build && php artisan test && composer audit
+  npm run build && php artisan test && npm run test:js && composer audit
   STATUS=$?
   rule
   if [ $STATUS -eq 0 ]; then
